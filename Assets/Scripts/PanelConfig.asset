@@ -17,6 +17,6 @@ MonoBehaviour:
     panelHeading: Beginers
     subButtons:
     - buttonLabel: B1
-      assetBundleUrl: https://drive.google.com/uc?export=download&id=1QI0gV_b6nwhgH_IlP34s_pxF-hCnZE4F
-      sceneName: ForestLevel
-      homeScreenId: HomeScreen_Water
+      assetBundleUrl: https://drive.google.com/uc?export=download&id=1olJZE6Aduz_OvVPqXXAEC8k33OLDouo9
+      sceneName: Beginer_1A
+      homeScreenId: HomeScreen_Forest
