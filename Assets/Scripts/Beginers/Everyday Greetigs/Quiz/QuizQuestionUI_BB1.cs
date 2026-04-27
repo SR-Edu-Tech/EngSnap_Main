@@ -4,32 +4,6 @@ using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 
-/// <summary>
-/// Displays one quiz question at a time.
-/// Called by QuizManager_BB1 to show each question, collect the player's answer,
-/// then report back via the onAnswered callback.
-///
-/// WIRING (Inspector):
-///   questionImageHolder  → GameObject that contains the question Image (hidden for audio-only types)
-///   questionImage        → Image component showing the scene sprite
-///   questionTypeLabel    → TextMeshProUGUI showing the question type string (optional, can be null)
-///   optionButtons        → Array of exactly 3 QuizOptionButton_BB1 (A, B, C)
-///   feedbackPanel        → GameObject shown after an answer (contains feedbackText)
-///   feedbackText         → TextMeshProUGUI for "Correct!" or "Not quite..." text
-///   feedbackIcon         → Image used for checkmark/cross icon in feedback panel
-///   starParticles        → ParticleSystem played on correct answer (optional)
-///   replayAudioButton    → Button to re-play the question audio (optional)
-///   audioController      → QuizAudioController_BB1 on the same prefab or parent
-///
-/// Flow per question:
-///   1. ShowQuestion() called by manager
-///   2. Image shown (if applicable), options locked
-///   3. Question VO plays automatically
-///   4. Secondary audio plays if present (ListenAndPick)
-///   5. Options unlocked
-///   6. Player taps an option → EvaluateAnswer()
-///   7. Feedback shown, onAnswered(isCorrect) called after delay
-/// </summary>
 public class QuizQuestionUI_BB1 : MonoBehaviour
 {
     [Header("Question Display")]
@@ -38,7 +12,7 @@ public class QuizQuestionUI_BB1 : MonoBehaviour
     public TextMeshProUGUI     questionTypeLabel;
 
     [Header("Option Buttons (exactly 3: A, B, C)")]
-    public QuizOptionButton_BB1[] optionButtons; // length must be 3
+    public QuizOptionButton_BB1[] optionButtons;
 
     [Header("Feedback Panel")]
     public GameObject          feedbackPanel;
@@ -58,20 +32,19 @@ public class QuizQuestionUI_BB1 : MonoBehaviour
     [Header("Audio Controller")]
     public QuizAudioController_BB1 audioController;
 
-    // ── Internal state ────────────────────────────────────────────────────
-    private QuizData_BB1.QuizQuestion currentQuestion;
-    private Action<bool>              onAnswered;   // bool = wasCorrect
-    private bool                      answered       = false;
-    private Coroutine                 flowCoroutine  = null;
+    // Set by QuizManager_BB1 — no extra Inspector wiring needed
+    [HideInInspector] public AudioClip correctFX;
+    [HideInInspector] public AudioClip wrongFX;
 
-    // Delay after showing feedback before calling onAnswered
+    private QuizData_BB1.QuizQuestion currentQuestion;
+    private Action<bool>              onAnswered;
+    private bool                      answered      = false;
+    private Coroutine                 flowCoroutine = null;
+
     private const float FEEDBACK_DISPLAY_DURATION = 2.2f;
 
     // ── Public API ────────────────────────────────────────────────────────
 
-    /// <summary>
-    /// Display a question. onAnswered is called with (wasCorrect) after feedback is shown.
-    /// </summary>
     public void ShowQuestion(QuizData_BB1.QuizQuestion question, Action<bool> onAnsweredCallback)
     {
         currentQuestion = question;
@@ -86,21 +59,17 @@ public class QuizQuestionUI_BB1 : MonoBehaviour
 
     IEnumerator QuestionFlow()
     {
-        // --- Reset UI ---
         HideFeedback();
         SetOptionsLocked(true);
 
-        // --- Question type label ---
         if (questionTypeLabel != null)
             questionTypeLabel.text = GetTypeDisplayName(currentQuestion.questionType);
 
-        // --- Image ---
         bool showImage = currentQuestion.questionImage != null;
         if (questionImageHolder != null) questionImageHolder.SetActive(showImage);
         if (showImage && questionImage != null)
             questionImage.sprite = currentQuestion.questionImage;
 
-        // --- Populate options ---
         var opts = new[]
         {
             currentQuestion.optionA,
@@ -110,7 +79,6 @@ public class QuizQuestionUI_BB1 : MonoBehaviour
 
         for (int i = 0; i < optionButtons.Length; i++)
         {
-            int capturedIndex = i;
             optionButtons[i].Initialise(
                 i,
                 opts[i].optionText,
@@ -119,7 +87,6 @@ public class QuizQuestionUI_BB1 : MonoBehaviour
             );
         }
 
-        // --- Replay button ---
         if (replayAudioButton != null)
         {
             replayAudioButton.onClick.RemoveAllListeners();
@@ -127,34 +94,20 @@ public class QuizQuestionUI_BB1 : MonoBehaviour
             replayAudioButton.gameObject.SetActive(true);
         }
 
-        // --- Play question VO ---
         bool audioDone = false;
 
         if (currentQuestion.secondaryAudio != null)
-        {
-            // Chain primary + secondary (ListenAndPick type)
-            audioController.PlayVOChained(
-                currentQuestion.questionAudio,
-                currentQuestion.secondaryAudio,
-                () => audioDone = true
-            );
-        }
+            audioController.PlayVOChained(currentQuestion.questionAudio, currentQuestion.secondaryAudio, () => audioDone = true);
         else
-        {
             audioController.PlayVO(currentQuestion.questionAudio, () => audioDone = true);
-        }
 
-        // Wait for all audio to finish before unlocking options
         yield return new WaitUntil(() => audioDone);
-        yield return new WaitForSeconds(0.2f); // tiny pause for polish
+        yield return new WaitForSeconds(0.2f);
 
-        // --- Unlock options ---
         SetOptionsLocked(false);
         flowCoroutine = null;
     }
 
-    // Simple heap-allocated bool so lambdas and coroutines can share it
-    // without needing ref/out (which C# forbids inside iterators and lambdas).
     private class BoolBox { public bool value; }
 
     void ReplayQuestionAudio()
@@ -162,18 +115,18 @@ public class QuizQuestionUI_BB1 : MonoBehaviour
         if (answered) return;
         SetOptionsLocked(true);
 
-        BoolBox audioDone = new BoolBox();
+        BoolBox done = new BoolBox();
         if (currentQuestion.secondaryAudio != null)
-            audioController.PlayVOChained(currentQuestion.questionAudio, currentQuestion.secondaryAudio, () => audioDone.value = true);
+            audioController.PlayVOChained(currentQuestion.questionAudio, currentQuestion.secondaryAudio, () => done.value = true);
         else
-            audioController.PlayVO(currentQuestion.questionAudio, () => audioDone.value = true);
+            audioController.PlayVO(currentQuestion.questionAudio, () => done.value = true);
 
-        StartCoroutine(WaitThenUnlock(audioDone));
+        StartCoroutine(WaitThenUnlock(done));
     }
 
-    IEnumerator WaitThenUnlock(BoolBox audioDone)
+    IEnumerator WaitThenUnlock(BoolBox done)
     {
-        yield return new WaitUntil(() => audioDone.value);
+        yield return new WaitUntil(() => done.value);
         yield return new WaitForSeconds(0.2f);
         if (!answered) SetOptionsLocked(false);
     }
@@ -183,10 +136,16 @@ public class QuizQuestionUI_BB1 : MonoBehaviour
     void OnOptionPicked(int pickedIndex)
     {
         if (answered) return;
+
+        // ══ PLAY FX FIRST — before anything else, zero delay ══
+        bool isCorrect = (pickedIndex == currentQuestion.correctOptionIndex);
+        audioController.PlayFX(isCorrect ? correctFX : wrongFX);
+
+        // Now do the rest
         answered = true;
         SetOptionsLocked(true);
+        audioController.StopVO(); // stop question VO if still playing
 
-        bool isCorrect = (pickedIndex == currentQuestion.correctOptionIndex);
         StartCoroutine(ShowAnswerFeedback(pickedIndex, isCorrect));
     }
 
@@ -194,20 +153,13 @@ public class QuizQuestionUI_BB1 : MonoBehaviour
     {
         if (isCorrect)
         {
-            // Correct
             optionButtons[pickedIndex].ShowCorrect();
-            audioController.PlayFX(null); // FX played by manager via correctVO
             ShowFeedback(true, "Correct! Well done!");
-
-            if (starParticles != null)
-                starParticles.Play();
+            if (starParticles != null) starParticles.Play();
         }
         else
         {
-            // Wrong — shake picked button, reveal correct button
             optionButtons[pickedIndex].ShowWrong();
-
-            // Short pause before revealing correct
             yield return new WaitForSeconds(0.5f);
             optionButtons[currentQuestion.correctOptionIndex].ShowRevealCorrect();
 
@@ -217,19 +169,17 @@ public class QuizQuestionUI_BB1 : MonoBehaviour
             ShowFeedback(false, revealText);
         }
 
-        // Let player read feedback
         yield return new WaitForSeconds(FEEDBACK_DISPLAY_DURATION);
-
         HideFeedback();
         onAnswered?.Invoke(isCorrect);
     }
 
-    // ── Feedback panel helpers ────────────────────────────────────────────
+    // ── Feedback helpers ──────────────────────────────────────────────────
 
     void ShowFeedback(bool correct, string message)
     {
         if (feedbackPanel != null) feedbackPanel.SetActive(true);
-        if (feedbackText  != null) feedbackText.text = message;
+        if (feedbackText  != null) feedbackText.text  = message;
 
         if (feedbackIcon != null)
         {
@@ -245,8 +195,6 @@ public class QuizQuestionUI_BB1 : MonoBehaviour
     {
         if (feedbackPanel != null) feedbackPanel.SetActive(false);
     }
-
-    // ── Helpers ───────────────────────────────────────────────────────────
 
     void SetOptionsLocked(bool locked)
     {

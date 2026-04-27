@@ -276,8 +276,10 @@ public class StoryModeManager : MonoBehaviour
         }
 
         LoadScene(next);
+       
+        
     }
-
+  
     // ── Restart ────────────────────────────────────────────────────────────────
 
     void Restart()

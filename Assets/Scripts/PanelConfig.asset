@@ -16,7 +16,28 @@ MonoBehaviour:
   - buttonLabel: Beginers
     panelHeading: Beginers
     subButtons:
-    - buttonLabel: B1
-      assetBundleUrl: https://drive.google.com/uc?export=download&id=1olJZE6Aduz_OvVPqXXAEC8k33OLDouo9
+    - buttonLabel: Level 1A
+      assetBundleUrl: https://drive.google.com/uc?export=download&id=162Cn0DLmpTOneRvQ8HX5H1KT-JyO1Oif
       sceneName: Beginer_1A
       homeScreenId: HomeScreen_Forest
+  - buttonLabel: Juniors
+    panelHeading: Juniors
+    subButtons:
+    - buttonLabel: Level 1A
+      assetBundleUrl: https://drive.usercontent.google.com/u/0/uc?id=1l55BG7u2TYhvJmTY78svkx4W63AY0GpH&export=download
+      sceneName: Junior_B1
+      homeScreenId: HomeScreen_Water
+  - buttonLabel: Seniors
+    panelHeading: Seniors
+    subButtons:
+    - buttonLabel: Level 1A
+      assetBundleUrl: https://drive.usercontent.google.com/u/0/uc?id=1ywywbSK-22RYSX4ErfJn6p6LgcLLN-VC&export=download
+      sceneName: SeniorLevel1A
+      homeScreenId: HomeScreen_Desert
+  - buttonLabel: Masters
+    panelHeading: Masters
+    subButtons:
+    - buttonLabel: Level 1A
+      assetBundleUrl: https://drive.usercontent.google.com/u/0/uc?id=1qhRzUsBlQZnOFT_mgHawF5jIPApK2oBK&export=download
+      sceneName: Masters_B1
+      homeScreenId: HomeScreen_City

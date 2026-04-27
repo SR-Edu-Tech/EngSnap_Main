@@ -6,55 +6,11 @@ using TMPro;
 
 /// <summary>
 /// Master controller for the BB1 Quiz gameplay screen.
-///
-/// ═══════════════════════════════════════════════════════════════════════
-/// SCENE SETUP
-/// ═══════════════════════════════════════════════════════════════════════
-/// Create a GameObject named "QuizManager" and attach this script.
-/// In the same screen hierarchy you need:
-///
-///   [QuizManager]                     ← this script
-///   [QuizAudioController_BB1]         ← on same GO or child
-///   [QuizQuestionUI_BB1]              ← question panel prefab instance
-///   [QuizSummaryUI_BB1]               ← summary panel (hidden until end)
-///   [IntroPanel]                      ← (optional) shown during intro VO
-///   [ProgressBar / QuestionCounter]   ← optional
-///
-/// ═══════════════════════════════════════════════════════════════════════
-/// WIRING (Inspector)
-/// ═══════════════════════════════════════════════════════════════════════
-///   quizData          → QuizData_BB1 ScriptableObject
-///   panel             → UnitPanelController_BB1 (parent panel)
-///   unitButton        → UnitButton_BB1 that launched this screen
-///   audioController   → QuizAudioController_BB1
-///   questionUI        → QuizQuestionUI_BB1
-///   summaryUI         → QuizSummaryUI_BB1
-///   introPanel        → (optional) panel shown during intro VO
-///   questionCounter   → (optional) TextMeshProUGUI "Question 2 of 5"
-///   progressBar       → (optional) Slider 0..1
-///   backButton        → (optional) back button
-///
-/// ═══════════════════════════════════════════════════════════════════════
-/// SAVE / RESTORE LOGIC
-/// ═══════════════════════════════════════════════════════════════════════
-///   Key: unitID + "_quizProgress"  → current question index (0-based)
-///   Key: unitID + "_quizScore"     → running correct count
-///   Key: unitID + "_quizDone"      → 1 when quiz fully completed
-///
-///   On Open:
-///     If _quizDone == 1  → start from Q0 (replay from beginning)
-///     Else               → resume from saved _quizProgress index
-///
-///   On Back mid-quiz:
-///     Save current index + score → resume next time
-///
-///   On Finish:
-///     Write _quizDone = 1, clear progress+score
-///     Call panel.UnitFinished(unitButton) → badge shown
+/// Passes correctFX / wrongFX clips from QuizData to QuizQuestionUI_BB1
+/// so they can be played instantly on button tap.
 /// </summary>
 public class QuizManager_BB1 : MonoBehaviour
 {
-    // ── References ────────────────────────────────────────────────────────
     [Header("Data")]
     public QuizData_BB1 quizData;
 
@@ -71,9 +27,9 @@ public class QuizManager_BB1 : MonoBehaviour
     public GameObject introPanelGO;
 
     [Header("HUD (optional)")]
-    public TextMeshProUGUI questionCounter;   // "Question 1 of 5"
-    public Slider          progressBar;       // 0..1
-    public TextMeshProUGUI liveScoreLabel;    // "Score: 3"
+    public TextMeshProUGUI questionCounter;
+    public Slider          progressBar;
+    public TextMeshProUGUI liveScoreLabel;
 
     [Header("Back Button (optional)")]
     public Button backButton;
@@ -87,7 +43,7 @@ public class QuizManager_BB1 : MonoBehaviour
     private int  currentQuestionIndex = 0;
     private int  correctCount         = 0;
     private bool quizCompleted        = false;
-    private bool inReviewMode         = false; // true when replaying one question from summary
+    private bool inReviewMode         = false;
 
     // ── Unity lifecycle ───────────────────────────────────────────────────
 
@@ -106,7 +62,6 @@ public class QuizManager_BB1 : MonoBehaviour
 
     void BeginQuiz()
     {
-        // Build save keys from unitButton's unitID
         string uid = (unitButton != null && !string.IsNullOrEmpty(unitButton.unitID))
                      ? unitButton.unitID
                      : "default";
@@ -115,19 +70,16 @@ public class QuizManager_BB1 : MonoBehaviour
         saveKey_score    = uid + "_quizScore";
         saveKey_done     = uid + "_quizDone";
 
-        // ── Decide where to start ──────────────────────────────────────
         bool wasCompleted = PlayerPrefs.GetInt(saveKey_done, 0) == 1;
 
         if (wasCompleted)
         {
-            // Player already finished → start fresh (replay from Q1)
             currentQuestionIndex = 0;
             correctCount         = 0;
             ClearSaveData();
         }
         else
         {
-            // Resume from last saved position
             currentQuestionIndex = PlayerPrefs.GetInt(saveKey_progress, 0);
             correctCount         = PlayerPrefs.GetInt(saveKey_score, 0);
         }
@@ -135,17 +87,21 @@ public class QuizManager_BB1 : MonoBehaviour
         quizCompleted = false;
         inReviewMode  = false;
 
-        // Wire back button
+        // ── Pass FX clips to QuestionUI so it can play them instantly on tap ──
+        if (questionUI != null && quizData != null)
+        {
+            questionUI.correctFX = quizData.correctFX;
+            questionUI.wrongFX   = quizData.wrongFX;
+        }
+
         if (backButton != null)
         {
             backButton.onClick.RemoveAllListeners();
             backButton.onClick.AddListener(OnBackClicked);
         }
 
-        // Hide summary
         if (summaryUI != null) summaryUI.Hide();
 
-        // Show intro panel (if first question)
         StartCoroutine(PlayIntroThenStart());
     }
 
@@ -153,11 +109,9 @@ public class QuizManager_BB1 : MonoBehaviour
 
     IEnumerator PlayIntroThenStart()
     {
-        // Start BGM
         if (audioController != null && quizData != null)
             audioController.PlayBGM(quizData.bgmClip);
 
-        // Show intro panel during intro VO (only on first question; skip if resuming mid-quiz)
         bool showIntro = (currentQuestionIndex == 0);
 
         if (showIntro && introPanelGO != null)
@@ -190,7 +144,6 @@ public class QuizManager_BB1 : MonoBehaviour
         if (quizData == null || quizData.questions == null) return;
         if (currentQuestionIndex >= quizData.questions.Count)
         {
-            // All questions done
             FinishQuiz();
             return;
         }
@@ -206,28 +159,25 @@ public class QuizManager_BB1 : MonoBehaviour
         if (wasCorrect)
         {
             correctCount++;
-            // Play correct VO
+            // correctVO plays AFTER the instant correctFX — manager handles the VO
             if (audioController != null && quizData != null)
                 audioController.PlayVO(quizData.correctVO);
         }
         else
         {
-            // Play wrong VO
+            // wrongVO plays AFTER the instant wrongFX
             if (audioController != null && quizData != null)
                 audioController.PlayVO(quizData.wrongVO);
         }
 
         if (inReviewMode)
         {
-            // After reviewing a single question from summary, go back to summary
             StartCoroutine(DelayThen(1.5f, ReturnToSummary));
             return;
         }
 
-        // Advance to next question
         currentQuestionIndex++;
         SaveProgress();
-
         StartCoroutine(DelayThen(1.5f, ShowCurrentQuestion));
     }
 
@@ -236,22 +186,17 @@ public class QuizManager_BB1 : MonoBehaviour
     void FinishQuiz()
     {
         quizCompleted = true;
-
-        // Mark as done + clear mid-progress
         PlayerPrefs.SetInt(saveKey_done, 1);
         ClearSaveData(keepDone: true);
 
-        // Play end VO
         if (audioController != null && quizData != null)
             audioController.PlayVO(quizData.endVO);
 
-        // Build question labels for review
         var labels = new List<string>();
         if (quizData != null)
             for (int i = 0; i < quizData.questions.Count; i++)
                 labels.Add($"Q{i + 1}");
 
-        // Show summary
         if (summaryUI != null)
         {
             questionUI.gameObject.SetActive(false);
@@ -259,9 +204,9 @@ public class QuizManager_BB1 : MonoBehaviour
                 correctCount,
                 quizData != null ? quizData.questions.Count : 0,
                 labels,
-                onFinishCallback:      OnSummaryFinish,
-                onReviewCallback:      OnReviewQuestion,
-                onReplayAllCallback:   OnReplayAll
+                onFinishCallback:    OnSummaryFinish,
+                onReviewCallback:    OnReviewQuestion,
+                onReplayAllCallback: OnReplayAll
             );
         }
 
@@ -270,10 +215,8 @@ public class QuizManager_BB1 : MonoBehaviour
 
     void OnSummaryFinish()
     {
-        // Stop audio
         if (audioController != null) audioController.StopAll();
 
-        // Tell the panel this unit is done → badge enabled
         if (panel != null && unitButton != null)
             panel.UnitFinished(unitButton);
         else
@@ -282,7 +225,6 @@ public class QuizManager_BB1 : MonoBehaviour
 
     void OnReviewQuestion(int questionIndex)
     {
-        // Player wants to replay one specific question
         if (quizData == null || questionIndex < 0 || questionIndex >= quizData.questions.Count)
             return;
 
@@ -316,7 +258,6 @@ public class QuizManager_BB1 : MonoBehaviour
 
     void OnReplayAll()
     {
-        // Full replay from Q1
         currentQuestionIndex = 0;
         correctCount         = 0;
         quizCompleted        = false;
@@ -334,9 +275,7 @@ public class QuizManager_BB1 : MonoBehaviour
 
     void OnBackClicked()
     {
-        // Save progress so player can resume
-        if (!quizCompleted)
-            SaveProgress();
+        if (!quizCompleted) SaveProgress();
 
         if (audioController != null) audioController.StopAll();
         StopAllCoroutines();
@@ -360,12 +299,9 @@ public class QuizManager_BB1 : MonoBehaviour
         int total = quizData.questions.Count;
 
         if (questionCounter != null)
-        {
-            if (quizCompleted)
-                questionCounter.text = "Quiz Complete!";
-            else
-                questionCounter.text = $"Question {currentQuestionIndex + 1} of {total}";
-        }
+            questionCounter.text = quizCompleted
+                ? "Quiz Complete!"
+                : $"Question {currentQuestionIndex + 1} of {total}";
 
         if (progressBar != null)
             progressBar.value = total > 0 ? (float)currentQuestionIndex / total : 0f;
@@ -383,7 +319,6 @@ public class QuizManager_BB1 : MonoBehaviour
         PlayerPrefs.Save();
     }
 
-    /// <param name="keepDone">If true, the _quizDone key is not deleted.</param>
     void ClearSaveData(bool keepDone = false)
     {
         PlayerPrefs.DeleteKey(saveKey_progress);
