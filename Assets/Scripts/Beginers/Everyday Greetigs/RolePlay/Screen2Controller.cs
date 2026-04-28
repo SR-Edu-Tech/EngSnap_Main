@@ -57,6 +57,8 @@ public class Screen2Controller : MonoBehaviour
     public AudioClip   teacherFinalClip;          // 'I am great too, thanks.'
     public AudioClip   wrongImpoliteClip;         // "Be polite! Try a better answer."
     public AudioClip   wrongGoodbyeClip;          // generic try-again
+    [Tooltip("Short pop sound played for each card as it appears.")]
+    public AudioClip   cardPopSound;
 
     [Header("── Feedback ──")]
     public float shakeDuration  = 0.4f;
@@ -120,7 +122,8 @@ public class Screen2Controller : MonoBehaviour
         cardB.onClick.AddListener(() => OnCardTapped(false, cardB, "B"));
         cardC.onClick.AddListener(() => OnCardTapped(false, cardC, "C"));
 
-        choiceCardPanel.SetActive(true);
+        choiceCardPanel.SetActive(false); // PopCardsIn will activate it
+        StartCoroutine(PopCardsIn(new Button[] { cardA, cardB, cardC }));
         inputLocked = false;
     }
 
@@ -149,7 +152,8 @@ public class Screen2Controller : MonoBehaviour
         cardB.onClick.AddListener(() => OnCardTapped(false, cardB, "B"));
         cardC.onClick.AddListener(() => OnCardTapped(false, cardC, "C"));
 
-        choiceCardPanel.SetActive(true);
+        choiceCardPanel.SetActive(false); // PopCardsIn will activate it
+        StartCoroutine(PopCardsIn(new Button[] { cardA, cardB, cardC }));
         inputLocked = false;
     }
 
@@ -320,5 +324,45 @@ public class Screen2Controller : MonoBehaviour
             yield return null;
         }
         rt.localRotation = origin;
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    //  CARD POP-IN
+    // ─────────────────────────────────────────────────────────────
+    private IEnumerator PopCardsIn(Button[] cards)
+    {
+        choiceCardPanel.SetActive(true);
+
+        foreach (var card in cards)
+        {
+            card.transform.localScale = Vector3.zero;
+            card.gameObject.SetActive(true);
+        }
+
+        foreach (var card in cards)
+        {
+            if (cardPopSound != null) audioSource.PlayOneShot(cardPopSound);
+            yield return StartCoroutine(PopCard(card.transform));
+            yield return new WaitForSeconds(0.08f);
+        }
+    }
+
+    private IEnumerator PopCard(Transform t)
+    {
+        float duration = 0.25f, elapsed = 0f;
+        while (elapsed < duration)
+        {
+            t.localScale = Vector3.one * Mathf.Lerp(0f, 1.2f, elapsed / duration);
+            elapsed += Time.deltaTime;
+            yield return null;
+        }
+        elapsed = 0f; float settle = 0.1f;
+        while (elapsed < settle)
+        {
+            t.localScale = Vector3.one * Mathf.Lerp(1.2f, 1f, elapsed / settle);
+            elapsed += Time.deltaTime;
+            yield return null;
+        }
+        t.localScale = Vector3.one;
     }
 }

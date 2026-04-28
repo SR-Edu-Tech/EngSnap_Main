@@ -21,6 +21,8 @@ public class ImageOptionGameController : MonoBehaviour
 
     [Header("Audio")]
     public AudioSource audioSource;
+    [Tooltip("Short sound played once when the option buttons pop in.")]
+    public AudioClip buttonPopSound;
 
     [Header("Navigation")]
     [Tooltip("Shown after all questions are answered.")]
@@ -130,6 +132,9 @@ public class ImageOptionGameController : MonoBehaviour
 
     void ShowButtonsWithPop()
     {
+        if (buttonPopSound != null)
+            audioSource.PlayOneShot(buttonPopSound);
+
         foreach (var btn in optionButtons)
         {
             btn.gameObject.SetActive(true);

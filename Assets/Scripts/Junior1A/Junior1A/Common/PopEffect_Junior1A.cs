@@ -1,15 +1,15 @@
 using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 
 public class PopEffect_Junior1A : MonoBehaviour
 {
     [SerializeField] float popDuration = 0.4f, overshoot = 2.0f;
-    
+
     void OnEnable() => StartCoroutine(Pop());
 
     IEnumerator Pop()
     {
+        if (GameManager_Junior1A.Instance) GameManager_Junior1A.Instance.Pop();
         transform.localScale = Vector3.zero;
         float elapsed = 0f;
         while (elapsed < popDuration)

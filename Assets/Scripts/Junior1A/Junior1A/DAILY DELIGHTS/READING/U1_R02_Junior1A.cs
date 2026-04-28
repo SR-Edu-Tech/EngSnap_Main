@@ -3,7 +3,6 @@ using System.Collections;
 using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
-using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 [Serializable]
@@ -27,6 +26,7 @@ public class U1_R02_Junior1A : MonoBehaviour, Interfaces_Junior1A
     [SerializeField] bool _isViewed = false;
     [SerializeField] GameObject _tab2Next, _tab1, _tab2, _questionObj;
     [SerializeField] Color _wrongColor, _correctColor;
+    [SerializeField] Image _previousButton;
     Coroutine _coroutine, _buttonCoroutine, _questionCoroutine;
 
     public bool IsViewed => _isViewed;
@@ -96,56 +96,57 @@ public class U1_R02_Junior1A : MonoBehaviour, Interfaces_Junior1A
         _cardParent.GetChild(_currentAudioIndex).GetChild(1).GetComponent<Image>().enabled = false;
     }
     public void OnEnableTab2() => _coroutine = StartCoroutine(StarterTab2());
-    public void OnOptionSelect(GameObject button) => _questionCoroutine = StartCoroutine(QuestionChecker(button.transform.GetChild(0).GetComponent<TextMeshProUGUI>().text, button));
+    public void OnOptionSelect(GameObject button)
+    {
+        if (_questionCoroutine != null) StopCoroutine(_questionCoroutine);
+        if (_previousButton) _previousButton.color = Color.white;
+        _previousButton = button.GetComponent<Image>();
+        _questionCoroutine = StartCoroutine(QuestionChecker(button.transform.GetChild(0).GetComponent<TextMeshProUGUI>().text, button));
+    }
     IEnumerator QuestionChecker(string answer, GameObject button)
     {
         if (_questionData[_currentQuestionIndex].CorrectAnswer == answer)
         {
             _currentQuestionIndex++;
+            foreach (GameObject option in _option) option.GetComponent<Button>().interactable = false;
+            button.GetComponent<Image>().color = _correctColor;
+            _audioSource.clip = _correctClip;
+            _audioSource.Play();
+            button.GetComponent<PopEffect_Junior1A>().enabled = false;
+            button.GetComponent<PopEffect_Junior1A>().enabled = true;
+            yield return new WaitForSeconds(_correctClip.length);
             if (_currentQuestionIndex >= _questionData.Length)
             {
-                _audioSource.clip = _correctClip;
-                _audioSource.Play();
-                button.GetComponent<PopEffect_Junior1A>().enabled = false;
-                button.GetComponent<PopEffect_Junior1A>().enabled = true;
-                yield return new WaitForSeconds(_correctClip.length + 1f);
                 _isViewed = true;
                 GameManager_Junior1A.Instance.Next(true);
                 yield break;
             }
             else
             {
-                _audioSource.clip = _correctClip;
-                _audioSource.Play();
-                button.GetComponent<PopEffect_Junior1A>().enabled = false;
-                button.GetComponent<PopEffect_Junior1A>().enabled = true;
-                yield return new WaitForSeconds(_correctClip.length + 1f);
-                EventSystem.current.SetSelectedGameObject(null);
+                foreach (GameObject option in _option) option.GetComponent<Button>().interactable = false;
                 _questionObj.SetActive(false);
-                foreach (GameObject obj in _option) obj.SetActive(false);
+                foreach (GameObject option in _option) option.SetActive(false);
                 _questionObj.GetComponentInChildren<TextMeshProUGUI>().text = _questionData[_currentQuestionIndex].QuestionText;
-                for (int i = 0; i < _option.Length; i++)
-                {
-                    ColorBlock colors = _option[i].GetComponent<Button>().colors;
-                    _option[i].GetComponentInChildren<TextMeshProUGUI>().text = _questionData[_currentQuestionIndex].OptionText[i];
-                    if (_questionData[_currentQuestionIndex].OptionText[i] != _questionData[_currentQuestionIndex].CorrectAnswer) colors.selectedColor = _wrongColor;
-                    else colors.selectedColor = _correctColor;
-                    _option[i].GetComponent<Button>().colors = colors;
-                    _option[i].GetComponent<Button>();
-                }
+                for (int i = 0; i < _option.Length; i++) _option[i].GetComponentInChildren<TextMeshProUGUI>().text = _questionData[_currentQuestionIndex].OptionText[i];
                 _questionObj.SetActive(true);
-                foreach (GameObject obj in _option) obj.SetActive(true);
+                button.GetComponent<Image>().color = Color.white;
+                foreach (GameObject option in _option)
+                {
+                    option.SetActive(true);
+                    option.GetComponent<Button>().interactable = true;
+                }
                 _audioSource.clip = _questionData[_currentQuestionIndex].AudioClipData;
                 _audioSource.Play();
             }
         }
         else
         {
+            button.GetComponent<Image>().color = _wrongColor;
             button.GetComponent<WiggleEffect_Junior1A1>().enabled = true;
             _audioSource.clip = _incorrectClip;
             _audioSource.Play();
             yield return new WaitForSeconds(_audioSource.clip.length / 2);
-            EventSystem.current.SetSelectedGameObject(null);
+            button.GetComponent<Image>().color = Color.white;
         }
     }
 }

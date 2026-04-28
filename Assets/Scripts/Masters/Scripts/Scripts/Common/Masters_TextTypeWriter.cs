@@ -1,23 +1,55 @@
+using DG.Tweening;
 using System.Collections;
-using UnityEngine;
+using System.Collections.Generic;
 using TMPro;
+using UnityEngine;
 
-/// <summary>
-/// Attach to any GameObject with a TMP_Text component.
-/// Reveals letters one by one with a rope/wave ripple effect.
-/// Automatically re-triggers whenever the text content changes.
-/// </summary>
-[RequireComponent(typeof(TMP_Text))]
-public class TMPTextRevealPop : MonoBehaviour
-{
-   
-    [SerializeField] TMP_Text _tmpText;
-    [SerializeField] float popDuration = 1.5f, popAmplitude = 0.5f, frequency = 3f, stagger = 0.03f;
+public class Masters_TextTypeWriter : MonoBehaviour {
 
-    void OnEnable() => StartCoroutine(TextPop());
-    IEnumerator TextPop()
-    {
-        _tmpText = GetComponent<TMP_Text>();
+
+    [SerializeField]
+    private float timeBetweenEachTypeWriter = 0.25f;
+    [SerializeField]
+    private int order;
+    [SerializeField]
+    TMP_Text _tmpText;
+    [SerializeField]
+    float popDuration = 1.75f, popAmplitude = 0.75f, frequency = 4f, stagger = 0.05f;
+    [SerializeField]
+    private bool canPlayAutomatically = true;
+
+
+    private int maxVisibleCharacters;
+
+
+    private void Awake() {
+        maxVisibleCharacters = _tmpText.maxVisibleCharacters;
+    }
+
+    public void TriggerAnimation(int maxCharacters) {
+        maxVisibleCharacters = maxCharacters;
+        StartCoroutine(TextPop());
+        _tmpText.maxVisibleCharacters = 0;
+        _tmpText.ForceMeshUpdate();
+    }
+
+    private void OnEnable() {
+        if (canPlayAutomatically) {
+            StartCoroutine(TextPop());
+            _tmpText.maxVisibleCharacters = 0;
+            _tmpText.ForceMeshUpdate();
+        }
+    }
+
+    private void OnDisable() {
+        StopAllCoroutines();
+        _tmpText.DOKill(true);
+    }
+
+    private IEnumerator TextPop() {
+        yield return new WaitForSeconds(timeBetweenEachTypeWriter * order);
+
+        _tmpText.maxVisibleCharacters = maxVisibleCharacters;
         _tmpText.ForceMeshUpdate();
         TMP_TextInfo textInfo = _tmpText.textInfo;
 
@@ -29,16 +61,14 @@ public class TMPTextRevealPop : MonoBehaviour
         float expectedTotalTime = (initialCharCount * stagger) + Mathf.Max(0.5f, 1f / frequency);
         float totalDuration = Mathf.Max(popDuration, expectedTotalTime);
 
-        while (elapsed < totalDuration)
-        {
+        while (elapsed < totalDuration) {
             elapsed += Time.deltaTime;
 
             textInfo = _tmpText.textInfo;
 
             int characterCount = textInfo.characterCount;
 
-            for (int i = 0; i < characterCount; i++)
-            {
+            for (int i = 0; i < characterCount; i++) {
                 TMP_CharacterInfo charInfo = textInfo.characterInfo[i];
                 if (!charInfo.isVisible) continue;
 
@@ -52,8 +82,7 @@ public class TMPTextRevealPop : MonoBehaviour
                 float localTime = elapsed - letterDelay;
 
                 float scale = 0f;
-                if (localTime > 0f)
-                {
+                if (localTime > 0f) {
                     float letterPopDuration = Mathf.Max(0.1f, 1f / frequency);
                     float t = Mathf.Clamp01(localTime / letterPopDuration);
 
@@ -62,25 +91,25 @@ public class TMPTextRevealPop : MonoBehaviour
 
                     scale = 1f + c3_dynamic * Mathf.Pow(t - 1f, 3f) + overshoot * Mathf.Pow(t - 1f, 2f);
                 }
-                for (int v = 0; v < 4; v++)
-                {
+                for (int v = 0; v < 4; v++) {
                     Vector3 orig = cachedMeshInfo[materialIndex].vertices[vertexIndex + v];
                     Vector3 offset = orig - charMid;
                     vertices[vertexIndex + v] = charMid + offset * scale;
                 }
             }
-            for (int m = 0; m < textInfo.meshInfo.Length; m++)
-            {
+            for (int m = 0; m < textInfo.meshInfo.Length; m++) {
                 textInfo.meshInfo[m].mesh.vertices = textInfo.meshInfo[m].vertices;
                 _tmpText.UpdateGeometry(textInfo.meshInfo[m].mesh, m);
             }
             yield return null;
         }
         textInfo = _tmpText.textInfo;
-        for (int i = 0; i < textInfo.meshInfo.Length; i++)
-        {
+        for (int i = 0; i < textInfo.meshInfo.Length; i++) {
             textInfo.meshInfo[i].mesh.vertices = cachedMeshInfo[i].vertices;
             _tmpText.UpdateGeometry(textInfo.meshInfo[i].mesh, i);
         }
     }
+
+
+
 }

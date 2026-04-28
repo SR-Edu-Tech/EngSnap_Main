@@ -17,7 +17,7 @@ MonoBehaviour:
     panelHeading: Beginers
     subButtons:
     - buttonLabel: Level 1A
-      assetBundleUrl: https://drive.google.com/uc?export=download&id=162Cn0DLmpTOneRvQ8HX5H1KT-JyO1Oif
+      assetBundleUrl: https://drive.google.com/uc?export=download&id=12U9rQc4fCAxI9dbsVJlJoz91K52clTYg
       sceneName: Beginer_1A
       homeScreenId: HomeScreen_Forest
   - buttonLabel: Juniors

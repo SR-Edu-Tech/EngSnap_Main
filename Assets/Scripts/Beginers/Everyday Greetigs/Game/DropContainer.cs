@@ -11,6 +11,22 @@ public class DropContainer : MonoBehaviour, IDropHandler, IPointerEnterHandler, 
     public Color normalColor    = Color.white;
     public Color highlightColor = new Color(0.8f, 1f, 0.8f);
 
+    [Header("Audio")]
+    [Tooltip("Sound played when a word is successfully dropped into this container.")]
+    public AudioClip dropSound;
+    private static AudioSource _sharedSource;
+
+    void Awake()
+    {
+        if (_sharedSource == null)
+        {
+            var go = new GameObject("DropContainer_SharedAudioSource");
+            DontDestroyOnLoad(go);
+            _sharedSource = go.AddComponent<AudioSource>();
+            _sharedSource.playOnAwake = false;
+        }
+    }
+
     public void OnPointerEnter(PointerEventData eventData)
     {
         if (background != null)
@@ -38,6 +54,10 @@ public class DropContainer : MonoBehaviour, IDropHandler, IPointerEnterHandler, 
 
         // Lock so it can't be dragged again
         draggable.LockInPlace();
+
+        // Play drop sound
+        if (dropSound != null && _sharedSource != null)
+            _sharedSource.PlayOneShot(dropSound);
 
         // Re-stack all children neatly
         ArrangeChildren();

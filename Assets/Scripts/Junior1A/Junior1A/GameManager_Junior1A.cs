@@ -1,4 +1,5 @@
 using System;
+using System.Security.Cryptography;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
@@ -44,6 +45,8 @@ public class GameManager_Junior1A : MonoBehaviour
     [SerializeField] TopicData _currentTopicData;
     [SerializeField] GameObject _next, _topicParent, _lessonParent;
 
+    [SerializeField] AudioSource _audioSource;
+    [SerializeField] AudioClip _popClip, _wooshClip;
     void Awake() => Instance = this;
     void Start()
     {
@@ -162,5 +165,16 @@ public class GameManager_Junior1A : MonoBehaviour
         _currentSlideIndex = -1;
         if (_allDone) _lessons[_selectedLessonIndex].Reward.SetActive(true);
         Debug.Log($"Topic {_selectedTopicType} in Lesson {_selectedLessonIndex + 1} is completely viewed!");
+    }
+
+    public void Pop()
+    {
+        _audioSource.clip = _popClip;
+        _audioSource.Play();
+    }
+    public void Woosh()
+    {
+        _audioSource.clip = _wooshClip;
+        _audioSource.Play();
     }
 }

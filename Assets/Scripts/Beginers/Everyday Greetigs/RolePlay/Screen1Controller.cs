@@ -41,6 +41,8 @@ public class Screen1Controller : MonoBehaviour
     public AudioClip benReplyClip;          // Correct answer audio
     public AudioClip maryResponseClip;      // 'I am also good, thanks.'
     public AudioClip tryAgainClip;          // 'Try again! Think…'
+    [Tooltip("Short pop sound played for each card as it appears.")]
+    public AudioClip cardPopSound;
 
     [Header("── Feedback ──")]
     public float shakeDuration  = 0.4f;
@@ -109,9 +111,9 @@ public class Screen1Controller : MonoBehaviour
         yield return new WaitForSeconds(GetClipLength(maryGreetingClip, 2.5f));
         //SetTalking(maryAnimator, false);
 
-        // STEP 2 — Show choice cards
+        // STEP 2 — Pop cards in one after another
         marySpeechBubble.SetActive(false);
-        choiceCardPanel.SetActive(true);
+        StartCoroutine(PopCardsIn(new Button[] { cardA, cardB, cardC }));
     }
 
     /// STEP 2 — Player taps a card
@@ -224,5 +226,45 @@ public class Screen1Controller : MonoBehaviour
             yield return null;
         }
         rt.localRotation = origin;
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    //  CARD POP-IN
+    // ─────────────────────────────────────────────────────────────
+    private IEnumerator PopCardsIn(Button[] cards)
+    {
+        choiceCardPanel.SetActive(true);
+
+        foreach (var card in cards)
+        {
+            card.transform.localScale = Vector3.zero;
+            card.gameObject.SetActive(true);
+        }
+
+        foreach (var card in cards)
+        {
+            if (cardPopSound != null) audioSource.PlayOneShot(cardPopSound);
+            yield return StartCoroutine(PopCard(card.transform));
+            yield return new WaitForSeconds(0.08f);
+        }
+    }
+
+    private IEnumerator PopCard(Transform t)
+    {
+        float duration = 0.25f, elapsed = 0f;
+        while (elapsed < duration)
+        {
+            t.localScale = Vector3.one * Mathf.Lerp(0f, 1.2f, elapsed / duration);
+            elapsed += Time.deltaTime;
+            yield return null;
+        }
+        elapsed = 0f; float settle = 0.1f;
+        while (elapsed < settle)
+        {
+            t.localScale = Vector3.one * Mathf.Lerp(1.2f, 1f, elapsed / settle);
+            elapsed += Time.deltaTime;
+            yield return null;
+        }
+        t.localScale = Vector3.one;
     }
 }

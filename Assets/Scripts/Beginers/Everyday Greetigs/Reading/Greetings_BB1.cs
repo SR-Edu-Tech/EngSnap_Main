@@ -39,6 +39,11 @@ public class Greetings_BB1 : MonoBehaviour
     [Tooltip("How long to highlight a pair during Play All before moving to next")]
     public float playAllPauseDuration = 1.8f;
 
+    [Header("Animate-In Sound")]
+    [Tooltip("Short whoosh/pop played each time a greeting or response slides in. One AudioSource is created automatically.")]
+    public AudioClip animateInSound;
+    private AudioSource _animateSFX;
+
     [Header("Buttons")]
     public Button nextButton;
     public Button replayButton;
@@ -54,6 +59,13 @@ public class Greetings_BB1 : MonoBehaviour
         if (rows.Count == 0)
         {
             InitializeRows();
+        }
+
+        // Ensure a dedicated AudioSource exists for the animate-in SFX
+        if (_animateSFX == null)
+        {
+            _animateSFX = gameObject.AddComponent<AudioSource>();
+            _animateSFX.playOnAwake = false;
         }
 
         StopAllCoroutines();
@@ -230,6 +242,7 @@ public class Greetings_BB1 : MonoBehaviour
 
             if (animate)
             {
+                PlayAnimateInSound();
                 yield return StartCoroutine(rows[i].AnimateIn(0.5f, 800f, onlyGreeting: true));
             }
             else
@@ -247,6 +260,7 @@ public class Greetings_BB1 : MonoBehaviour
 
             if (animate)
             {
+                PlayAnimateInSound();
                 yield return StartCoroutine(rows[i].AnimateIn(0.5f, 800f, onlyGreeting: false, onlyResponse: true));
             }
             else
@@ -278,6 +292,15 @@ public class Greetings_BB1 : MonoBehaviour
             row.SetHighlight(defaultColor);
             row.SetButtonScale(Vector3.one, scaleDuration);
         }
+    }
+
+    // ─────────────────────────────────────────────
+    // ANIMATE-IN SOUND HELPER
+    // ─────────────────────────────────────────────
+    void PlayAnimateInSound()
+    {
+        if (_animateSFX != null && animateInSound != null)
+            _animateSFX.PlayOneShot(animateInSound);
     }
 
     public void OnBackClicked()
