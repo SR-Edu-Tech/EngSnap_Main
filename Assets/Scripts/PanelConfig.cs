@@ -21,7 +21,11 @@ public class SubButtonData
     public string buttonLabel;
     public string assetBundleUrl;
     public string sceneName;
+    public string homeScreenId;
 
-    // 🔥 IMPORTANT CHANGE
-    public string homeScreenId; // instead of GameObject
+    [Tooltip("Background sprite shown when this sub-button is selected")]
+    public Sprite backgroundSprite;   // swapped on the shared BG Image
+
+    [Tooltip("Sprite shown on the button itself (the Button's own Image)")]
+    public Sprite buttonSprite;       // ← NEW: set directly on the instantiated button
 }

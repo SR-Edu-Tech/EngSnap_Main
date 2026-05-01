@@ -28,6 +28,7 @@ public class U1_W01_Junior1A : MonoBehaviour, Interfaces_Junior1A
 
     IEnumerator Starter()
     {
+        _checkBox.gameObject.SetActive(false);
         _coroutine = null;
         _currentQuestionIndex = _currentAnswerIndex = 0;
         _currentAnswerText = string.Empty;
@@ -36,9 +37,14 @@ public class U1_W01_Junior1A : MonoBehaviour, Interfaces_Junior1A
         {
             Transform child = _answerBox.GetChild(0);
             child.GetComponent<Button>().interactable = true;
+            child.GetComponent<Image>().color = Color.white;
             child.SetParent(_spawnBox);
         }
-        foreach (Transform child in _spawnBox) child.gameObject.SetActive(false);
+        foreach (Transform child in _spawnBox)
+        {
+            child.gameObject.SetActive(false);
+            child.GetComponent<PopEffect_Junior1A>().enabled = true;
+        }
         _audioSource.clip = _introClip;
         _audioSource.Play();
         yield return new WaitForSeconds(_introClip.length + 1f);
@@ -56,6 +62,8 @@ public class U1_W01_Junior1A : MonoBehaviour, Interfaces_Junior1A
     {
         if (gameObject.transform.parent == _spawnBox) gameObject.SetParent(_answerBox, false);
         else gameObject.SetParent(_spawnBox, false);
+        if (_answerBox.childCount == _questionData[_currentQuestionIndex].OptionText.Length) _checkBox.gameObject.SetActive(true);
+        else _checkBox.gameObject.SetActive(false);
     }
     public void CheckData()
     {
@@ -74,6 +82,7 @@ public class U1_W01_Junior1A : MonoBehaviour, Interfaces_Junior1A
     {
         if (_currentAnswerText == _questionData[_currentQuestionIndex].AnswerText)
         {
+            _checkBox.gameObject.SetActive(false);
             foreach (Transform obj in _answerBox) obj.GetComponent<Button>().interactable = false;
             _answerBox.GetComponent<PopEffect_Junior1A>().enabled = false;
             _answerBox.GetComponent<PopEffect_Junior1A>().enabled = true;
@@ -81,7 +90,6 @@ public class U1_W01_Junior1A : MonoBehaviour, Interfaces_Junior1A
             _audioSource.clip = _correctClip;
             _audioSource.Play();
             yield return new WaitForSeconds(_correctClip.length);
-
             _audioSource.clip = _questionData[_currentQuestionIndex].AudioClipData;
             _audioSource.Play();
             yield return new WaitForSeconds(_audioSource.clip.length);
@@ -103,6 +111,7 @@ public class U1_W01_Junior1A : MonoBehaviour, Interfaces_Junior1A
                 {
                     _spawnBox.GetChild(_currentAnswerIndex).GetChild(0).GetComponent<TextMeshProUGUI>().text = data;
                     _spawnBox.GetChild(_currentAnswerIndex).gameObject.SetActive(true);
+                    _spawnBox.GetChild(_currentAnswerIndex).GetComponent<PopEffect_Junior1A>().enabled = true;
                     _currentAnswerIndex++;
                     LayoutRebuilder.ForceRebuildLayoutImmediate(_spawnBox as RectTransform);
                     yield return new WaitForSeconds(0.5f);

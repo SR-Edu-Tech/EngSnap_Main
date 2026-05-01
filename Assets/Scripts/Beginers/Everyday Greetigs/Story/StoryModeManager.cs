@@ -115,7 +115,7 @@ public class StoryModeManager : MonoBehaviour
             if (s.sceneRoot) s.sceneRoot.SetActive(false);
 
         completedPanel.SetActive(false);
-
+        nextButton.gameObject.SetActive(false);
         nextButton.onClick.AddListener(OnNextClicked);
         restartButton.onClick.AddListener(Restart);
 
@@ -176,7 +176,7 @@ public class StoryModeManager : MonoBehaviour
         if (subtitleText) subtitleText.text = scene.subtitle;
 
         // Next button
-        nextButton.interactable = false;
+        nextButton.gameObject.SetActive(false);
         if (nextButtonLabel)
             nextButtonLabel.text = (index == scenes.Length - 1) ? "Finish ✓" : "Next →";
 
@@ -247,14 +247,14 @@ public class StoryModeManager : MonoBehaviour
 
         // All buttons played → unlock Next
         if (playedSet.Count >= scenes[currentScene].buttons.Length)
-            nextButton.interactable = true;
+            nextButton.gameObject.SetActive(true);
     }
 
     // ── Next Button ────────────────────────────────────────────────────────────
 
     void OnNextClicked()
     {
-        nextButton.interactable = false;
+        nextButton.gameObject.SetActive(false);
         StartCoroutine(TransitionToNext());
     }
 

@@ -27,6 +27,7 @@ public class U1_R02_Junior1A : MonoBehaviour, Interfaces_Junior1A
     [SerializeField] GameObject _tab2Next, _tab1, _tab2, _questionObj;
     [SerializeField] Color _wrongColor, _correctColor;
     [SerializeField] Image _previousButton;
+    [SerializeField] TextMeshProUGUI _clickedIndexText;
     Coroutine _coroutine, _buttonCoroutine, _questionCoroutine;
 
     public bool IsViewed => _isViewed;
@@ -35,6 +36,9 @@ public class U1_R02_Junior1A : MonoBehaviour, Interfaces_Junior1A
 
     IEnumerator StarterTab1()
     {
+        foreach (Transform button in _cardParent) button.GetComponent<PopEffect_Junior1A>().enabled = true;
+        _clickCheckIndex.Clear();
+        _clickedIndexText.text = _clickCheckIndex.Count.ToString() + "/8";
         _tab1.SetActive(true);
         _tab2.SetActive(false);
         foreach (Transform button in _cardParent)
@@ -81,7 +85,11 @@ public class U1_R02_Junior1A : MonoBehaviour, Interfaces_Junior1A
         _currentAudioIndex = index;
         if (_buttonCoroutine != null) StopCoroutine(_buttonCoroutine);
         _buttonCoroutine = StartCoroutine(StartButtonAudio());
-        if (!_clickCheckIndex.Contains(index)) _clickCheckIndex.Add(index);
+        if (!_clickCheckIndex.Contains(index))
+        {
+            _clickedIndexText.text = (_clickCheckIndex.Count + 1).ToString() + "/8";
+            _clickCheckIndex.Add(index);
+        }
         if (_clickCheckIndex.Count == _clips.Length) _tab2Next.SetActive(true);
     }
     IEnumerator StartButtonAudio()

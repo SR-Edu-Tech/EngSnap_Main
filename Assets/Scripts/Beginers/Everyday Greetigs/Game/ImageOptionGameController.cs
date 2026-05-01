@@ -8,6 +8,9 @@ using TMPro;
 /// OnEnable resets to Q0 every time it becomes active (first play + replays).
 /// Next button (shown after all questions done) disables this panel
 /// and enables the DragDrop sibling panel.
+/// 
+/// FEEDBACK CHANGE: correct/wrong feedback is now shown by coloring each
+/// option button's Image component (background) instead of the text color.
 /// </summary>
 public class ImageOptionGameController : MonoBehaviour
 {
@@ -45,10 +48,18 @@ public class ImageOptionGameController : MonoBehaviour
     private bool canAnswer     = false;
     private bool listenersWired = false;
 
+    // Cached Image components on each option button (the background we colorize)
+    private Image[] optionButtonImages;
+
     // ─────────────────────────────────────────────────────────────────────
 
     void Awake()
     {
+        // Cache the Image on every option button once
+        optionButtonImages = new Image[optionButtons.Length];
+        for (int i = 0; i < optionButtons.Length; i++)
+            optionButtonImages[i] = optionButtons[i].GetComponent<Image>();
+
         // Wire Next button in Awake so it is ready before the first OnEnable
         if (!listenersWired)
         {
@@ -99,10 +110,10 @@ public class ImageOptionGameController : MonoBehaviour
         SetOptionsVisible(false);
 
         for (int i = 0; i < optionTexts.Length; i++)
-        {
-            optionTexts[i].text  = q.options[i];
-            optionTexts[i].color = normalColor;
-        }
+            optionTexts[i].text = q.options[i];
+
+        // Reset button background colors to normal
+        ResetButtonColors();
 
         for (int i = 0; i < optionButtons.Length; i++)
         {
@@ -155,6 +166,13 @@ public class ImageOptionGameController : MonoBehaviour
             btn.interactable = value;
     }
 
+    /// <summary>Resets every option button's background Image to normalColor.</summary>
+    void ResetButtonColors()
+    {
+        foreach (var img in optionButtonImages)
+            if (img != null) img.color = normalColor;
+    }
+
     // ─────────────────────────────────────────────────────────────────────
 
     void OnOptionSelected(int index)
@@ -174,7 +192,10 @@ public class ImageOptionGameController : MonoBehaviour
 
     IEnumerator HandleCorrect(int index, ImageOptionQuestion q)
     {
-        optionTexts[index].color = correctColor;
+        // Color the button background green
+        if (optionButtonImages[index] != null)
+            optionButtonImages[index].color = correctColor;
+
         yield return StartCoroutine(PunchScale(optionButtons[index].transform));
 
         if (q.correctAudio != null)
@@ -190,7 +211,10 @@ public class ImageOptionGameController : MonoBehaviour
 
     IEnumerator HandleWrong(int index, ImageOptionQuestion q)
     {
-        optionTexts[index].color = wrongColor;
+        // Color the button background red
+        if (optionButtonImages[index] != null)
+            optionButtonImages[index].color = wrongColor;
+
         yield return StartCoroutine(Shake(optionButtons[index].transform));
 
         if (q.wrongAudio != null)
@@ -201,7 +225,10 @@ public class ImageOptionGameController : MonoBehaviour
         }
 
         yield return new WaitForSeconds(0.2f);
-        optionTexts[index].color = normalColor;
+
+        // Reset the button background back to normal so the player can retry
+        if (optionButtonImages[index] != null)
+            optionButtonImages[index].color = normalColor;
 
         canAnswer = true;
         SetOptionsInteractable(true);

@@ -9,10 +9,10 @@ public class U1_L01_Junior1A : MonoBehaviour, Interfaces_Junior1A
     [SerializeField] AudioSource _audioSource;
     [SerializeField] AudioClip _introClip;
     [SerializeField] AudioClip[] _audioClips;
-    [SerializeField] Transform _buttonParent;
+    [SerializeField] Transform _buttonParent, _optionParent;
     [SerializeField] int _currentAudioIndex = 0;
     [SerializeField] Color defaultColor;
-    [SerializeField] bool _autoStart, _isViewed, _canChangeAudio, _isSlowed;
+    [SerializeField] bool _autoStart, _isViewed, _isSlowed;
     Coroutine _coroutine, _setCoroutine;
     public void SetAudioClip(int index)
     {
@@ -21,24 +21,20 @@ public class U1_L01_Junior1A : MonoBehaviour, Interfaces_Junior1A
         {
             _audioSource.clip = _audioClips[index];
             _audioSource.Play();
-            if (_canChangeAudio)
-            {   
-                if (_setCoroutine != null) StopCoroutine(_setCoroutine);
-                if (_coroutine != null) StopCoroutine(_coroutine);
-                _setCoroutine = StartCoroutine(SetText(index));
-            }
+            if (_setCoroutine != null) StopCoroutine(_setCoroutine);
+            if (_coroutine != null) StopCoroutine(_coroutine);
+            _setCoroutine = StartCoroutine(SetText(index));
         }
     }
     void OnEnable() => StartCoroutine(Starter());
-    void OnDisable()
-    {
-        _canChangeAudio = false;
-        foreach (Transform child in _buttonParent) child.GetComponent<Button>().interactable = false;
-    }
     IEnumerator Starter()
     {
+        foreach (Transform button in _buttonParent) button.GetComponent<PopEffect_Junior1A>().enabled = true;
+        _optionParent.GetChild(0).GetComponent<PopEffect_Junior1A>().enabled = true;
         _audioSource.clip = _introClip;
         _audioSource.Play();
+        _optionParent.GetChild(1).gameObject.SetActive(false);
+        foreach (Transform child in _buttonParent) child.GetComponent<Button>().interactable = false;
         _buttonParent.GetChild(_currentAudioIndex).GetChild(1).GetComponent<Image>().enabled = false;
         _buttonParent.GetChild(_currentAudioIndex).GetChild(0).GetComponent<TextMeshProUGUI>().color = defaultColor;
         _buttonParent.GetChild(_currentAudioIndex).GetChild(0).GetComponent<TextMeshProUGUI>().fontStyle = FontStyles.Normal;
@@ -52,7 +48,7 @@ public class U1_L01_Junior1A : MonoBehaviour, Interfaces_Junior1A
         _buttonParent.GetChild(_currentAudioIndex).GetChild(0).GetComponent<TextMeshProUGUI>().fontStyle = FontStyles.Normal;
         _currentAudioIndex = index;
         _buttonParent.GetChild(index).GetChild(1).GetComponent<Image>().enabled = true;
-        _buttonParent.GetChild(index).GetChild(0).GetComponent<TextMeshProUGUI>().fontStyle = FontStyles.Bold;
+        _buttonParent.GetChild(index).GetChild(0).GetComponent<TextMeshProUGUI>().fontStyle = FontStyles.Italic;
         if (ColorUtility.TryParseHtmlString("#14799E", out Color myColor)) _buttonParent.GetChild(index).GetChild(0).GetComponent<TextMeshProUGUI>().color = myColor;
         yield return new WaitForSeconds(_audioClips[index].length + .5f);
         _buttonParent.GetChild(index).GetChild(1).GetComponent<Image>().enabled = false;
@@ -68,7 +64,7 @@ public class U1_L01_Junior1A : MonoBehaviour, Interfaces_Junior1A
             _buttonParent.GetChild(_currentAudioIndex).GetChild(1).GetComponent<Image>().enabled = true;
             _audioSource.clip = clip;
             _audioSource.Play();
-            _buttonParent.GetChild(_currentAudioIndex).GetChild(0).GetComponent<TextMeshProUGUI>().fontStyle = FontStyles.Bold;
+            _buttonParent.GetChild(_currentAudioIndex).GetChild(0).GetComponent<TextMeshProUGUI>().fontStyle = FontStyles.Italic;
             if (ColorUtility.TryParseHtmlString("#14799E", out Color myColor)) _buttonParent.GetChild(_currentAudioIndex).GetChild(0).GetComponent<TextMeshProUGUI>().color = myColor;
             yield return new WaitForSeconds(clip.length + .5f);
             _buttonParent.GetChild(_currentAudioIndex).GetChild(1).GetComponent<Image>().enabled = false;
@@ -76,17 +72,17 @@ public class U1_L01_Junior1A : MonoBehaviour, Interfaces_Junior1A
             _buttonParent.GetChild(_currentAudioIndex).GetChild(0).GetComponent<TextMeshProUGUI>().fontStyle = FontStyles.Normal;
             if (_currentAudioIndex == 7)
             {
-                _canChangeAudio = _isViewed = true;
+                _isViewed = true;
                 GameManager_Junior1A.Instance.Next(true);
             }
             _currentAudioIndex++;
         }
         _currentAudioIndex = 0;
+        _optionParent.GetChild(1).gameObject.SetActive(true);
         foreach (Transform child in _buttonParent) child.GetComponent<Button>().interactable = true;
     }
     public void Repeat()
     {
-        if (!_canChangeAudio) return;
         if (_coroutine != null) StopCoroutine(_coroutine);
         _audioSource.Stop();
         _buttonParent.GetChild(_currentAudioIndex).GetChild(0).GetComponent<TextMeshProUGUI>().color = defaultColor;
@@ -96,5 +92,10 @@ public class U1_L01_Junior1A : MonoBehaviour, Interfaces_Junior1A
         _coroutine = StartCoroutine(AutoStart());
     }
     public bool IsViewed => _isViewed;
-    public void ButtonClick(Image image) => image.color = image.color == Color.white ? Color.gray : Color.white;
+    public void Slow(TextMeshProUGUI text)
+    {
+        text.text = _isSlowed ? "    SLOW" : "    FAST";
+        _audioSource.pitch = _isSlowed ? 1f : 0.75f;
+        _isSlowed = !_isSlowed;
+    }
 }

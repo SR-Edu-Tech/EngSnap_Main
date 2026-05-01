@@ -34,10 +34,10 @@ RectTransform:
   - {fileID: 624000780645818774}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 0, y: 0}
-  m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 0, y: 0}
+  m_AnchorMin: {x: 0.5, y: 0.5}
+  m_AnchorMax: {x: 0.5, y: 0.5}
+  m_AnchoredPosition: {x: -978.3832, y: -589.24426}
+  m_SizeDelta: {x: 62.1137, y: 39.5114}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &1426320153027424013
 CanvasRenderer:
@@ -76,7 +76,7 @@ MonoBehaviour:
   m_FillClockwise: 1
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
-  m_PixelsPerUnitMultiplier: 3.18
+  m_PixelsPerUnitMultiplier: 10.27
 --- !u!114 &50872329501846849
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -117,7 +117,7 @@ MonoBehaviour:
     m_SelectedTrigger: 
     m_DisabledTrigger: 
   m_Interactable: 1
-  m_TargetGraphic: {fileID: 0}
+  m_TargetGraphic: {fileID: 7207349528624802828}
   m_OnClick:
     m_PersistentCalls:
       m_Calls:
@@ -177,10 +177,10 @@ RectTransform:
   m_Children: []
   m_Father: {fileID: 1979013295621329989}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 0, y: 0}
+  m_AnchorMin: {x: 0.5, y: 0.5}
+  m_AnchorMax: {x: 0.5, y: 0.5}
+  m_AnchoredPosition: {x: 60, y: 0}
+  m_SizeDelta: {x: 1006.6784, y: 177.3035}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &2926444554706178447
 CanvasRenderer:
@@ -237,8 +237,8 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 50
-  m_fontSizeBase: 50
+  m_fontSize: 150
+  m_fontSizeBase: 150
   m_fontWeight: 400
   m_enableAutoSizing: 0
   m_fontSizeMin: 18

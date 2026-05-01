@@ -2,7 +2,8 @@ using System.Collections;
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
-
+using DG.Tweening;
+using UnityEngine.Animations;
 public class IntroManager_BB1 : MonoBehaviour
 {
     [Header("Callback")]
@@ -25,6 +26,8 @@ public class IntroManager_BB1 : MonoBehaviour
     public RectTransform flashcardIcon;
     public Button startButton;
 
+    public Animator animator;
+
     [Header("Config")]
     public string badgeTextValue = "Unit I";
    // public Color badgeTextColor  = new Color(0.5f, 0f, 1f);
@@ -41,6 +44,26 @@ public class IntroManager_BB1 : MonoBehaviour
     {
         // Re-run the intro every time the GameObject is activated
         StartIntro();
+
+        if (animator != null)
+        {
+            animator.Play("monkey",0,0f);
+            animator.speed = 0f; 
+        }
+     
+     Invoke("monkeyanimation", 2f);
+
+
+    }
+
+    void monkeyanimation()
+    {
+       // Animation.reset("monkey");
+        if (animator != null)
+        {
+            animator.speed = 1f;
+            animator.Play("monkey",0,0f);
+        }
     }
 
     void OnDisable()
@@ -95,7 +118,7 @@ public class IntroManager_BB1 : MonoBehaviour
 
         StartCoroutine(IntroSequence());
     }
-
+ 
     IEnumerator IntroSequence()
     {
         // 1. Badge drop-in
@@ -151,7 +174,7 @@ public class IntroManager_BB1 : MonoBehaviour
             startButton.gameObject.SetActive(true);
             startButton.onClick.RemoveAllListeners();
             startButton.onClick.AddListener(OnIntroFinished);
-            StartCoroutine(AnimateStartButtonPulse());
+           AnimateStartButtonPulse();
         }
     }
 
@@ -189,18 +212,18 @@ public class IntroManager_BB1 : MonoBehaviour
         flashcardIcon.localScale = Vector3.one;
     }
 
-    IEnumerator AnimateStartButtonPulse()
+    public void AnimateStartButtonPulse()
     {
-        float pulseScale = 1.05f, duration = 0.7f;
-        Vector3 orig = startButton.transform.localScale;
-        while (startButton.gameObject.activeSelf)
-        {
-            float t = 0f;
-            while (t < duration / 2f) { t += Time.deltaTime; startButton.transform.localScale = orig * Mathf.Lerp(1f, pulseScale, t / duration); yield return null; }
-            t = 0f;
-            while (t < duration / 2f) { t += Time.deltaTime; startButton.transform.localScale = orig * Mathf.Lerp(pulseScale, 1f, t / duration); yield return null; }
-        }
-        startButton.transform.localScale = orig;
+       // float pulseScale = 1.05f, duration = 0.7f;
+       // Vector3 orig = startButton.transform.localScale;
+       // while (startButton.gameObject.activeSelf)
+        //{
+          //  float t = 0f;
+          //  while (t < duration / 2f) { t += Time.deltaTime; startButton.transform.localScale = orig * Mathf.Lerp(1f, pulseScale, t / duration); yield return null; }
+           // t = 0f;
+            //while (t < duration / 2f) { t += Time.deltaTime; startButton.transform.localScale = orig * Mathf.Lerp(pulseScale, 1f, t / duration); yield return null; }
+       // }
+        //startButton.transform.DOScale(Vector2.one * 0.75f, 0.5f).SetLoops(-1, LoopType.Yoyo);
     }
 
     IEnumerator AnimateTitle(string title)

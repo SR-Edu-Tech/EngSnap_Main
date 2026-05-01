@@ -14,6 +14,7 @@ public class U1_R01_Junior1A : MonoBehaviour, Interfaces_Junior1A
     [SerializeField] int _currentAudioIndex = 0;
     [SerializeField] Transform _buttonParent, _tinaTextObj, _samTextObj;
     [SerializeField] List<int> _clickCheckIndex = new List<int>();
+    [SerializeField] TextMeshProUGUI _clickedIndexText;
     Coroutine _coroutine, _buttonCoroutine;
 
     public bool IsViewed => _isViewed;
@@ -21,6 +22,9 @@ public class U1_R01_Junior1A : MonoBehaviour, Interfaces_Junior1A
     void OnEnable() => _coroutine = StartCoroutine(AutoStart());
     IEnumerator AutoStart()
     {
+        foreach (Transform button in _buttonParent) button.GetComponent<PopEffect_Junior1A>().enabled = true;
+        _clickCheckIndex.Clear();
+        _clickedIndexText.text = _clickCheckIndex.Count.ToString() + "/8";
         _tinaTextObj.gameObject.SetActive(false);
         _samTextObj.gameObject.SetActive(false);
         _buttonParent.GetChild(_currentAudioIndex).GetChild(1).GetComponent<Image>().enabled = false;
@@ -40,7 +44,12 @@ public class U1_R01_Junior1A : MonoBehaviour, Interfaces_Junior1A
         _currentAudioIndex = index;
         if (_buttonCoroutine != null) StopCoroutine(_buttonCoroutine);
         _buttonCoroutine = StartCoroutine(StartButtonAudio());
-        if (!_clickCheckIndex.Contains(index)) _clickCheckIndex.Add(index);
+        if (!_clickCheckIndex.Contains(_currentAudioIndex))
+        {
+            _clickedIndexText.text = (_clickCheckIndex.Count + 1).ToString() + "/8";
+            _buttonParent.GetChild(_currentAudioIndex).GetComponent<Image>().color = new Color(.35f, .35f, .35f, 1.0f);
+            _clickCheckIndex.Add(_currentAudioIndex);
+        }
         if (_clickCheckIndex.Count == _samClips.Length)
         {
             _isViewed = true;
@@ -49,7 +58,6 @@ public class U1_R01_Junior1A : MonoBehaviour, Interfaces_Junior1A
     }
     IEnumerator StartButtonAudio()
     {
-        _buttonParent.GetChild(_currentAudioIndex).GetComponent<Image>().color = new Color(200f / 255f, 200f / 255f, 200f / 255f, 1.0f);
         _buttonParent.GetChild(_currentAudioIndex).GetChild(1).GetComponent<Image>().enabled = true;
         _samTextObj.gameObject.SetActive(false);
         _tinaTextObj.gameObject.SetActive(false);

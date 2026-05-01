@@ -4,6 +4,7 @@ using UnityEngine;
 public class PopEffect_Junior1A : MonoBehaviour
 {
     [SerializeField] float popDuration = 0.4f, overshoot = 2.0f;
+    [SerializeField] bool shouldDisable = false;
 
     void OnEnable() => StartCoroutine(Pop());
 
@@ -24,5 +25,6 @@ public class PopEffect_Junior1A : MonoBehaviour
             yield return null;
         }
         transform.localScale = Vector3.one;
+        if(shouldDisable) this.enabled = false;
     }
 }

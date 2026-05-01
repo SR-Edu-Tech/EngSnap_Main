@@ -1,11 +1,21 @@
 using UnityEngine;
 using UnityEngine.EventSystems;
+using UnityEngine.UI;
 using TMPro;
 
+/// <summary>
+/// FEEDBACK CHANGE: exposes a `background` Image field.
+/// DragDropGameController colors `background` (not `label`) for correct/wrong feedback.
+/// Assign the card's background Image in the Inspector (or it will be auto-fetched
+/// from the GameObject's own Image component as a fallback).
+/// </summary>
 public class DraggableWord : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndDragHandler
 {
     public TMP_Text label;
     public DragWordData data;
+
+    [Tooltip("The Image component used as the card background — colored for feedback.")]
+    public Image background;
 
     private RectTransform rectTransform;
     private Canvas canvas;
@@ -26,6 +36,10 @@ public class DraggableWord : MonoBehaviour, IBeginDragHandler, IDragHandler, IEn
         canvasGroup = GetComponent<CanvasGroup>();
         if (canvasGroup == null)
             canvasGroup = gameObject.AddComponent<CanvasGroup>();
+
+        // Fallback: auto-grab the Image on this GameObject if none was assigned
+        if (background == null)
+            background = GetComponent<Image>();
     }
 
     public void Init(DragWordData d)

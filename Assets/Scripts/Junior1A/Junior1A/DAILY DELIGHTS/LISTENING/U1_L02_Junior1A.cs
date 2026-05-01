@@ -1,4 +1,3 @@
-using System;
 using System.Collections;
 using TMPro;
 using UnityEngine;
@@ -20,8 +19,12 @@ public class U1_L02_Junior1A : MonoBehaviour, Interfaces_Junior1A
     void OnEnable() => _coroutine = StartCoroutine(AutoStart());
     IEnumerator AutoStart()
     {
-        foreach (Transform button in _buttonParent) button.GetComponent<Button>().interactable = false;
-        foreach (Transform button in _buttonParent) button.gameObject.SetActive(false);
+        foreach (Transform button in _buttonParent)
+        {
+            button.GetComponent<PopEffect_Junior1A>().enabled = true;
+            button.GetComponent<Button>().interactable = false;
+            button.gameObject.SetActive(false);
+        }
         _samTextObj.gameObject.SetActive(false);
         _tinaTextObj.gameObject.SetActive(false);
         _currentAudioIndex = 0;

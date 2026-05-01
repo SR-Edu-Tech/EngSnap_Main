@@ -1,5 +1,7 @@
 using System;
 using System.Security.Cryptography;
+using System.Text;
+using TMPro;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
@@ -176,5 +178,37 @@ public class GameManager_Junior1A : MonoBehaviour
     {
         _audioSource.clip = _wooshClip;
         _audioSource.Play();
+    }
+
+
+
+    [SerializeField] TextMeshProUGUI consoleText;
+    [SerializeField] int maxLines = 20;
+
+    StringBuilder logBuilder = new StringBuilder();
+
+    void OnEnable()
+    {
+        Application.logMessageReceived += HandleLog;
+    }
+
+    void OnDisable()
+    {
+        Application.logMessageReceived -= HandleLog;
+    }
+
+    void HandleLog(string logString, string stackTrace, LogType type)
+    {
+        logBuilder.AppendLine($"[{type}] {logString}");
+
+        var lines = logBuilder.ToString().Split('\n');
+        if (lines.Length > maxLines)
+        {
+            logBuilder.Clear();
+            for (int i = lines.Length - maxLines; i < lines.Length; i++)
+                logBuilder.AppendLine(lines[i]);
+        }
+
+        consoleText.text = logBuilder.ToString();
     }
 }

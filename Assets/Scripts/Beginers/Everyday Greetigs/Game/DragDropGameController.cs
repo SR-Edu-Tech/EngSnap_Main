@@ -10,6 +10,9 @@ using TMPro;
 /// OnEnable resets the game every time it becomes active (first play + replays).
 /// OnFinish calls UnitFinished() which disables the parent unitGameObject,
 /// taking both panels inactive so the next open always starts from Panel 1.
+///
+/// FEEDBACK CHANGE: correct/wrong feedback is shown by coloring each draggable
+/// word card's background Image component instead of the label text color.
 /// </summary>
 public class DragDropGameController : MonoBehaviour
 {
@@ -37,6 +40,10 @@ public class DragDropGameController : MonoBehaviour
     [Header("Spawn Layout")]
     public float spawnSpacingX = 220f;
     public int batchSize = 2;
+
+    [Header("Feedback Colors")]
+    public Color correctColor = Color.green;
+    public Color wrongColor   = Color.red;
 
     private List<DraggableWord> spawnedWords = new List<DraggableWord>();
     private int spawnIndex = 0;
@@ -203,8 +210,12 @@ public class DragDropGameController : MonoBehaviour
             if (parent == greetingBox.transform && word.data.isGreeting) isCorrect = true;
             if (parent == responseBox.transform  && word.data.isResponse) isCorrect = true;
 
-            if (isCorrect) { correct++; word.label.color = Color.green; }
-            else           { wrong++;   word.label.color = Color.red;   }
+            // Color the card's background Image instead of the text label
+            if (word.background != null)
+                word.background.color = isCorrect ? correctColor : wrongColor;
+
+            if (isCorrect) correct++;
+            else           wrong++;
         }
 
         resultText.text = $"✓ Correct: {correct}    ✗ Wrong: {wrong}";

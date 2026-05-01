@@ -56,9 +56,11 @@ public class U1_Q01_Junior1A : MonoBehaviour, Interfaces_Junior1A
         if (_audioCoroutine != null) StopCoroutine(_audioCoroutine);
         _audioCoroutine = StartCoroutine(StartAudio());
     }
-    public void CheckQuestion(int index)
+    public void SetIndex(int Index) => _currentOptionIndex = Index;
+    public void CheckQuestion()
     {
-        if (_checkCoroutine == null) _checkCoroutine = StartCoroutine(CheckAnswer(index));
+        if (_checkCoroutine == null) _checkCoroutine = StartCoroutine(CheckAnswer(_currentOptionIndex));
+        foreach (Transform obj in _buttonParent.transform) obj.GetComponent<Button>().enabled = false;
     }
     IEnumerator CheckAnswer(int index)
     {
@@ -99,6 +101,7 @@ public class U1_Q01_Junior1A : MonoBehaviour, Interfaces_Junior1A
             _object.SetActive(true);
             if (_currentQuestionIndex == 2) _imageObj.SetActive(true);
             else _imageObj.SetActive(false);
+            foreach (Transform obj in _buttonParent.transform) obj.GetComponent<Button>().enabled = true;
         }
         else
         {

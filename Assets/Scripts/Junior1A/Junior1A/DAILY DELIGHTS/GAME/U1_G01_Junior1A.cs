@@ -21,11 +21,12 @@ public class U1_G01_Junior1A : MonoBehaviour, Interfaces_Junior1A
     public bool IsViewed => _isViewed;
     IEnumerator Starter()
     {
+
         _currentclipIndex = 0;
         _audioSource.clip = _introClip;
         _audioSource.Play();
         _fish.anchoredPosition = Vector3.zero;
-        _fish.GetComponent<Button>().interactable = true;
+        _fish.GetComponent<Button>().interactable = _fish.GetComponent<PopEffect_Junior1A>().enabled = true;
         _fish.GetChild(0).GetComponent<TextMeshProUGUI>().text = "Phrase Fish";
         _fish.gameObject.SetActive(true);
         _fish.GetChild(1).GetComponent<Image>().enabled = true;
@@ -36,6 +37,7 @@ public class U1_G01_Junior1A : MonoBehaviour, Interfaces_Junior1A
         transform.GetChild(1).gameObject.SetActive(true);
         transform.GetChild(2).gameObject.SetActive(true);
         transform.GetChild(2).GetComponent<Button>().interactable = transform.GetChild(1).GetComponent<Button>().interactable = false;
+        transform.GetChild(2).GetComponent<PopEffect_Junior1A>().enabled = transform.GetChild(1).GetComponent<PopEffect_Junior1A>().enabled = true;
         yield return new WaitForSeconds(_audioSource.clip.length / 2);
         _fish.GetChild(0).GetComponent<TextMeshProUGUI>().text = _audioClips[_currentclipIndex].name;
         _fish.GetComponent<Button>().interactable = transform.GetChild(2).GetComponent<Button>().interactable = transform.GetChild(1).GetComponent<Button>().interactable = true;
@@ -57,7 +59,8 @@ public class U1_G01_Junior1A : MonoBehaviour, Interfaces_Junior1A
     }
     public void PlayAudio()
     {
-        if (_fishAudioCoroutine != null) return;
+        _fish.GetChild(1).GetComponent<Image>().enabled = false;
+        if (_fishAudioCoroutine != null) StopCoroutine(_fishAudioCoroutine);
         _fishAudioCoroutine = StartCoroutine(StartPlayAudio());
     }
     IEnumerator StartPlayAudio()
@@ -67,7 +70,6 @@ public class U1_G01_Junior1A : MonoBehaviour, Interfaces_Junior1A
         _fish.GetChild(1).GetComponent<Image>().enabled = true;
         yield return new WaitForSeconds(_audioSource.clip.length);
         _fish.GetChild(1).GetComponent<Image>().enabled = false;
-        _fishAudioCoroutine = null;
     }
     IEnumerator CheckFishType()
     {
@@ -81,6 +83,7 @@ public class U1_G01_Junior1A : MonoBehaviour, Interfaces_Junior1A
             _currentclipIndex++;
             _fish.anchoredPosition = Vector3.zero;
             _fish.gameObject.SetActive(true);
+            _fish.GetComponent<PopEffect_Junior1A>().enabled = true;
             if (_currentclipIndex < _audioClips.Length) _fish.GetChild(0).GetComponent<TextMeshProUGUI>().text = _audioClips[_currentclipIndex].name;
             else
             {
