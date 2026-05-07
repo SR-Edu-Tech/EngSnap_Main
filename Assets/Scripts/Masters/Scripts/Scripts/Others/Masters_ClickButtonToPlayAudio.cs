@@ -35,6 +35,8 @@ public class Masters_ClickButtonToPlayAudio : MonoBehaviour {
             speakerGameObject.SetActive(true);
         }
 
+        Masters_AudioManager.Instance.PlaySoundEffect(Masters_SFX.SelectPositive);
+
         rectTransform.DOKill(true);
         rectTransform.localScale = Vector3.one;
 

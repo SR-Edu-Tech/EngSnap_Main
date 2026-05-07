@@ -11,21 +11,6 @@ public class Masters_MeetingAndGreeting_Writing_LessonOne : Masters_Lesson {
     private const string LOAD_NEXT_SET_OF_STATEMENTS_AND_BUTTONS = "LoadNextSetOfStatementsAndButtons";
 
 
-    [System.Serializable]
-    public struct BlanksAndWords {
-
-        public Button[] blankButtonArray;
-        public Button[] wordButtonArray;
-
-    }
-
-
-    [SerializeField]
-    private GameObject[] statementGameObjectArray;
-    [SerializeField]
-    private GameObject[] wordsGameObjectArray;
-    [SerializeField]
-    private BlanksAndWords[] blanksAndWordsArray;
     [SerializeField]
     private Color correctColor;
     [SerializeField]
@@ -58,12 +43,13 @@ public class Masters_MeetingAndGreeting_Writing_LessonOne : Masters_Lesson {
     private GameObject currentFillInTheBlanksGameObject;
     [SerializeField]
     private Button retryButton;
+    [SerializeField]
+    private Masters_FillInTheBlanks fillInTheBlanks;
 
 
     private int setIndex;
     private GameObject currentStatementGameObject;
     private GameObject currentWordsGameObject;
-    private BlanksAndWords currentBlanksAndWords;
     private Masters_FillInTheBlank_Blank currentSelectedBlank;
     private int numberOfWordsInteracted;
     private int correctlyFilled;
@@ -79,11 +65,16 @@ public class Masters_MeetingAndGreeting_Writing_LessonOne : Masters_Lesson {
     private void OnRetryButtonClicked() {
         completedRectTransform.DOScale(Vector3.zero, animationSpeed).SetEase(Ease.OutExpo).OnComplete(() => {
             completedGameObject.SetActive(false);
+            completedRectTransform.localScale = Vector3.one;
 
             Destroy(currentFillInTheBlanksGameObject);
             currentFillInTheBlanksGameObject = Instantiate(fillInTheBlanksGameObjectPrefab);
+            fillInTheBlanks = currentFillInTheBlanksGameObject.GetComponent<Masters_FillInTheBlanks>();
+            fillInTheBlanksRectTransform = currentFillInTheBlanksGameObject.GetComponent<RectTransform>();
             currentFillInTheBlanksGameObject.transform.SetParent(fillInTheBlanksGameObjectPosition, true);
             currentFillInTheBlanksGameObject.transform.localScale = Vector3.one;
+            setIndex = 0;
+            LoadNextSetOfStatementsAndButtons();
 
             correctlyFilled = 0;
             correctlyFilledTMP.text = $"Correctly Filled: {correctlyFilled}/12";
@@ -106,17 +97,21 @@ public class Masters_MeetingAndGreeting_Writing_LessonOne : Masters_Lesson {
             currentWordsGameObject.SetActive(false);
         }
 
+        GameObject[] statementGameObjectArray = fillInTheBlanks.GetStatementGameObjectArray();
+        GameObject[] wordsGameObjectArray = fillInTheBlanks.GetWordsGameObjectArray();
+        Masters_FillInTheBlanks.BlanksAndWords[] blanksAndWordsArray = fillInTheBlanks.GetBlanksAndWordsArray(); 
+
         currentStatementGameObject = statementGameObjectArray[setIndex];
         currentWordsGameObject = wordsGameObjectArray[setIndex];
-        currentBlanksAndWords = blanksAndWordsArray[setIndex];
+        fillInTheBlanks.SetCurrentBlanksAndWords(blanksAndWordsArray[setIndex]);
 
-        foreach(Button blankButton in currentBlanksAndWords.blankButtonArray) {
+        foreach(Button blankButton in fillInTheBlanks.GetCurrentBlanksAndWords().blankButtonArray) {
             blankButton.onClick.AddListener(() => {
                 OnBlankButtonClicked(blankButton);
             });
         }
 
-        foreach(Button wordButton in currentBlanksAndWords.wordButtonArray) {
+        foreach(Button wordButton in fillInTheBlanks.GetCurrentBlanksAndWords().wordButtonArray) {
             wordButton.onClick.AddListener(() => {
                 OnWordButtonClicked(wordButton);
             });

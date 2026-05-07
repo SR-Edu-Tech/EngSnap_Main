@@ -56,7 +56,6 @@ public class Masters_MeetingAndGreeting_Writing_LessonTwo : Masters_Lesson {
 
     private int arrangeWordsPuzzleIndex;
     private ArrangeWordsPuzzle currentArrangeWordsPuzzle;
-    private int currentCorrectWordIndex;
     private List<Button> currentPuzzleButtonList = new List<Button>();
     private bool canClickCheck;
 
@@ -135,7 +134,6 @@ public class Masters_MeetingAndGreeting_Writing_LessonTwo : Masters_Lesson {
         }
 
         currentArrangeWordsPuzzle = arrangeWordsPuzzleArray[arrangeWordsPuzzleIndex++];
-        currentCorrectWordIndex = 0;
 
         Transform[] buttonTransformArray;
         HorizontalLayoutGroup wordsHorizontalLayoutGroup = buttonsParentTransform.GetComponent<HorizontalLayoutGroup>();

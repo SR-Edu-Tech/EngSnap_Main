@@ -44,7 +44,9 @@ public class Masters_MeetingAndGreeting_Roleplay_LessonOne : Masters_Lesson {
         base.Awake();
     }
 
-    private void Start() {
+    protected override void Start() {
+        base.Start();
+
         LoadNextRoleplay();
     }
 

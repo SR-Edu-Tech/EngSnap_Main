@@ -108,8 +108,17 @@ public class DialogueGameplayManager : MonoBehaviour
     /// <summary>Called by each screen controller when gameplay is complete.</summary>
     public void OnScreenComplete()
     {
-        wellDoneBanner.SetActive(true);
-        nextButton.gameObject.SetActive(true);
+        if (currentScreen < 3)
+        {
+            wellDoneBanner.SetActive(true);
+             nextButton.gameObject.SetActive(true);
+        }
+        else
+        {
+            wellDoneBanner.SetActive(false);
+            nextButton.gameObject.SetActive(true);
+        }
+        
     }
 
     private void OnNextClicked()
@@ -132,6 +141,7 @@ public class DialogueGameplayManager : MonoBehaviour
             PlayerPrefs.SetInt(PREFS_KEY, 1);
             PlayerPrefs.Save();
             screen3Root.SetActive(false);
+           // wellDoneBanner.SetActive(false);
             completedScreen.SetActive(true);
         }
     }

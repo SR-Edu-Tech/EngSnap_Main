@@ -13,15 +13,15 @@ MonoBehaviour:
   m_Name: PanelConfig
   m_EditorClassIdentifier: 
   categories:
-  - buttonLabel: Beginers
-    panelHeading: Beginers
+  - buttonLabel: Beginners
+    panelHeading: Beginners
     subButtons:
     - buttonLabel: Level 1A
       assetBundleUrl: https://drive.google.com/uc?export=download&id=1gkGTPF5p7WUYLzPXVb6ZtFQGdbk6dBzS
       sceneName: Beginer_1A
       homeScreenId: HomeScreen_Forest
-      backgroundSprite: {fileID: 21300000, guid: d19ecdfb4937a8e4b85a8bacfc61e49c, type: 3}
-      buttonSprite: {fileID: 21300000, guid: 4afbe8fac63991c4eb69df0d69758096, type: 3}
+      backgroundSprite: {fileID: 21300000, guid: c99d8cde92b9fec49a9fa7e99a565eca, type: 3}
+      buttonSprite: {fileID: 21300000, guid: cf669e3328df407499845ad149f2271e, type: 3}
   - buttonLabel: Juniors
     panelHeading: Juniors
     subButtons:
@@ -29,8 +29,8 @@ MonoBehaviour:
       assetBundleUrl: https://drive.usercontent.google.com/u/0/uc?id=1l55BG7u2TYhvJmTY78svkx4W63AY0GpH&export=download
       sceneName: Junior_B1
       homeScreenId: HomeScreen_Water
-      backgroundSprite: {fileID: 21300000, guid: 76b3b959101bbf84988b07460d646006, type: 3}
-      buttonSprite: {fileID: 21300000, guid: a5dd4d21a307c4a4bb37796dd1163f05, type: 3}
+      backgroundSprite: {fileID: 21300000, guid: cf09621552a475b4ba6f52268faffec6, type: 3}
+      buttonSprite: {fileID: 21300000, guid: 1909b131275d209419bfea1a01ca5eee, type: 3}
   - buttonLabel: Seniors
     panelHeading: Seniors
     subButtons:
@@ -38,8 +38,8 @@ MonoBehaviour:
       assetBundleUrl: https://drive.usercontent.google.com/u/0/uc?id=1ywywbSK-22RYSX4ErfJn6p6LgcLLN-VC&export=download
       sceneName: SeniorLevel1A
       homeScreenId: HomeScreen_Desert
-      backgroundSprite: {fileID: 21300000, guid: 79886a9b4b731f4478406007b2b42344, type: 3}
-      buttonSprite: {fileID: 21300000, guid: 30822707612df444bb1af1d22e7fb9be, type: 3}
+      backgroundSprite: {fileID: 21300000, guid: 819a2628e22a18c43ab19e97bada93fd, type: 3}
+      buttonSprite: {fileID: 21300000, guid: bcd1fac159e014c4e9baecb27d97c266, type: 3}
   - buttonLabel: Masters
     panelHeading: Masters
     subButtons:
@@ -47,5 +47,5 @@ MonoBehaviour:
       assetBundleUrl: https://drive.usercontent.google.com/u/0/uc?id=1qhRzUsBlQZnOFT_mgHawF5jIPApK2oBK&export=download
       sceneName: Masters_B1
       homeScreenId: HomeScreen_City
-      backgroundSprite: {fileID: 21300000, guid: e594e9dd0ae17134d8513c46f65bd0f3, type: 3}
-      buttonSprite: {fileID: 21300000, guid: 21ef82347e5dd1243af74f1e98aa6e6d, type: 3}
+      backgroundSprite: {fileID: 21300000, guid: 253965cd3ff8b6f4b8431b779a43e6eb, type: 3}
+      buttonSprite: {fileID: 21300000, guid: fe62ee7e70b2a8e4b8addc11140a3792, type: 3}

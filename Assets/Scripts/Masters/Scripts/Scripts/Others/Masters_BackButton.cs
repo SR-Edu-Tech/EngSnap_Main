@@ -32,7 +32,7 @@ public class Masters_BackButton : MonoBehaviour {
     }
 
     private void OnBackButtonClicked() {
-        Masters_AudioManager.Instance.PlaySoundEffect(Masters_SFX.SelectNegative);
+        Masters_AudioManager.Instance.PlaySoundEffect(Masters_SFX.SelectPositive);
         Masters_AudioManager.Instance.StopVoiceOver();
         Masters_LevelManager.Instance.OnBackButtonClicked();
     }

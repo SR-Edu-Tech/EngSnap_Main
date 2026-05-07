@@ -16,13 +16,17 @@ public class Masters_FadeInAnimator : MonoBehaviour {
 
     private void OnEnable() {
         fillCanvasGroup.alpha = 0f;
-        borderCanvasGroup.alpha = 0f;
+        if (borderCanvasGroup) {
+            borderCanvasGroup.alpha = 0f;
+        }
         FadeIn();
     }
 
     private void FadeIn() {
         fillCanvasGroup.DOFade(1f, animationSpeed);
-        borderCanvasGroup.DOFade(1f, animationSpeed);
+        if (borderCanvasGroup) {
+            borderCanvasGroup.DOFade(1f, animationSpeed);
+        }
     }
 
 

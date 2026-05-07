@@ -10,8 +10,7 @@ public enum Masters_SFX {
     Incorrect,
     Correct,
     Pop,
-    SelectPositive,
-    SelectNegative
+    SelectPositive
 
 }
 
@@ -76,9 +75,6 @@ public class Masters_AudioManager : Masters_Singleton<Masters_AudioManager> {
                 break;
             case Masters_SFX.SelectPositive:
                 sfxAudioSource.PlayOneShot(selectPositiveAudioClip);
-                break;
-            case Masters_SFX.SelectNegative:
-                sfxAudioSource.PlayOneShot(selectNegativeAudioClip);
                 break;
         }
     }

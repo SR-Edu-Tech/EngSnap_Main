@@ -28,7 +28,9 @@ public class Masters_MeetingAndGreeting_Rewards_LessonOne : Masters_Lesson {
     private int currentTopicCompletedIndex;
 
 
-    private void Start() {
+    protected override void Start() {
+        base.Start();
+
         StartCoroutine(RewardCoroutine());
     }
 

@@ -27,7 +27,7 @@ public class Masters_TopicButton : MonoBehaviour {
 
 
     private Button button;
-    private bool isLocked;
+    //private bool isLocked;
     private int maxVisibleCharacters;
 
 
@@ -139,7 +139,7 @@ public class Masters_TopicButton : MonoBehaviour {
 
     public void RemoveLock() {
         if (isLockable) {
-            isLocked = false;
+            //isLocked = false;
             tickGameObject.SetActive(false);
             //button.interactable = true;
         }
@@ -147,7 +147,7 @@ public class Masters_TopicButton : MonoBehaviour {
 
     public void AddLock() {
         if (isLockable) {
-            isLocked = true;
+            //isLocked = true;
             tickGameObject.SetActive(true);
             //button.interactable = false;
         }

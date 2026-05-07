@@ -83,6 +83,7 @@ public class Masters_MeetingAndGreeting_Listening_LessonTwo : Masters_Lesson {
     }
 
     private void OnDialogueSetButtonClicked(RectTransform rectTransform, DialogueSet dialogueSet) {
+        Masters_AudioManager.Instance.PlaySoundEffect(Masters_SFX.SelectPositive);
 
         rectTransform.DOKill(true);
         rectTransform.localScale = Vector3.one;
