@@ -7,27 +7,22 @@ using TMPro;
 /// <summary>
 /// STORY MODE - Single Script (Manual Button Placement)
 ///
+/// ★ NEW: Each scene now has a narrationClip that auto-plays when the scene
+///         fades in. A separate completionNarrationClip plays when the
+///         Completed panel appears.
+///
 /// HIERARCHY SETUP:
 /// Canvas
 /// └── StoryModeManager              ← attach this script + CanvasGroup
 ///     ├── Scene_0                   ← assign to scenes[0].sceneRoot
-///     │   ├── BackgroundImage       ← your scene image (full rect)
-///     │   ├── Button_A              ← manually placed anywhere over the image
-///     │   └── Button_B              ← manually placed anywhere over the image
-///     ├── Scene_1                   ← assign to scenes[1].sceneRoot
 ///     │   ├── BackgroundImage
 ///     │   ├── Button_A
 ///     │   └── Button_B
-///     ├── Scene_2 ... Scene_4       ← same pattern
-///     ├── NextButton                ← shared, always visible on top
-///     ├── ProgressContainer         ← HorizontalLayoutGroup (for dots)
-///     └── CompletedPanel            ← disabled by default
+///     ├── Scene_1 … Scene_N         ← same pattern
+///     ├── NextButton
+///     ├── ProgressContainer
+///     └── CompletedPanel
 ///         └── RestartButton
-///
-/// HOW TO ASSIGN IN INSPECTOR:
-/// - scenes[i].sceneRoot   → drag the Scene_X GameObject
-/// - scenes[i].buttons[j].buttonObject → drag each Button from that scene
-/// - scenes[i].buttons[j].audioClip    → assign the AudioClip
 /// </summary>
 public class StoryModeManager : MonoBehaviour
 {
@@ -35,10 +30,10 @@ public class StoryModeManager : MonoBehaviour
     public class SceneButton
     {
         [Tooltip("Drag the manually-placed Button GameObject here")]
-        public GameObject   buttonObject;
+        public GameObject buttonObject;
 
         [Tooltip("Audio that plays when this button is tapped")]
-        public AudioClip    audioClip;
+        public AudioClip audioClip;
 
         [Header("Button Colors")]
         public Color defaultColor = new Color(1f,    1f,    1f,    0.85f);
@@ -51,11 +46,15 @@ public class StoryModeManager : MonoBehaviour
     [System.Serializable]
     public class StoryScene
     {
-        public string        title;
-        public string        subtitle;
+        public string title;
+        public string subtitle;
 
         [Tooltip("Root GameObject for this scene — contains the background image and all buttons")]
-        public GameObject    sceneRoot;
+        public GameObject sceneRoot;
+
+        [Tooltip("★ Narration clip that auto-plays when this scene fades in.\n" +
+                 "Buttons are locked until narration finishes (or immediately if null).")]
+        public AudioClip narrationClip;
 
         [Tooltip("All tappable buttons in this scene")]
         public SceneButton[] buttons;
@@ -67,50 +66,55 @@ public class StoryModeManager : MonoBehaviour
     public StoryScene[] scenes;
 
     [Header("── Shared UI ──────────────────")]
-    [Tooltip("CanvasGroup on the root (or a content container) — used for fade")]
-    public CanvasGroup      sceneCanvasGroup;
-    public TextMeshProUGUI  titleText;
-    public TextMeshProUGUI  subtitleText;
-    public Button           nextButton;
-    public TextMeshProUGUI  nextButtonLabel;
-
-   // [Header("── Progress Dots ──────────────")]
-    //public Transform        progressContainer;
-    //public GameObject       dotPrefab;
-    /// <summary>
-    /// public Color            dotDefault  = new Color(0.75f, 0.75f, 0.75f);
-    /// </summary>
-    //public Color            dotActive   = new Color(0.22f, 0.54f, 0.87f);
-    //public Color            dotDone     = new Color(0.23f, 0.63f, 0.18f);
+    [Tooltip("CanvasGroup on the root — used for fade")]
+    public CanvasGroup     sceneCanvasGroup;
+    public TextMeshProUGUI titleText;
+    public TextMeshProUGUI subtitleText;
+    public Button          nextButton;
+    public TextMeshProUGUI nextButtonLabel;
 
     [Header("── Completion ─────────────────")]
-    public GameObject       completedPanel;
-    public Button           restartButton;
-    [Tooltip("'Next/Done' button on CompletedPanel — closes story, returns to unit panel")]
-    public Button           finishButton;
+    public GameObject completedPanel;
+    public Button     restartButton;
+    [Tooltip("'Finish' button on CompletedPanel — closes story, returns to unit panel")]
+    public Button     finishButton;
+
+    [Header("★ Completion Narration ────────")]
+    [Tooltip("Audio clip that plays when the Completed panel appears.")]
+    public AudioClip completionNarrationClip;
+
+    [Header("── Audio Sources ──────────────")]
+    [Tooltip("AudioSource used for button tap SFX / button audio clips")]
+    public AudioSource audioSource;
+
+    [Tooltip("★ Dedicated AudioSource for narration (scene + completion).\n" +
+             "If left empty, audioSource is used as fallback.")]
+    public AudioSource narrationAudioSource;
 
     [Header("── Settings ───────────────────")]
-    public AudioSource      audioSource;
-    public float            fadeDuration = 0.6f;
+    public float fadeDuration = 0.6f;
 
     [Header("── Unit Integration ───────────")]
     [Tooltip("The UnitButton_BB1 that launched this story")]
-    public UnitButton_BB1           ownerUnitButton;
+    public UnitButton_BB1 ownerUnitButton;
     [Tooltip("The UnitPanelController_BB1 to return to after story finishes")]
-    public UnitPanelController_BB1  ownerUnitPanel;
+    public UnitPanelController_BB1 ownerUnitPanel;
 
     // ── Runtime ────────────────────────────────────────────────────────────────
 
-    private int             currentScene = 0;
-    private HashSet<int>    playedSet    = new();
-    private List<Image>     dots         = new();
-    private bool            isPlaying    = false;
+    private int          currentScene = 0;
+    private HashSet<int> playedSet    = new();
+    private List<Image>  dots         = new();
+    private bool         isPlaying    = false;
+
+    // ── Convenience: which AudioSource to use for narration ───────────────────
+
+    AudioSource NarrationSource => narrationAudioSource != null ? narrationAudioSource : audioSource;
 
     // ── Unity Lifecycle ────────────────────────────────────────────────────────
 
     void Start()
     {
-        // Hide every scene root at start
         foreach (var s in scenes)
             if (s.sceneRoot) s.sceneRoot.SetActive(false);
 
@@ -122,41 +126,15 @@ public class StoryModeManager : MonoBehaviour
         if (finishButton)
             finishButton.onClick.AddListener(OnStoryFinished);
 
-       // BuildDots();
         LoadScene(0);
     }
+
     void OnEnable()
     {
         LoadScene(0);
     }
-    // ── Progress Dots ──────────────────────────────────────────────────────────
-
-    // void BuildDots()
-    // {
-    //  foreach (Transform t in progressContainer) Destroy(t.gameObject);
-    // dots.Clear();
-    //
-    //  for (int i = 0; i < scenes.Length; i++)
-    // {
-    //    var go = Instantiate(dotPrefab, progressContainer);
-    //  dots.Add(go.GetComponent<Image>());
-    //  }
-
-    //  RefreshDots();
-    // }
-
-    // void RefreshDots()
-    // {
-    //    for (int i = 0; i < dots.Count; i++)
-    //  {
-    //     if      (i < currentScene)  dots[i].color = dotDone;
-    //    else if (i == currentScene) dots[i].color = dotActive;
-    //    else                        dots[i].color = dotDefault;
-    // }
-    // }
 
     // ── Load Scene ─────────────────────────────────────────────────────────────
-
 
     void LoadScene(int index)
     {
@@ -166,7 +144,7 @@ public class StoryModeManager : MonoBehaviour
 
         var scene = scenes[index];
 
-        // Show only this scene's GameObject
+        // Show only this scene root
         foreach (var s in scenes)
             if (s.sceneRoot) s.sceneRoot.SetActive(false);
         if (scene.sceneRoot) scene.sceneRoot.SetActive(true);
@@ -180,7 +158,7 @@ public class StoryModeManager : MonoBehaviour
         if (nextButtonLabel)
             nextButtonLabel.text = (index == scenes.Length - 1) ? "Finish ✓" : "Next →";
 
-        // Wire buttons
+        // Wire buttons — lock them initially; narration coroutine unlocks them
         for (int i = 0; i < scene.buttons.Length; i++)
         {
             var sb = scene.buttons[i];
@@ -192,20 +170,41 @@ public class StoryModeManager : MonoBehaviour
                 continue;
             }
 
-            // Reset color & interactable
             SetButtonColor(sb, sb.defaultColor);
-            sb.buttonObject.GetComponent<Button>().interactable = true;
 
-            // Re-wire click (fresh)
             var btn = sb.buttonObject.GetComponent<Button>();
+            btn.interactable = false;       // locked until narration ends
             btn.onClick.RemoveAllListeners();
 
             int captured = i;
             btn.onClick.AddListener(() => OnButtonTapped(captured));
         }
 
-       // RefreshDots();
-        StartCoroutine(FadeIn());
+        StartCoroutine(FadeInThenNarrate(scene));
+    }
+
+    // ── ★ Fade In → Play Narration → Unlock Buttons ────────────────────────────
+
+    IEnumerator FadeInThenNarrate(StoryScene scene)
+    {
+        // Fade the scene in first
+        yield return StartCoroutine(FadeIn());
+
+        // Stop any leftover narration from the previous scene
+        NarrationSource.Stop();
+
+        if (scene.narrationClip != null)
+        {
+            NarrationSource.PlayOneShot(scene.narrationClip);
+            yield return new WaitForSeconds(scene.narrationClip.length);
+        }
+
+        // Unlock all buttons after narration (or immediately if no clip)
+        foreach (var sb in scene.buttons)
+        {
+            if (sb.buttonObject == null) continue;
+            sb.buttonObject.GetComponent<Button>().interactable = true;
+        }
     }
 
     // ── Button Tap ─────────────────────────────────────────────────────────────
@@ -223,7 +222,6 @@ public class StoryModeManager : MonoBehaviour
         var sb   = scenes[currentScene].buttons[idx];
         var clip = sb.audioClip;
 
-        // Show playing state
         SetButtonColor(sb, sb.playingColor);
 
         if (clip != null)
@@ -237,7 +235,6 @@ public class StoryModeManager : MonoBehaviour
             yield return new WaitForSeconds(0.5f);
         }
 
-        // Show done state
         sb.played = true;
         playedSet.Add(idx);
         SetButtonColor(sb, sb.doneColor);
@@ -254,6 +251,9 @@ public class StoryModeManager : MonoBehaviour
 
     void OnNextClicked()
     {
+        // Stop narration if the player skips ahead before it finishes
+        NarrationSource.Stop();
+
         nextButton.gameObject.SetActive(false);
         StartCoroutine(TransitionToNext());
     }
@@ -262,32 +262,50 @@ public class StoryModeManager : MonoBehaviour
     {
         yield return StartCoroutine(FadeOut());
 
-       // dots[currentScene].color = dotDone;
         int next = currentScene + 1;
 
         if (next >= scenes.Length)
         {
-            // All scenes done
             if (scenes[currentScene].sceneRoot)
                 scenes[currentScene].sceneRoot.SetActive(false);
 
-            completedPanel.SetActive(true);
+            ShowCompleted();
             yield break;
         }
 
         LoadScene(next);
-       
-        
     }
-  
+
+    // ── ★ Completed Panel + Narration ──────────────────────────────────────────
+
+    void ShowCompleted()
+    {
+        completedPanel.SetActive(true);
+        StartCoroutine(PlayCompletionNarration());
+    }
+
+    IEnumerator PlayCompletionNarration()
+    {
+        NarrationSource.Stop();
+
+        if (completionNarrationClip != null)
+        {
+            NarrationSource.PlayOneShot(completionNarrationClip);
+            yield return new WaitForSeconds(completionNarrationClip.length);
+        }
+        else
+        {
+            yield break;
+        }
+    }
+
     // ── Restart ────────────────────────────────────────────────────────────────
 
     void Restart()
     {
-        // Restart is only reachable from CompletedPanel — no coroutines are
-        // running at this point so StopAllCoroutines is safe here.
         StopAllCoroutines();
-        if (audioSource.isPlaying) audioSource.Stop();
+        if (audioSource.isPlaying)    audioSource.Stop();
+        if (NarrationSource.isPlaying) NarrationSource.Stop();
 
         completedPanel.SetActive(false);
         ResetAllScenes();
@@ -298,6 +316,7 @@ public class StoryModeManager : MonoBehaviour
 
     void OnStoryFinished()
     {
+        NarrationSource.Stop();
         completedPanel.SetActive(false);
         gameObject.SetActive(false);
 
@@ -309,10 +328,6 @@ public class StoryModeManager : MonoBehaviour
 
     // ── Open Story (called from UnitButton) ────────────────────────────────────
 
-    /// <summary>
-    /// Call this from the UnitButton that launches the story:
-    ///   storyManager.OpenStory(this, panel);
-    /// </summary>
     public void OpenStory(UnitButton_BB1 unitButton, UnitPanelController_BB1 unitPanel)
     {
         ownerUnitButton = unitButton;
@@ -320,15 +335,12 @@ public class StoryModeManager : MonoBehaviour
 
         gameObject.SetActive(true);
 
-        // Stop audio from previous run.
-        // Do NOT call StopAllCoroutines() here — LoadScene immediately
-        // starts FadeIn and StopAllCoroutines would kill it on the same frame.
-        if (audioSource.isPlaying) audioSource.Stop();
+        if (audioSource.isPlaying)    audioSource.Stop();
+        if (NarrationSource.isPlaying) NarrationSource.Stop();
 
         completedPanel.SetActive(false);
-
-        ResetAllScenes();   // hides all scenes, resets all buttons, clears runtime state
-        LoadScene(0);       // shows scene 0, wires buttons, starts FadeIn
+        ResetAllScenes();
+        LoadScene(0);
     }
 
     // ── Shared Reset Helper ────────────────────────────────────────────────────
@@ -341,14 +353,11 @@ public class StoryModeManager : MonoBehaviour
 
         foreach (var s in scenes)
         {
-            // Hide root
             if (s.sceneRoot) s.sceneRoot.SetActive(false);
 
-            // Reset every button back to default
             foreach (var sb in s.buttons)
             {
                 sb.played = false;
-
                 if (sb.buttonObject == null) continue;
 
                 var btn = sb.buttonObject.GetComponent<Button>();

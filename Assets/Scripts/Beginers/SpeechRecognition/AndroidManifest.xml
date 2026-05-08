@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    package="com.yourcompany.yourgame">
+
+    <!-- Required for microphone access -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO"/>
+
+    <!-- Required for network-assisted recognition on some devices -->
+    <uses-permission android:name="android.permission.INTERNET"/>
+
+    <!-- Tell the store this app uses a microphone -->
+    <uses-feature android:name="android.hardware.microphone" android:required="false"/>
+
+    <application>
+        <activity android:name="com.unity3d.player.UnityPlayerActivity"
+            android:theme="@style/UnityThemeSelector">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN"/>
+                <category android:name="android.intent.category.LAUNCHER"/>
+            </intent-filter>
+        </activity>
+    </application>
+
+</manifest>

@@ -93,3 +93,5 @@ MonoBehaviour:
   correctVO: {fileID: 8300000, guid: e5229c200592e934795da8892d950f88, type: 3}
   wrongVO: {fileID: 8300000, guid: 01eb8213e3efd934a976460d74bcdda8, type: 3}
   endVO: {fileID: 0}
+  correctFX: {fileID: 0}
+  wrongFX: {fileID: 0}
