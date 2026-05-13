@@ -27,8 +27,8 @@ public class Masters_QuestionAndAnswerButton : MonoBehaviour {
         answerButton.transform.DOKill(true);
         questionButton.transform.localScale = Vector3.one;
         answerButton.transform.localScale = Vector3.one;
-        questionButton.transform.DOPunchScale(Vector3.one * 0.2f, 0.2f, 8, 0.8f);
-        answerButton.transform.DOPunchScale(Vector3.one * 0.2f, 0.2f, 8, 0.8f);
+        questionButton.transform.DOPunchScale(Vector3.one * 0.1f, 0.2f, 8, 0.8f);
+        answerButton.transform.DOPunchScale(Vector3.one * 0.1f, 0.2f, 8, 0.8f);
 
         Masters_AudioManager.Instance.PlaySoundEffect(Masters_SFX.SelectPositive);
 

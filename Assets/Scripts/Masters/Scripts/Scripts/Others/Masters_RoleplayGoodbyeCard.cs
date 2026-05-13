@@ -18,7 +18,7 @@ public class Masters_RoleplayGoodbyeCard : MonoBehaviour, IPointerDownHandler, I
     [SerializeField]
     private GameObject tickGameObject;
     [SerializeField]
-    private Masters_HoldToTalkButton holdToTalkButton;
+    private Masters_ToggleToTalkButton holdToTalkButton;
 
 
     private bool canLookForInput;

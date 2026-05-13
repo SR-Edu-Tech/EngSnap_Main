@@ -51,6 +51,7 @@ public class Greetings_BB1 : MonoBehaviour
     private List<GreetingRow_BB1> rows = new List<GreetingRow_BB1>();
     private bool isPlayingAll = false;
     private Coroutine playAllCoroutine;
+    private Coroutine _rowPlayCoroutine; // tracks the greeting→response sequence started by a tap
 
     // ─────────────────────────────────────────────
     void OnEnable()
@@ -148,6 +149,16 @@ public class Greetings_BB1 : MonoBehaviour
     {
         if (isPlayingAll) return; // Don't allow taps during Play All
 
+        // Cancel any in-progress greeting→response sequence from a previous tap
+        if (_rowPlayCoroutine != null)
+        {
+            StopCoroutine(_rowPlayCoroutine);
+            _rowPlayCoroutine = null;
+        }
+
+        // Stop ALL audio immediately so nothing from the previous tap bleeds through
+        StopAllAudios();
+
         // Clear all highlights and scales
         ClearAllHighlights();
 
@@ -155,12 +166,9 @@ public class Greetings_BB1 : MonoBehaviour
         tappedRow.SetHighlight(highlightColor);
         tappedRow.SetButtonScale(Vector3.one * highlightScale, scaleDuration);
 
-        // Stop any currently playing audio before starting new ones
-        StopAllAudios();
-
         // Play greeting then response
         tappedRow.PlayGreetingAudio();
-        StartCoroutine(PlayResponseAfterGreeting(tappedRow));
+        _rowPlayCoroutine = StartCoroutine(PlayResponseAfterGreeting(tappedRow));
     }
 
     IEnumerator PlayResponseAfterGreeting(GreetingRow_BB1 row)
@@ -170,6 +178,7 @@ public class Greetings_BB1 : MonoBehaviour
         yield return new WaitForSeconds(len);
 
         row.PlayResponseAudio();
+        _rowPlayCoroutine = null;
     }
 
     // ─────────────────────────────────────────────

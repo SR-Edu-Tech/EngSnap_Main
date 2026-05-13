@@ -4,26 +4,6 @@ using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 
-/// <summary>
-/// STORY MODE - Single Script (Manual Button Placement)
-///
-/// ★ NEW: Each scene now has a narrationClip that auto-plays when the scene
-///         fades in. A separate completionNarrationClip plays when the
-///         Completed panel appears.
-///
-/// HIERARCHY SETUP:
-/// Canvas
-/// └── StoryModeManager              ← attach this script + CanvasGroup
-///     ├── Scene_0                   ← assign to scenes[0].sceneRoot
-///     │   ├── BackgroundImage
-///     │   ├── Button_A
-///     │   └── Button_B
-///     ├── Scene_1 … Scene_N         ← same pattern
-///     ├── NextButton
-///     ├── ProgressContainer
-///     └── CompletedPanel
-///         └── RestartButton
-/// </summary>
 public class StoryModeManager : MonoBehaviour
 {
     [System.Serializable]
@@ -62,6 +42,14 @@ public class StoryModeManager : MonoBehaviour
 
     // ── Inspector Fields ───────────────────────────────────────────────────────
 
+
+    [Header("── Kid Friendly Animation ─────────")]
+public float pulseScale = 1.15f;
+public float pulseSpeed = 0.5f;
+
+private Coroutine pulseRoutine;
+private Coroutine currentButtonAudioRoutine;
+private AudioSource currentPlayingSource;
     [Header("── Scenes ──────────────────────")]
     public StoryScene[] scenes;
 
@@ -78,6 +66,17 @@ public class StoryModeManager : MonoBehaviour
     public Button     restartButton;
     [Tooltip("'Finish' button on CompletedPanel — closes story, returns to unit panel")]
     public Button     finishButton;
+
+    [Header("★ Intro Panel ──────────────────")]
+    [Tooltip("Panel shown before any scene. Hidden once the player taps Start.")]
+    public GameObject introPanel;
+
+    [Tooltip("Audio that plays automatically when the story opens.\n" +
+             "Start button appears only after this finishes.")]
+    public AudioClip introNarrationClip;
+
+    [Tooltip("The Start button inside IntroPanel — hidden until intro audio finishes.")]
+    public Button startButton;
 
     [Header("★ Completion Narration ────────")]
     [Tooltip("Audio clip that plays when the Completed panel appears.")]
@@ -113,8 +112,13 @@ public class StoryModeManager : MonoBehaviour
 
     // ── Unity Lifecycle ────────────────────────────────────────────────────────
 
+    // tracks whether Start() has already run
+    private bool _initialised = false;
+
     void Start()
     {
+        _initialised = true;
+
         foreach (var s in scenes)
             if (s.sceneRoot) s.sceneRoot.SetActive(false);
 
@@ -126,11 +130,77 @@ public class StoryModeManager : MonoBehaviour
         if (finishButton)
             finishButton.onClick.AddListener(OnStoryFinished);
 
-        LoadScene(0);
+        // Wire Start button — hidden until intro audio ends
+        if (startButton != null)
+        {
+            startButton.gameObject.SetActive(false);
+            startButton.onClick.RemoveAllListeners();
+            startButton.onClick.AddListener(OnStartClicked);
+        }
+
+        ShowIntro();
     }
 
     void OnEnable()
     {
+        // OnEnable fires before Start on the very first activation,
+        // so guard to avoid running before _initialised.
+        if (!_initialised) return;
+
+        StopAllCoroutines();
+        NarrationSource.Stop();
+        audioSource.Stop();
+
+        ResetAllScenes();
+        completedPanel.SetActive(false);
+        nextButton.gameObject.SetActive(false);
+
+        ShowIntro();
+    }
+
+    // ── ★ Intro Panel ──────────────────────────────────────────────────────────
+
+    void ShowIntro()
+    {
+        // Hide all scenes while intro plays
+        foreach (var s in scenes)
+            if (s.sceneRoot) s.sceneRoot.SetActive(false);
+
+        if (introPanel != null)
+        {
+            introPanel.SetActive(true);
+
+            // Hide Start button until audio finishes
+            if (startButton != null)
+                startButton.gameObject.SetActive(false);
+
+            StartCoroutine(PlayIntroAudio());
+        }
+        else
+        {
+            // No intro panel configured — go straight to Scene 0
+            LoadScene(0);
+        }
+    }
+
+    IEnumerator PlayIntroAudio()
+    {
+        NarrationSource.Stop();
+
+        if (introNarrationClip != null)
+        {
+            NarrationSource.PlayOneShot(introNarrationClip);
+            yield return new WaitForSeconds(introNarrationClip.length);
+        }
+
+        // Reveal Start button after audio completes (or immediately if no clip)
+        if (startButton != null)
+            startButton.gameObject.SetActive(true);
+    }
+
+    void OnStartClicked()
+    {
+        if (introPanel != null) introPanel.SetActive(false);
         LoadScene(0);
     }
 
@@ -200,53 +270,142 @@ public class StoryModeManager : MonoBehaviour
         }
 
         // Unlock all buttons after narration (or immediately if no clip)
-        foreach (var sb in scene.buttons)
-        {
-            if (sb.buttonObject == null) continue;
-            sb.buttonObject.GetComponent<Button>().interactable = true;
-        }
+     // Unlock buttons
+foreach (var sb in scene.buttons)
+{
+    if (sb.buttonObject == null) continue;
+    sb.buttonObject.GetComponent<Button>().interactable = true;
+}
+
+// Start pulsing first button
+PulseNextButton();
     }
 
     // ── Button Tap ─────────────────────────────────────────────────────────────
 
-    void OnButtonTapped(int idx)
+ void OnButtonTapped(int idx)
+{
+    if (playedSet.Contains(idx)) return;
+
+    // Stop narration instantly if still playing
+    if (NarrationSource.isPlaying)
+        NarrationSource.Stop();
+
+    // Stop previous button audio
+    if (currentButtonAudioRoutine != null)
+        StopCoroutine(currentButtonAudioRoutine);
+
+    if (audioSource.isPlaying)
+        audioSource.Stop();
+
+    // Stop button pulse animation
+    StopButtonPulse();
+
+    currentButtonAudioRoutine = StartCoroutine(PlayAudio(idx));
+}
+
+IEnumerator PlayAudio(int idx)
+{
+    isPlaying = true;
+
+    var sb = scenes[currentScene].buttons[idx];
+    var clip = sb.audioClip;
+
+    SetButtonColor(sb, sb.playingColor);
+
+    // Disable all buttons while one audio is playing
+    foreach (var b in scenes[currentScene].buttons)
     {
-        if (playedSet.Contains(idx) || isPlaying) return;
-        StartCoroutine(PlayAudio(idx));
+        if (b.buttonObject != null)
+            b.buttonObject.GetComponent<Button>().interactable = false;
     }
 
-    IEnumerator PlayAudio(int idx)
+    if (clip != null)
     {
-        isPlaying = true;
+        audioSource.clip = clip;
+        audioSource.Play();
 
-        var sb   = scenes[currentScene].buttons[idx];
-        var clip = sb.audioClip;
-
-        SetButtonColor(sb, sb.playingColor);
-
-        if (clip != null)
-        {
-            audioSource.PlayOneShot(clip);
-            yield return new WaitForSeconds(clip.length);
-        }
-        else
-        {
-            Debug.LogWarning($"[StoryMode] No AudioClip on button {idx} — scene '{scenes[currentScene].title}'");
-            yield return new WaitForSeconds(0.5f);
-        }
-
-        sb.played = true;
-        playedSet.Add(idx);
-        SetButtonColor(sb, sb.doneColor);
-        sb.buttonObject.GetComponent<Button>().interactable = false;
-
-        isPlaying = false;
-
-        // All buttons played → unlock Next
-        if (playedSet.Count >= scenes[currentScene].buttons.Length)
-            nextButton.gameObject.SetActive(true);
+        yield return new WaitWhile(() => audioSource.isPlaying);
     }
 
+    sb.played = true;
+    playedSet.Add(idx);
+
+    SetButtonColor(sb, sb.doneColor);
+
+    // Enable remaining buttons
+    foreach (var b in scenes[currentScene].buttons)
+    {
+        if (b.buttonObject == null) continue;
+
+        int buttonIndex = System.Array.IndexOf(scenes[currentScene].buttons, b);
+
+        if (!playedSet.Contains(buttonIndex))
+            b.buttonObject.GetComponent<Button>().interactable = true;
+    }
+
+    isPlaying = false;
+
+    // ALL BUTTONS COMPLETED
+    if (playedSet.Count >= scenes[currentScene].buttons.Length)
+    {
+        nextButton.gameObject.SetActive(true);
+    }
+    else
+    {
+        // Pulse next unplayed button
+        PulseNextButton();
+    }
+}
+void PulseNextButton()
+{
+    StopButtonPulse();
+
+    for (int i = 0; i < scenes[currentScene].buttons.Length; i++)
+    {
+        if (!playedSet.Contains(i))
+        {
+            pulseRoutine = StartCoroutine(PulseButton(
+                scenes[currentScene].buttons[i].buttonObject.transform
+            ));
+            break;
+        }
+    }
+}
+
+void StopButtonPulse()
+{
+    if (pulseRoutine != null)
+        StopCoroutine(pulseRoutine);
+}
+
+IEnumerator PulseButton(Transform target)
+{
+    Vector3 originalScale = Vector3.one;
+
+    while (true)
+    {
+        // Scale Up
+        float t = 0f;
+        while (t < pulseSpeed)
+        {
+            t += Time.deltaTime;
+            float scale = Mathf.Lerp(1f, pulseScale, t / pulseSpeed);
+            target.localScale = originalScale * scale;
+            yield return null;
+        }
+
+        // Scale Down
+        t = 0f;
+        while (t < pulseSpeed)
+        {
+            t += Time.deltaTime;
+            float scale = Mathf.Lerp(pulseScale, 1f, t / pulseSpeed);
+            target.localScale = originalScale * scale;
+            yield return null;
+        }
+    }
+}
     // ── Next Button ────────────────────────────────────────────────────────────
 
     void OnNextClicked()
@@ -304,12 +463,14 @@ public class StoryModeManager : MonoBehaviour
     void Restart()
     {
         StopAllCoroutines();
-        if (audioSource.isPlaying)    audioSource.Stop();
+        if (audioSource.isPlaying)     audioSource.Stop();
         if (NarrationSource.isPlaying) NarrationSource.Stop();
 
         completedPanel.SetActive(false);
         ResetAllScenes();
-        LoadScene(0);
+
+        // Restart from the intro, not from Scene 0 directly
+        ShowIntro();
     }
 
     // ── Story Finish → Return to Unit Panel ────────────────────────────────────
@@ -335,12 +496,12 @@ public class StoryModeManager : MonoBehaviour
 
         gameObject.SetActive(true);
 
-        if (audioSource.isPlaying)    audioSource.Stop();
+        if (audioSource.isPlaying)     audioSource.Stop();
         if (NarrationSource.isPlaying) NarrationSource.Stop();
 
         completedPanel.SetActive(false);
         ResetAllScenes();
-        LoadScene(0);
+        ShowIntro();   // ★ always start from the intro
     }
 
     // ── Shared Reset Helper ────────────────────────────────────────────────────

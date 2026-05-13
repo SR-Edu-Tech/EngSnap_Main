@@ -15,10 +15,15 @@ public class Masters_PopUpEffect : MonoBehaviour {
     private int order;
     [SerializeField]
     private bool canPlaySound;
+    [SerializeField]
+    private bool canPlayAutomatically = true;
 
 
     private void OnEnable() {
-        StartCoroutine(StartingAnimationCoroutine());
+        parentRectTransform.localScale = Vector3.zero;
+        if (canPlayAutomatically) {
+            StartCoroutine(StartingAnimationCoroutine());
+        }
     }
 
     private void OnDisable() {
@@ -26,12 +31,15 @@ public class Masters_PopUpEffect : MonoBehaviour {
     }
 
     private IEnumerator StartingAnimationCoroutine() {
-        parentRectTransform.localScale = Vector3.zero;
         yield return new WaitForSeconds(timeBetweenEachAnimation * order);
         if (canPlaySound) {
             Masters_AudioManager.Instance.PlaySoundEffect(Masters_SFX.Pop);
         }
         parentRectTransform.DOScale(Vector3.one, popUpAnimationTime).SetEase(Ease.OutExpo);
+    }
+
+    public void Pop() {
+        StartCoroutine(StartingAnimationCoroutine());
     }
 
 

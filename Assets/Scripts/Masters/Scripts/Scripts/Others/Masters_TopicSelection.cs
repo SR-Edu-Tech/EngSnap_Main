@@ -7,6 +7,8 @@ public class Masters_TopicSelection : MonoBehaviour {
 
     [SerializeField]
     private Masters_TopicButton[] topicButtonArray;
+    [SerializeField]
+    private RectTransform scrollRectContentRectTransform;
 
 
     private Masters_Unit unit;
@@ -23,6 +25,11 @@ public class Masters_TopicSelection : MonoBehaviour {
     public void SetUnit(Masters_Unit unit) {
         this.unit = unit;
     }
+
+    public RectTransform GetScrollRectContentRectTransform() {
+        return scrollRectContentRectTransform;
+    }
+
 
 
 }

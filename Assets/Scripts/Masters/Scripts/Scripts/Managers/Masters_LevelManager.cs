@@ -59,6 +59,10 @@ public class Masters_LevelManager : Masters_Singleton<Masters_LevelManager> {
     private Masters_LessonSO[] lessonSOArray;
     [SerializeField]
     private AudioClip selectAUnitAudioClip, selectATopicAudioClip;
+    [SerializeField]
+    private RectTransform unitSelectionScrollRectContentRectTransform;
+    [SerializeField]
+    private float unitContentSize, topicContentSize;
 
 
     private Masters_TopicButton[] topicButtonArray;
@@ -69,6 +73,7 @@ public class Masters_LevelManager : Masters_Singleton<Masters_LevelManager> {
     private int numberOfTopicCompleted;
     private GameObject currentTopicGameObject;
     private List<Masters_TopicSelection> topicSelectionList = new List<Masters_TopicSelection>();
+    private RectTransform topicSelectionScrollRectContentRectTransform;
 
 
     protected override void Awake() {
@@ -83,11 +88,15 @@ public class Masters_LevelManager : Masters_Singleton<Masters_LevelManager> {
         currentlySelectedUnit = selectedUnit;
         Debug.Log($"Selected Unit: {currentlySelectedUnit}");
 
+        Masters_TopicSelection currentTopicSelection;
+
         // CONDITION: If player goes back and clicks the same unit
-        if(currentTopicGameObject != null) {
+        if (currentTopicGameObject != null) {
             // There is a Topic Selection
             if(selectedUnit == currentTopicGameObject.GetComponent<Masters_TopicSelection>().GetUnit()) {
                 // Current Topic Selection is of another unit, so spawn a new one
+                currentTopicSelection = currentTopicGameObject.GetComponent<Masters_TopicSelection>();
+                topicSelectionScrollRectContentRectTransform = currentTopicSelection.GetScrollRectContentRectTransform();
                 ChangeToTopicSelectionScreen();
                 return;
             }
@@ -98,6 +107,8 @@ public class Masters_LevelManager : Masters_Singleton<Masters_LevelManager> {
             if(topicSelection.GetUnit() == currentlySelectedUnit) {
                 currentTopicGameObject = topicSelection.gameObject;
                 topicButtonArray = topicSelection.GetTopicButtonArray();
+                currentTopicSelection = currentTopicGameObject.GetComponent<Masters_TopicSelection>();
+                topicSelectionScrollRectContentRectTransform = currentTopicSelection.GetScrollRectContentRectTransform();
                 ChangeToTopicSelectionScreen();
                 return;
             }
@@ -113,9 +124,18 @@ public class Masters_LevelManager : Masters_Singleton<Masters_LevelManager> {
                 currentTopicGameObject = Instantiate(topicSelectionGameObject, topicCanvasGameObject.transform);
                 currentTopicGameObject.name = "SelfIntroduction_TopicSelection";
                 break;
+            case Masters_Unit.MyLearningHub:
+                currentTopicGameObject = Instantiate(topicSelectionGameObject, topicCanvasGameObject.transform);
+                currentTopicGameObject.name = "MyLearningHub_TopicSelection";
+                break;
+            case Masters_Unit.YouAreInvited:
+                currentTopicGameObject = Instantiate(topicSelectionGameObject, topicCanvasGameObject.transform);
+                currentTopicGameObject.name = "YouAreInvited_TopicSelection";
+                break;
         }
 
-        Masters_TopicSelection currentTopicSelection = currentTopicGameObject.GetComponent<Masters_TopicSelection>();
+        currentTopicSelection = currentTopicGameObject.GetComponent<Masters_TopicSelection>();
+        topicSelectionScrollRectContentRectTransform = currentTopicSelection.GetScrollRectContentRectTransform();
         topicSelectionList.Add(currentTopicSelection);
         currentTopicSelection.SetUnit(selectedUnit);
         topicButtonArray = currentTopicSelection.GetTopicButtonArray();
@@ -134,6 +154,8 @@ public class Masters_LevelManager : Masters_Singleton<Masters_LevelManager> {
     private void ChangeToUnitSelectionScreen() {
         Masters_AudioManager.Instance.PlayVoiceOver(selectAUnitAudioClip);
 
+        unitSelectionScrollRectContentRectTransform.offsetMin = new Vector2(0f, 0f);
+        unitSelectionScrollRectContentRectTransform.offsetMax = new Vector2(-unitContentSize, 0f);
         unitSelectionGameObject.SetActive(true);
         currentTopicGameObject.SetActive(false);
         currentScreen = Masters_CurrentScreen.UnitSelection;
@@ -147,12 +169,18 @@ public class Masters_LevelManager : Masters_Singleton<Masters_LevelManager> {
             Destroy(currentLessonGameObject);
         }
 
+        topicSelectionScrollRectContentRectTransform.offsetMin = new Vector2(0f, 0f);
+        topicSelectionScrollRectContentRectTransform.offsetMax = new Vector2(-topicContentSize, 0f);
         currentTopicGameObject.SetActive(true);
         unitSelectionGameObject.SetActive(false);
         currentScreen = Masters_CurrentScreen.TopicSelection;
     }
 
     public void CompleteTopic(Masters_Topic topic) {
+        if(topic == Masters_Topic.Rewards) {
+            return;
+        }
+
         Masters_Topic nextTopicIndex = (Masters_Topic)((int)topic + 1);
 
         foreach(Masters_TopicButton topicButton in topicButtonArray) {

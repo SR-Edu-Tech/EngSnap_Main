@@ -26,5 +26,9 @@ public class Masters_ButtonPunchAnimator : MonoBehaviour {
         rectTransform.DOPunchScale(Vector3.one * 0.2f, 0.2f, 8, 0.8f);
     }
 
+    public void Punch() {
+        OnButtonClicked();
+    }
+
 
 }

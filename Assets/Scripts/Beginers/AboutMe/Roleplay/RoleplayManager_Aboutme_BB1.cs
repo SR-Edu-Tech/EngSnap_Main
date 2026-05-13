@@ -18,23 +18,28 @@ public class RoleplayManager_Aboutme_BB1 : MonoBehaviour
     }
  
     [System.Serializable]
-    public class DialogueTurn
-    {
-        [Header("Girl auto-line")]
-        [TextArea] public string girlText;
-        public AudioClip         girlAudio;
- 
-        [Header("Choice cards (3)")]
-        public ChoiceOption[]    choices;          // exactly 3
- 
-        [Header("Boy correct reply (after correct choice)")]
-        [TextArea] public string boyText;
-        public AudioClip         boyAudio;
- 
-        [Header("Girl follow-up (auto, after boy reply)")]
-        [TextArea] public string girlFollowUpText;
-        public AudioClip         girlFollowUpAudio;
-    }
+
+public class DialogueTurn
+{
+    [Header("Optional Question")]
+    [TextArea] public string questionText;
+    public Sprite questionSprite;
+
+    [Header("Girl auto-line")]
+    [TextArea] public string girlText;
+    public AudioClip girlAudio;
+
+    [Header("Choice cards (3)")]
+    public ChoiceOption[] choices;
+
+    [Header("Boy correct reply (after correct choice)")]
+    [TextArea] public string boyText;
+    public AudioClip boyAudio;
+
+    [Header("Girl follow-up (auto, after boy reply)")]
+    [TextArea] public string girlFollowUpText;
+    public AudioClip girlFollowUpAudio;
+}
  
     // ─────────────────────────────────────────────────────────────────────────
     // INSPECTOR
@@ -46,6 +51,11 @@ public class RoleplayManager_Aboutme_BB1 : MonoBehaviour
     [Header("── Chat Area ──")]
     public ScrollRect      chatScrollRect;
     public RectTransform   chatContent;
+
+    [Header("── Question UI ──")]
+public GameObject questionPanel;              // Optional
+public TextMeshProUGUI questionTextUI;        // Optional
+public Image questionImageUI;                 // Optional
  
     [Header("── Bubble Prefabs (create 2 simple prefabs) ──")]
     public GameObject      girlBubblePrefab;
@@ -209,7 +219,7 @@ public class RoleplayManager_Aboutme_BB1 : MonoBehaviour
     {
         if (index >= turns.Count) yield break;
         DialogueTurn turn = turns[index];
- 
+        UpdateQuestionUI(turn);
         if (index > 0)
             yield return StartCoroutine(ClearBubbles());
  
@@ -513,6 +523,46 @@ public class RoleplayManager_Aboutme_BB1 : MonoBehaviour
         }
         t.localPosition = origin;
     }
+
+    void UpdateQuestionUI(DialogueTurn turn)
+{
+    // Entire panel optional
+    if (questionPanel != null)
+        questionPanel.SetActive(false);
+
+    bool hasQuestionText =
+        questionTextUI != null &&
+        !string.IsNullOrEmpty(turn.questionText);
+
+    bool hasQuestionImage =
+        questionImageUI != null &&
+        turn.questionSprite != null;
+
+    // Update text
+    if (questionTextUI != null)
+    {
+        questionTextUI.text = turn.questionText;
+
+        questionTextUI.gameObject.SetActive(hasQuestionText);
+    }
+
+    // Update image
+    if (questionImageUI != null)
+    {
+        if (turn.questionSprite != null)
+        {
+            questionImageUI.sprite = turn.questionSprite;
+        }
+
+        questionImageUI.gameObject.SetActive(hasQuestionImage);
+    }
+
+    // Enable panel only if something exists
+    if (questionPanel != null)
+    {
+        questionPanel.SetActive(hasQuestionText || hasQuestionImage);
+    }
+}
  
     IEnumerator CharacterHop(Transform t, int loops = 1, float delay = 0f)
     {
