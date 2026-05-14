@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
@@ -26,6 +27,8 @@ public class HomeScreenManager : MonoBehaviour
     [SerializeField] private Button          subButtonPrefab;
     [SerializeField] private Button          backButton;
 
+    [SerializeField] private AudioSource splashscreenAudio;
+
     // ── Sub-Panel Background ──────────────────────────────────────────────────
     [Header("Sub-Panel Background")]
     [Tooltip("The single shared Image used as the sub-panel background. " +
@@ -35,6 +38,14 @@ public class HomeScreenManager : MonoBehaviour
     // ── Home Screen ───────────────────────────────────────────────────────────
     [Header("Home Screen")]
     [SerializeField] private Button playButton;
+
+    [Header("User Greeting")]
+    [Tooltip("Text field that shows 'Hi, <Name>!' or similar on the home screen.")]
+    [SerializeField] private TextMeshProUGUI greetingLabel;
+
+    [Tooltip("Format string for the greeting. Use {0} as the name placeholder.\n" +
+             "Example: \"Hi, {0}!\" → \"Hi, Pramod!\"")]
+    [SerializeField] private string greetingFormat = "Hi, {0}!";
 
     // ── Loading UI ────────────────────────────────────────────────────────────
     [Header("Loading UI")]
@@ -102,16 +113,36 @@ public class HomeScreenManager : MonoBehaviour
 
     private void Start()
     {
+        // Subscribe to AssetBundleLoader events (with retry in case it's not ready yet)
         if (AssetBundleLoader.Instance != null)
-        {
-            AssetBundleLoader.Instance.OnDownloadProgress += HandleProgress;
-            AssetBundleLoader.Instance.OnDownloadComplete += HandleComplete;
-            AssetBundleLoader.Instance.OnError            += HandleError;
-        }
+            SubscribeToLoader();
         else
+            StartCoroutine(WaitForLoader());
+
+        // Show the username from AppSession (set by GameAuthManager after login)
+        RefreshGreeting();
+    }
+
+    private IEnumerator WaitForLoader()
+    {
+        float timeout = 5f;
+        while (AssetBundleLoader.Instance == null && timeout > 0f)
         {
-            Debug.LogError("[HomeScreenManager] AssetBundleLoader singleton not found.");
+            timeout -= UnityEngine.Time.deltaTime;
+            yield return null;
         }
+
+        if (AssetBundleLoader.Instance != null)
+            SubscribeToLoader();
+        else
+            Debug.LogError("[HomeScreenManager] AssetBundleLoader not found after waiting 5 s.");
+    }
+
+    private void SubscribeToLoader()
+    {
+        AssetBundleLoader.Instance.OnDownloadProgress += HandleProgress;
+        AssetBundleLoader.Instance.OnDownloadComplete += HandleComplete;
+        AssetBundleLoader.Instance.OnError            += HandleError;
     }
 
     private void OnDestroy()
@@ -122,6 +153,25 @@ public class HomeScreenManager : MonoBehaviour
             AssetBundleLoader.Instance.OnDownloadComplete -= HandleComplete;
             AssetBundleLoader.Instance.OnError            -= HandleError;
         }
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    //  Greeting
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Updates the greeting label from AppSession.UserName.
+    /// Call this from GameAuthManager right after login, or let Start() call it.
+    /// </summary>
+    public void RefreshGreeting()
+    {
+        if (greetingLabel == null) return;
+
+        string name = AppSession.UserName;
+        if (!string.IsNullOrEmpty(name))
+            greetingLabel.text = string.Format(greetingFormat, name);
+        else
+            greetingLabel.text = string.Empty;   // hide until name is known
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -155,7 +205,6 @@ public class HomeScreenManager : MonoBehaviour
         foreach (var btn in _spawnedButtons) Destroy(btn.gameObject);
         _spawnedButtons.Clear();
 
-        // Default BG to the first sub-button's sprite when the panel opens
         if (data.subButtons != null && data.subButtons.Count > 0)
             SetSubPanelBackground(data.subButtons[0].backgroundSprite);
 
@@ -163,19 +212,16 @@ public class HomeScreenManager : MonoBehaviour
         {
             Button btn = Instantiate(subButtonPrefab, subButtonContainer);
 
-            // ── Label ──────────────────────────────────────────────────────────
             var label = btn.GetComponentInChildren<TextMeshProUGUI>();
             if (label) label.text = subData.buttonLabel;
 
-            // ── Button sprite ──────────────────────────────────────────────────
-            // The Button component itself has the Image — get it directly.
             if (subData.buttonSprite != null)
             {
                 Image btnImage = btn.GetComponent<Image>();
                 if (btnImage != null)
                     btnImage.sprite = subData.buttonSprite;
                 else
-                    Debug.LogWarning($"[HomeScreenManager] Sub-button prefab has no Image component on root for '{subData.buttonLabel}'.");
+                    Debug.LogWarning($"[HomeScreenManager] Sub-button prefab has no Image on root for '{subData.buttonLabel}'.");
             }
 
             SubButtonData captured = subData;
@@ -188,7 +234,7 @@ public class HomeScreenManager : MonoBehaviour
     }
 
     // ─────────────────────────────────────────────────────────────────────────
-    //  Sub-button click → swap BG, store session, show linked home screen
+    //  Sub-button click
     // ─────────────────────────────────────────────────────────────────────────
 
     private void OnSubButtonClicked(SubButtonData data)
@@ -202,6 +248,8 @@ public class HomeScreenManager : MonoBehaviour
 
         HideActiveHomeScreen();
         homeScreen.SetActive(false);
+
+        splashscreenAudio.gameObject.SetActive(false);
 
         if (_homeScreenMap.TryGetValue(data.homeScreenId, out GameObject screen))
         {

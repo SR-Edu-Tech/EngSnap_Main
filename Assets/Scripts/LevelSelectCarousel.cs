@@ -1,67 +1,49 @@
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.EventSystems;
 
-/// <summary>
-/// LevelSelectCarousel — Fixed Version
-/// 
-/// Each button's scale is driven CONTINUOUSLY by its distance from the
-/// viewport centre — no index snapping needed for the scale calculation.
-/// This means as you drag, the leaving button shrinks and the arriving
-/// button grows in real time, frame by frame.
-///
-/// SETUP
-/// ─────
-/// 1. Attach this script to your ScrollRect GameObject.
-/// 2. ScrollRect → Horizontal scroll, Inertia ON (deceleration ~0.135).
-/// 3. Content → Horizontal Layout Group, child force-expand OFF,
-///    child alignment: Middle Centre.
-/// 4. Assign buttonItems[]  → the 4 button RectTransforms (children of Content).
-/// 5. Assign bgImages[]     → 4 full-screen background Images (same order).
-/// 6. Assign scrollRect     → the ScrollRect component.
-/// </summary>
-public class LevelSelectCarousel : MonoBehaviour, IEndDragHandler
+public class LevelSelectCarousel : MonoBehaviour, IBeginDragHandler, IEndDragHandler
 {
     [Header("References")]
-    public ScrollRect       scrollRect;
-    public RectTransform[]  buttonItems;   // 4 buttons
-    public Image[]          bgImages;      // 4 full-screen BG images
+    public ScrollRect      scrollRect;
+    public RectTransform[] buttonItems;
+    public Image[]         bgImages;
 
     [Header("Scale")]
-    [Tooltip("Scale when a button is perfectly centred in the viewport")]
     public float focusedScale   = 1.15f;
-
-    [Tooltip("Scale when a button is fully off-screen / at max distance")]
     public float unfocusedScale = 0.80f;
-
-    [Tooltip("How far from centre (in pixels) counts as fully unfocused")]
     public float maxDistancePx  = 500f;
-
-    [Tooltip("Lerp speed for scale smoothing")]
     public float scaleSpeed     = 12f;
 
     [Header("Background Fade")]
-    [Tooltip("Alpha fade speed between backgrounds")]
-    public float bgFadeSpeed    = 5f;
+    public float bgFadeSpeed = 5f;
 
-    public GameObject contentPanel; // assign the Content GameObject here for external access
+    [Header("Content Panel")]
+    public GameObject contentPanel;
 
-    [Header("Snap")]
-    public bool  snapOnRelease  = true;
-    public float snapSpeed      = 10f;
+    [Header("Snap (manual drag)")]
+    public bool  snapOnRelease = true;
+    public float snapSpeed     = 10f;
 
-    // private
-    private int   _centreIndex    = 0;
-    private bool  _isSnapping     = false;
+    [Header("Auto-scroll")]
+    public float autoScrollSpeed = 8f;
+
+    // Index: 0=Beginners  1=Juniors  2=Seniors  3=Masters
+    public static readonly float[] ContentXForIndex = { 0f, -1250f, -2500f, -3750f };
+
+    private int   _centreIndex   = 0;
+    private bool  _isSnapping    = false;
     private float _snapTargetNorm = 0f;
 
+    // Auto-scroll state
+    private bool  _autoScrolling    = false;
+    private float _autoScrollTarget = 0f;   // content localPosition.x target
+    private float autoVelocity;
+    // ─────────────────────────────────────────────────────────────────────────
     private void Start()
     {
         for (int i = 0; i < bgImages.Length; i++)
             SetAlpha(bgImages[i], i == 0 ? 1f : 0f);
-
         ApplyScales(instant: true);
     }
 
@@ -71,74 +53,133 @@ public class LevelSelectCarousel : MonoBehaviour, IEndDragHandler
         ApplyScales(instant: false);
         FadeBackgrounds();
 
-        if (_isSnapping)
+        if (_autoScrolling)
+        {
+            DoAutoScroll();
+        }
+        else if (_isSnapping)
+        {
             DoSnap();
-    }
-
-    void OnEnable()
-    {
-        contentPanel.transform.localPosition = Vector3.zero; // reset content position when enabled
-    }
-
-    // Scale — driven by real-time pixel distance from viewport centre
-    private void ApplyScales(bool instant)
-    {
-        Vector2 viewCentre = GetViewportCentreWorld();
-
-        for (int i = 0; i < buttonItems.Length; i++)
-        {
-            float dist        = Mathf.Abs(buttonItems[i].position.x - viewCentre.x);
-            float t           = Mathf.Clamp01(dist / maxDistancePx);
-            float targetScale = Mathf.Lerp(focusedScale, unfocusedScale, t);
-            Vector3 target    = Vector3.one * targetScale;
-
-            buttonItems[i].localScale = instant
-                ? target
-                : Vector3.Lerp(buttonItems[i].localScale, target, Time.deltaTime * scaleSpeed);
         }
     }
 
-    // Background — weighted alpha based on each button's proximity
-    private void FadeBackgrounds()
+private void OnEnable()
+{
+    _autoScrolling = false;
+    _isSnapping = false;
+
+    Canvas.ForceUpdateCanvases();
+
+    // Keep current scroll position
+    SyncScrollRect();
+
+    scrollRect.enabled = true;
+}
+    // ─────────────────────────────────────────────────────────────────────────
+    //  Called by GameAuthManager after API sets lock states
+    // ─────────────────────────────────────────────────────────────────────────
+
+public void ScrollToIndex(int index)
+{
+    index = Mathf.Clamp(index,0,
+             ContentXForIndex.Length-1);
+
+    _autoScrollTarget = ContentXForIndex[index];
+
+    scrollRect.StopMovement();
+    scrollRect.enabled = false;
+
+    autoVelocity = 0;
+
+    _isSnapping = false;
+    _autoScrolling = true;
+}
+    // ─────────────────────────────────────────────────────────────────────────
+    //  Auto-scroll: drives localPosition directly, ScrollRect disabled
+    // ─────────────────────────────────────────────────────────────────────────
+
+private void DoAutoScroll()
+{
+    float cur = contentPanel.transform.localPosition.x;
+
+    float next = Mathf.SmoothDamp(
+        cur,
+        _autoScrollTarget,
+        ref autoVelocity,
+        0.25f,      // smaller = faster
+        5000f,      // max speed
+        Time.deltaTime
+    );
+
+    SetContentX(next);
+
+    if (Mathf.Abs(next - _autoScrollTarget) < 1f)
     {
-        Vector2 viewCentre = GetViewportCentreWorld();
+        SetContentX(_autoScrollTarget);
 
-        float[] weights = new float[buttonItems.Length];
-        float   sum     = 0f;
+        autoVelocity = 0;
+        _autoScrolling = false;
 
-        for (int i = 0; i < buttonItems.Length; i++)
+        SyncScrollRect();
+        scrollRect.enabled = true;
+    }
+}
+    // Writes x into content localPosition (ScrollRect is OFF during auto-scroll
+    // so this won't be fought over).
+    private void SetContentX(float x)
+    {
+        Vector3 p = contentPanel.transform.localPosition;
+        p.x = x;
+        contentPanel.transform.localPosition = p;
+    }
+
+    // After auto-scroll finishes, push the correct normalised value into the
+    // ScrollRect before re-enabling it, so drag/inertia start from the right place.
+    private void SyncScrollRect()
+    {
+        Canvas.ForceUpdateCanvases();
+        float total = scrollRect.content.rect.width - scrollRect.viewport.rect.width;
+        if (total > 0f)
         {
-            float dist = Mathf.Abs(buttonItems[i].position.x - viewCentre.x);
-            float t    = Mathf.Clamp01(dist / maxDistancePx);
-            weights[i] = 1f - t;
-            sum       += weights[i];
-        }
-
-        for (int i = 0; i < bgImages.Length; i++)
-        {
-            float targetAlpha = (sum > 0f) ? weights[i] / sum : 0f;
-            Color c           = bgImages[i].color;
-            c.a               = Mathf.Lerp(c.a, targetAlpha, Time.deltaTime * bgFadeSpeed);
-            bgImages[i].color = c;
+            float norm = Mathf.Clamp01(-contentPanel.transform.localPosition.x / total);
+            // Temporarily enable just to set the value, then it stays enabled.
+            scrollRect.enabled = true;
+            scrollRect.horizontalNormalizedPosition = norm;
+            scrollRect.enabled = false; // will be set true by caller right after
         }
     }
 
-    // Snap
+    // ─────────────────────────────────────────────────────────────────────────
+    //  Drag — player takes control
+    // ─────────────────────────────────────────────────────────────────────────
+
+    public void OnBeginDrag(PointerEventData eventData)
+    {
+        // Cancel auto-scroll immediately; ScrollRect is already enabled
+        // (OnBeginDrag only fires when ScrollRect is interactable).
+        _autoScrolling = false;
+        _isSnapping    = false;
+    }
+
     public void OnEndDrag(PointerEventData eventData)
     {
         if (snapOnRelease) TriggerSnap();
     }
 
+    // ─────────────────────────────────────────────────────────────────────────
+    //  Manual snap after drag (ScrollRect is ON, use normalised position)
+    // ─────────────────────────────────────────────────────────────────────────
+
     private void TriggerSnap()
     {
-        int   closest  = GetCentreIndex();
-        float total    = scrollRect.content.rect.width - scrollRect.viewport.rect.width;
+        int   closest = GetCentreIndex();
+        float total   = scrollRect.content.rect.width - scrollRect.viewport.rect.width;
         if (total <= 0f) return;
 
-        float btnX         = buttonItems[closest].anchoredPosition.x;
-        float targetX      = btnX - scrollRect.viewport.rect.width * 0.5f;
-        _snapTargetNorm    = Mathf.Clamp01(targetX / total);
-        _isSnapping        = true;
+        float btnX      = buttonItems[closest].anchoredPosition.x;
+        float targetX   = btnX - scrollRect.viewport.rect.width * 0.5f;
+        _snapTargetNorm = Mathf.Clamp01(targetX / total);
+        _isSnapping     = true;
     }
 
     private void DoSnap()
@@ -154,13 +195,61 @@ public class LevelSelectCarousel : MonoBehaviour, IEndDragHandler
         }
     }
 
-    // Helpers
+    // ─────────────────────────────────────────────────────────────────────────
+    //  Scale
+    // ─────────────────────────────────────────────────────────────────────────
+
+    private void ApplyScales(bool instant)
+    {
+        Vector2 viewCentre = GetViewportCentreWorld();
+        for (int i = 0; i < buttonItems.Length; i++)
+        {
+            float   dist        = Mathf.Abs(buttonItems[i].position.x - viewCentre.x);
+            float   t           = Mathf.Clamp01(dist / maxDistancePx);
+            float   targetScale = Mathf.Lerp(focusedScale, unfocusedScale, t);
+            Vector3 target      = Vector3.one * targetScale;
+            buttonItems[i].localScale = instant
+                ? target
+                : Vector3.Lerp(buttonItems[i].localScale, target, Time.deltaTime * scaleSpeed);
+        }
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    //  Background fade
+    // ─────────────────────────────────────────────────────────────────────────
+
+    private void FadeBackgrounds()
+    {
+        Vector2 viewCentre = GetViewportCentreWorld();
+        float[] weights    = new float[buttonItems.Length];
+        float   sum        = 0f;
+
+        for (int i = 0; i < buttonItems.Length; i++)
+        {
+            float dist = Mathf.Abs(buttonItems[i].position.x - viewCentre.x);
+            float t    = Mathf.Clamp01(dist / maxDistancePx);
+            weights[i] = 1f - t;
+            sum        += weights[i];
+        }
+
+        for (int i = 0; i < bgImages.Length; i++)
+        {
+            float targetAlpha = (sum > 0f) ? weights[i] / sum : 0f;
+            Color c           = bgImages[i].color;
+            c.a               = Mathf.Lerp(c.a, targetAlpha, Time.deltaTime * bgFadeSpeed);
+            bgImages[i].color = c;
+        }
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    //  Helpers
+    // ─────────────────────────────────────────────────────────────────────────
+
     private int GetCentreIndex()
     {
         Vector2 viewCentre = GetViewportCentreWorld();
         int   closest = 0;
         float minDist = float.MaxValue;
-
         for (int i = 0; i < buttonItems.Length; i++)
         {
             float d = Mathf.Abs(buttonItems[i].position.x - viewCentre.x);
@@ -177,13 +266,11 @@ public class LevelSelectCarousel : MonoBehaviour, IEndDragHandler
         Color c = img.color; c.a = a; img.color = c;
     }
 
-    // Public API
     public void SnapToIndex(int index)
     {
         index = Mathf.Clamp(index, 0, buttonItems.Length - 1);
         float total = scrollRect.content.rect.width - scrollRect.viewport.rect.width;
         if (total <= 0f) return;
-
         float btnX      = buttonItems[index].anchoredPosition.x;
         float targetX   = btnX - scrollRect.viewport.rect.width * 0.5f;
         _snapTargetNorm = Mathf.Clamp01(targetX / total);
