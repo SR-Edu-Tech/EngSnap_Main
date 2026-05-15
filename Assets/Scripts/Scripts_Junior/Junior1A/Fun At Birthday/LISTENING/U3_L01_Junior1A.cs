@@ -61,7 +61,7 @@ public class U3_L01_Junior1A : MonoBehaviour, Interfaces_Junior1A
         {
             if (index == _currentTabIndex) return;
             _currentTabIndex = index;
-            if (_currentTabIndex == 0) foreach (Transform child in _tab1P.transform) child.gameObject.SetActive(false);
+            if (_currentTabIndex == 0) foreach (Transform child in _tab1P.transform.GetChild(0).GetChild(0).GetChild(0)) child.gameObject.SetActive(false);
             else foreach (Transform child in _tab2P.transform) child.gameObject.SetActive(false);
             if (_tabChange != null) StopCoroutine(_tabChange);
             _tabChange = StartCoroutine(OnTab());
@@ -75,7 +75,7 @@ public class U3_L01_Junior1A : MonoBehaviour, Interfaces_Junior1A
     {
         _slided = true;
 
-        if (_currentTabIndex == 0) foreach (Transform child in _tab1P.transform) child.gameObject.SetActive(false);
+        if (_currentTabIndex == 0) foreach (Transform child in _tab1P.transform.GetChild(0).GetChild(0).GetChild(0)) child.gameObject.SetActive(false);
         else foreach (Transform child in _tab2P.transform) child.gameObject.SetActive(false);
 
         Vector3 worldPos1 = _tab1.position;
@@ -129,20 +129,20 @@ public class U3_L01_Junior1A : MonoBehaviour, Interfaces_Junior1A
 
             yield return new WaitForSeconds(1);
 
-            for (int i = 0; i < _tab1P.transform.childCount - 1; i++)
+            for (int i = 0; i < _tab1P.transform.GetChild(0).GetChild(0).GetChild(0).childCount; i++)
             {
-                _tab1P.transform.GetChild(i).gameObject.SetActive(true);
-                _tab1P.transform.GetChild(i).GetComponent<Button>().interactable = false;
+                _tab1P.transform.GetChild(0).GetChild(0).GetChild(0).GetChild(i).gameObject.SetActive(true);
+                _tab1P.transform.GetChild(0).GetChild(0).GetChild(0).GetChild(i).GetComponent<Button>().interactable = false;
 
                 yield return new WaitForSeconds(.25f);
             }
             yield return new WaitForSeconds(.25f);
-            for (int i = 0; i < _tab1P.transform.childCount - 1; i++)
+            for (int i = 0; i < _tab1P.transform.GetChild(0).GetChild(0).GetChild(0).childCount; i++)
             {
-                _tab1P.transform.GetChild(i).GetComponent<Button>().onClick.Invoke();
+                _tab1P.transform.GetChild(0).GetChild(0).GetChild(0).GetChild(i).GetComponent<Button>().onClick.Invoke();
                 yield return new WaitForSeconds(_audioSource.clip.length);
             }
-            for (int i = 0; i < _tab1P.transform.childCount - 1; i++) _tab1P.transform.GetChild(i).GetComponent<Button>().interactable = true;
+            for (int i = 0; i < _tab1P.transform.GetChild(0).GetChild(0).GetChild(0).childCount; i++) _tab1P.transform.GetChild(0).GetChild(0).GetChild(0) .GetChild(i).GetComponent<Button>().interactable = true;
         }
         else
         {

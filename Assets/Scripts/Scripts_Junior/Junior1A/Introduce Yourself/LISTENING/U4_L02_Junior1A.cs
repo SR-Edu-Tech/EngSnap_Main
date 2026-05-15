@@ -1,5 +1,4 @@
 using System.Collections;
-using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -11,7 +10,7 @@ public class U4_L02_Junior1A : MonoBehaviour, Interfaces_Junior1A
     [SerializeField] AudioClip[] _question, _response;
     [SerializeField] bool _isViewed = false, _didSlided = false, _didTab1 = false, _didTab2 = false;
     [SerializeField] CanvasGroup _canvasParent;
-    [SerializeField] RectTransform _tab1 , _tab2;
+    [SerializeField] RectTransform _tab1, _tab2;
     Coroutine _coroutine;
 
     public bool IsViewed => _isViewed;
@@ -42,11 +41,11 @@ public class U4_L02_Junior1A : MonoBehaviour, Interfaces_Junior1A
     public void MoveTabs(int index)
     {
         if (_coroutine != null) StopCoroutine(_coroutine);
-       _coroutine = StartCoroutine(MoveTab(index));
+        _coroutine = StartCoroutine(MoveTab(index));
     }
     IEnumerator MoveTab(int index)
     {
-        if(index == 0)
+        if (index == 0)
         {
             _didTab1 = true;
             _canvasParent.transform.GetChild(0).GetComponent<Image>().sprite = _tab1.GetChild(0).GetChild(0).GetChild(0).GetComponent<Image>().sprite;
@@ -58,7 +57,7 @@ public class U4_L02_Junior1A : MonoBehaviour, Interfaces_Junior1A
             _canvasParent.transform.GetChild(0).GetComponent<Image>().sprite = _tab2.GetChild(0).GetChild(0).GetChild(0).GetComponent<Image>().sprite;
             _canvasParent.transform.GetChild(1).GetComponent<Image>().sprite = _tab2.GetChild(0).GetChild(1).GetChild(0).GetComponent<Image>().sprite;
         }
-        if(_didTab1 && _didTab2)
+        if (_didTab1 && _didTab2)
         {
             GameManager_Junior1A.Instance.Next(true);
             _isViewed = true;

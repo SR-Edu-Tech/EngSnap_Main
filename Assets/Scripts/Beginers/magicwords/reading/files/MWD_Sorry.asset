@@ -1,0 +1,22 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fd395374597f9f84a927f12223233475, type: 3}
+  m_Name: MWD_Sorry
+  m_EditorClassIdentifier: 
+  magicWord: SORRY
+  accentColor: {r: 1, g: 1, b: 1, a: 1}
+  bubbleIntroAudio: {fileID: 8300000, guid: aef092369e226f44096d9bac04232197, type: 3}
+  bubbleIcon: {fileID: 21300000, guid: f9d709fc7d3adb0418c4d6065732ed88, type: 3}
+  situationIllustration: {fileID: -1137421237, guid: 09d059d19db163c4d8c273a583899919, type: 3}
+  situationAudio: {fileID: 8300000, guid: ba0ebc37033aa2545a6eb706a6a7058a, type: 3}
+  wordOnlyAudio: {fileID: 8300000, guid: fae8214f43158b3489291eae569c4476, type: 3}
+  cardAutoPlayDelay: 0.6

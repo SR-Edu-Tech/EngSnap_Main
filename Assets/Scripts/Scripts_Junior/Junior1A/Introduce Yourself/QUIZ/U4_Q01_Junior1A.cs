@@ -33,8 +33,10 @@ public class U4_Q01_Junior1A : MonoBehaviour, Interfaces_Junior1A
         _audioSource.clip = _introClip;
         _audioSource.Play();
         _completed.SetActive(false);
+        _imageObj.SetActive(false);
         _object.SetActive(false);
         _mainHeading.SetActive(true);
+        foreach (Transform obj in _buttonParent.transform) obj.GetComponent<PopEffect_Junior1A>().enabled = obj.GetComponent<Button>().enabled = true;
         for (int i = 0; i < _questions.Length; i++) _completed.transform.GetChild(i).gameObject.SetActive(false);
         foreach (Transform obj in _buttonParent.transform) obj.GetComponent<Image>().color = Color.white;
         yield return new WaitForSeconds(_introClip.length);
@@ -60,7 +62,7 @@ public class U4_Q01_Junior1A : MonoBehaviour, Interfaces_Junior1A
     public void CheckQuestion()
     {
         if (_checkCoroutine == null) _checkCoroutine = StartCoroutine(CheckAnswer(_currentOptionIndex));
-        foreach (Transform obj in _buttonParent.transform) obj.GetComponent<Button>().enabled = false;
+        foreach (Transform obj in _buttonParent.transform) obj.GetComponent<Button>().enabled = false;  
     }
     IEnumerator CheckAnswer(int index)
     {

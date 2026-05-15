@@ -46,6 +46,8 @@ public class Masters_MeetingAndGreeting_Reading_LessonThree : Masters_Lesson {
     private Button confirmButton;
     [SerializeField]
     private float animationSpeed, timeBetweenEachAnimation;
+    [SerializeField]
+    private TextMeshProUGUI progressCountTMP;
 
 
     private MultipleChoiceQuestion currentQuestion;
@@ -78,6 +80,8 @@ public class Masters_MeetingAndGreeting_Reading_LessonThree : Masters_Lesson {
             // Correct
             Masters_AudioManager.Instance.PlaySoundEffect(Masters_SFX.Correct);
 
+            progressCountTMP.text = $"{currentQuestionIndex}/4";
+
             Image buttonImage = currentSelectedButton.GetComponent<Image>();
             buttonImage.color = correctColor;
 
@@ -105,6 +109,8 @@ public class Masters_MeetingAndGreeting_Reading_LessonThree : Masters_Lesson {
             Image image = currentSelectedButton.GetComponent<Image>();
             image.color = defaultColor;
         }
+
+        Masters_AudioManager.Instance.PlaySoundEffect(Masters_SFX.SelectPositive);
 
         currentSelectedButton = button;
         currentSelectedIndex = index;

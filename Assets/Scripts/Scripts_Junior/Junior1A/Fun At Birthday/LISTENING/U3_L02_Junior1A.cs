@@ -34,10 +34,9 @@ public class U3_L02_Junior1A : MonoBehaviour, Interfaces_Junior1A
             button.GetComponent<Button>().interactable = false;
             button.gameObject.SetActive(true);
             button.GetComponent<Button>().onClick.Invoke();
-            yield return new WaitForSeconds(_audioClips[_currentAudioIndex].length);
+            yield return new WaitForSeconds(_audioClips[_currentAudioIndex].length + .25f);
         }
         _isViewed = true;
-        _buttonParent.parent.parent.GetChild(_buttonParent.parent.parent.childCount - 1).gameObject.SetActive(true);
         GameManager_Junior1A.Instance.Next(true);
         _currentAudioIndex = 0;
         foreach (Transform button in _buttonParent) button.GetComponent<Button>().interactable = true;

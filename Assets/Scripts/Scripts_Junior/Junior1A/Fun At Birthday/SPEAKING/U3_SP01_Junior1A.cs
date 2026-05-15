@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using TMPro;
 using UnityEngine;
+using UnityEngine.SocialPlatforms.Impl;
 using UnityEngine.UI;
 
 public class U3_SP01_Junior1A : MonoBehaviour, Interfaces_Junior1A
@@ -12,7 +13,7 @@ public class U3_SP01_Junior1A : MonoBehaviour, Interfaces_Junior1A
     [SerializeField] string[] _answerText;
     [SerializeField] int _currentAudioIndex = 0;
     [SerializeField] GameObject _currentLineShowBox, _micObj;
-    [SerializeField] TextMeshProUGUI _feedbackText;
+    [SerializeField] TextMeshProUGUI _feedbackText, _percentageText;
     [SerializeField] Slider _progressBar;
     [SerializeField, Range(0f, 1f)] float passThreshold = 0.75f;
     [SerializeField] bool _isProcessingResult = false, _isViewed = false, _isMicOn = false;
@@ -21,6 +22,7 @@ public class U3_SP01_Junior1A : MonoBehaviour, Interfaces_Junior1A
     public bool IsViewed => _isViewed;
     void OnEnable()
     {
+        _micObj.GetComponent<Button>().interactable = true;
         CrossPlatformSpeechManager_junior.OnResultStatic += OnSpeechResult;
         StartCoroutine(Starter());
     }
@@ -39,7 +41,7 @@ public class U3_SP01_Junior1A : MonoBehaviour, Interfaces_Junior1A
         }
         else
         {
-            _feedbackText.text = "";
+            _percentageText.text = _feedbackText.text = "";
             _micObj.transform.GetChild(0).GetComponent<Image>().color = Color.black;
             CrossPlatformSpeechManager_junior.Instance?.StopListening();
         }
@@ -82,6 +84,7 @@ public class U3_SP01_Junior1A : MonoBehaviour, Interfaces_Junior1A
     void OnSpeechResult(string spokenText)
     {
         if (_isProcessingResult) return;
+        MicToogle();
         EvaluateSpeech(spokenText, true);
     }
 
@@ -89,7 +92,7 @@ public class U3_SP01_Junior1A : MonoBehaviour, Interfaces_Junior1A
     {
         float score = SimilarityPercent(_answerText[_currentAudioIndex], text);
         _feedbackText.text = text;
-
+        _percentageText.text = Mathf.RoundToInt(score * 100) + "%";
         _progressBar.value = score;
         _progressBar.fillRect.GetComponent<Image>().color = Color.HSVToRGB(Mathf.Lerp(0f, 0.33f, score), 0.9f, 0.6f);
 
@@ -119,6 +122,7 @@ public class U3_SP01_Junior1A : MonoBehaviour, Interfaces_Junior1A
             }
             else
             {
+                _micObj.GetComponent<Button>().interactable = false;
                 GameManager_Junior1A.Instance.Next(true);
                 _isViewed = true;
             }

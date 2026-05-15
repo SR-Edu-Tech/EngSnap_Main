@@ -63,7 +63,8 @@ private AudioSource currentPlayingSource;
 
     [Header("── Completion ─────────────────")]
     public GameObject completedPanel;
-    public Button     restartButton;
+   
+   // public Button     restartButton;
     [Tooltip("'Finish' button on CompletedPanel — closes story, returns to unit panel")]
     public Button     finishButton;
 
@@ -125,7 +126,7 @@ private AudioSource currentPlayingSource;
         completedPanel.SetActive(false);
         nextButton.gameObject.SetActive(false);
         nextButton.onClick.AddListener(OnNextClicked);
-        restartButton.onClick.AddListener(Restart);
+        //restartButton.onClick.AddListener(Restart);
 
         if (finishButton)
             finishButton.onClick.AddListener(OnStoryFinished);

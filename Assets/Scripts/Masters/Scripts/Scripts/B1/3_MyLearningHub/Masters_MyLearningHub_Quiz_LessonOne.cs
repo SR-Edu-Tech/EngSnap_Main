@@ -49,6 +49,7 @@ public class Masters_MyLearningHub_Quiz_LessonOne : Masters_Lesson {
     private int currentQuizIndex;
     private Quiz currentQuiz;
     private Masters_QuizButton currentlyPressedQuizButton;
+    private bool canClickCheckButton;
 
 
     protected override void Awake() {
@@ -72,11 +73,17 @@ public class Masters_MyLearningHub_Quiz_LessonOne : Masters_Lesson {
     }
 
     private void OnConfirmButtonClicked() {
+        if (!canClickCheckButton) {
+            return;
+        }
+
         if (currentQuiz.correctOptionIndex == currentlyPressedQuizButton.GetButtonIndex()) {
             // Correct
             Masters_AudioManager.Instance.PlaySoundEffect(Masters_SFX.Correct);
             currentlyPressedQuizButton.GetButtonImage().color = correctColor;
             quizCountTMP.text = $"{++currentQuizIndex}/6";
+
+            canClickCheckButton = false;
 
             Invoke(SET_QUIZ, timeBetweenEachQuizQuestion);
         } else {
@@ -109,6 +116,8 @@ public class Masters_MyLearningHub_Quiz_LessonOne : Masters_Lesson {
             NextButtonAnimation();
             return;
         }
+
+        canClickCheckButton = true;
 
         foreach (Masters_QuizButton quizButton in quizButtonArray) {
             //quizButton.GetButton().transition = Selectable.Transition.ColorTint;

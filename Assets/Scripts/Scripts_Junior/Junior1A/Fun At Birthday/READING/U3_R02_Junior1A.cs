@@ -32,11 +32,34 @@ public class U3_R02_Junior1A : MonoBehaviour, Interfaces_Junior1A
         if (_currentTabIndex == 0) _tab1P.GetComponent<CanvasGroup>().alpha = 0;
         else _tab2P.GetComponent<CanvasGroup>().alpha = 0;
         _tab1Opened = _tab2Opened = _slided = false;
+        _clickCheckIndex.Clear();
+        _clickedIndexText.text = $"{_clickCheckIndex.Count.ToString()}/{_audioClips.Length}";
     }
     void OnDisable()
     {
-        for (int i = 0; i < _tab1P.transform.childCount - 2; i++) _tab1P.transform.GetChild(i).transform.GetChild(1).GetComponent<Image>().color /= 0.85f;
-        for (int i = 0; i < _tab2P.transform.childCount - 2; i++) _tab2P.transform.GetChild(i).transform.GetChild(1).GetComponent<Image>().color /= 0.85f;
+        for (int i = 0; i < _tab1P.transform.childCount - 2; i++)
+        {
+            Image img = _tab1P.transform.GetChild(i).GetChild(1).GetComponent<Image>();
+
+            Color c = img.color;
+            c.r /= 0.75f;
+            c.g /= 0.75f;
+            c.b /= 0.75f;
+
+            img.color = c;
+        }
+
+        for (int i = 0; i < _tab2P.transform.childCount - 2; i++)
+        {
+            Image img = _tab2P.transform.GetChild(i).GetChild(1).GetComponent<Image>();
+
+            Color c = img.color;
+            c.r /= 0.75f;
+            c.g /= 0.75f;
+            c.b /= 0.75f;
+
+            img.color = c;
+        }
     }
     public void TabSlideUp(int index)
     {

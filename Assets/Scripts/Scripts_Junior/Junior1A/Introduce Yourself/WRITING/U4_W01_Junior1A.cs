@@ -109,6 +109,7 @@ public class U4_W01_Junior1A : MonoBehaviour, Interfaces_Junior1A
                 foreach (string data in _questionData[_currentQuestionIndex].OptionText)
                 {
                     _spawnBox.GetChild(_currentAnswerIndex).GetChild(0).GetComponent<TextMeshProUGUI>().text = data;
+                    _spawnBox.GetChild(_currentAnswerIndex).GetComponent<Button>().interactable = false;
                     _spawnBox.GetChild(_currentAnswerIndex).gameObject.SetActive(true);
                     _spawnBox.GetChild(_currentAnswerIndex).GetComponent<PopEffect_Junior1A>().enabled = true;
                     _currentAnswerIndex++;

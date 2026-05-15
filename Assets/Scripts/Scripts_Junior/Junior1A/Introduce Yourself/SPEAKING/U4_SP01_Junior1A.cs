@@ -13,7 +13,7 @@ public class U4_SP01_Junior1A : MonoBehaviour
     [SerializeField] string[] _answerText;
     [SerializeField] int _currentAudioIndex = 0;
     [SerializeField] GameObject _currentLineShowBox, _micObj;
-    [SerializeField] TextMeshProUGUI _feedbackText;
+    [SerializeField] TextMeshProUGUI _feedbackText, _percentageText;
     [SerializeField] Slider _progressBar;
     [SerializeField, Range(0f, 1f)] float passThreshold = 0.75f;
     [SerializeField] bool _isProcessingResult = false, _isViewed = false, _isMicOn = false;
@@ -22,6 +22,7 @@ public class U4_SP01_Junior1A : MonoBehaviour
     public bool IsViewed => _isViewed;
     void OnEnable()
     {
+        _micObj.GetComponent<Button>().interactable = true;
         CrossPlatformSpeechManager_junior.OnResultStatic += OnSpeechResult;
         StartCoroutine(Starter());
     }
@@ -37,10 +38,11 @@ public class U4_SP01_Junior1A : MonoBehaviour
             CrossPlatformSpeechManager_junior.Instance?.StartListening();
             _progressBar.gameObject.SetActive(true);
             _feedbackText.text = "Listening...";
+            _percentageText.text = "";
         }
         else
         {
-            _feedbackText.text = "";
+            _percentageText.text = _feedbackText.text = "";
             _micObj.transform.GetChild(0).GetComponent<Image>().color = Color.black;
             CrossPlatformSpeechManager_junior.Instance?.StopListening();
         }
@@ -83,6 +85,7 @@ public class U4_SP01_Junior1A : MonoBehaviour
     void OnSpeechResult(string spokenText)
     {
         if (_isProcessingResult) return;
+        MicToogle();
         EvaluateSpeech(spokenText, true);
     }
 
@@ -90,7 +93,7 @@ public class U4_SP01_Junior1A : MonoBehaviour
     {
         float score = SimilarityPercent(_answerText[_currentAudioIndex], text);
         _feedbackText.text = text;
-
+        _percentageText.text = Mathf.RoundToInt(score * 100) + "%";
         _progressBar.value = score;
         _progressBar.fillRect.GetComponent<Image>().color = Color.HSVToRGB(Mathf.Lerp(0f, 0.33f, score), 0.9f, 0.6f);
 
@@ -120,6 +123,7 @@ public class U4_SP01_Junior1A : MonoBehaviour
             }
             else
             {
+                _micObj.GetComponent<Button>().interactable = false;
                 GameManager_Junior1A.Instance.Next(true);
                 _isViewed = true;
             }

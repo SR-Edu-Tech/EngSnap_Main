@@ -70,7 +70,8 @@ public class Masters_LevelManager : Masters_Singleton<Masters_LevelManager> {
     private Masters_Unit currentlySelectedUnit;
     private Masters_Topic currentlySelectedTopic;
     private GameObject currentLessonGameObject;
-    private int numberOfTopicCompleted;
+    private List<Dictionary<Masters_Unit, int>> topicCompletedPerUnitList = new List<Dictionary<Masters_Unit, int>>();
+    private Dictionary<Masters_Unit, int> topicCompletedPerUnitDictionary = new Dictionary<Masters_Unit, int>();
     private GameObject currentTopicGameObject;
     private List<Masters_TopicSelection> topicSelectionList = new List<Masters_TopicSelection>();
     private RectTransform topicSelectionScrollRectContentRectTransform;
@@ -86,9 +87,24 @@ public class Masters_LevelManager : Masters_Singleton<Masters_LevelManager> {
     public void OnUnitButtonClicked(Masters_Unit selectedUnit) {
         // Store selected unit
         currentlySelectedUnit = selectedUnit;
-        Debug.Log($"Selected Unit: {currentlySelectedUnit}");
 
         Masters_TopicSelection currentTopicSelection;
+
+        bool found = false;
+        foreach (Dictionary<Masters_Unit, int> topicCompletedPerUnitDictionary in topicCompletedPerUnitList) {
+            if (topicCompletedPerUnitDictionary.ContainsKey(currentlySelectedUnit)) {
+                // Already has a dictionary for this unit
+                this.topicCompletedPerUnitDictionary = topicCompletedPerUnitDictionary;
+                found = true;
+            }
+        }
+        if (!found) {
+            // Not found a dictionary as selected is a new unit
+            Dictionary<Masters_Unit, int> newTopicCompletedPerUnitDictionary = new Dictionary<Masters_Unit, int>();
+            newTopicCompletedPerUnitDictionary[currentlySelectedUnit] = 0;
+            topicCompletedPerUnitList.Add(newTopicCompletedPerUnitDictionary);
+            topicCompletedPerUnitDictionary = newTopicCompletedPerUnitDictionary;
+        }
 
         // CONDITION: If player goes back and clicks the same unit
         if (currentTopicGameObject != null) {
@@ -132,6 +148,10 @@ public class Masters_LevelManager : Masters_Singleton<Masters_LevelManager> {
                 currentTopicGameObject = Instantiate(topicSelectionGameObject, topicCanvasGameObject.transform);
                 currentTopicGameObject.name = "YouAreInvited_TopicSelection";
                 break;
+            case Masters_Unit.YeahAndNah:
+                currentTopicGameObject = Instantiate(topicSelectionGameObject, topicCanvasGameObject.transform);
+                currentTopicGameObject.name = "YeahAndNah_TopicSelection";
+                break;
         }
 
         currentTopicSelection = currentTopicGameObject.GetComponent<Masters_TopicSelection>();
@@ -146,7 +166,6 @@ public class Masters_LevelManager : Masters_Singleton<Masters_LevelManager> {
     public void OnTopicButtonClicked(Masters_Topic selectedTopic) {
         // Store selected topic
         currentlySelectedTopic = selectedTopic;
-        Debug.Log($"Selected Topic: {currentlySelectedTopic}");
 
         SpawnLessonScreenToLessonCanvas();
     }
@@ -195,9 +214,9 @@ public class Masters_LevelManager : Masters_Singleton<Masters_LevelManager> {
     }
 
     public void OnLessonComplete(Masters_Topic topic) {
-        numberOfTopicCompleted++;
-        Debug.Log(numberOfTopicCompleted);
-        if(numberOfTopicCompleted == 8) {
+        topicCompletedPerUnitDictionary[currentlySelectedUnit]++;
+        Debug.Log($"{currentlySelectedUnit}: {topicCompletedPerUnitDictionary[currentlySelectedUnit]}");
+        if(topicCompletedPerUnitDictionary[currentlySelectedUnit] == 8) {
             // Rewards unlocked
             Destroy(currentLessonGameObject);
             OnTopicButtonClicked(Masters_Topic.Rewards);

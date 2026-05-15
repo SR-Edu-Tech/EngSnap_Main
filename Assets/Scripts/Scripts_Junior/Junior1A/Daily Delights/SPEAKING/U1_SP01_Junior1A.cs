@@ -11,7 +11,7 @@ public class U1_SP01_Junior1A : MonoBehaviour, Interfaces_Junior1A
     [SerializeField] AudioClip[] _audioClips;
     [SerializeField] int _currentAudioIndex = 0;
     [SerializeField] GameObject _currentLineShowBox, _micObj;
-    [SerializeField] TextMeshProUGUI _feedbackText;
+    [SerializeField] TextMeshProUGUI _feedbackText, _percentageText;
     [SerializeField] Slider _progressBar;
     [SerializeField, Range(0f, 1f)] float passThreshold = 0.75f;
     [SerializeField] bool _isProcessingResult = false, _isViewed = false, _isMicOn = false;
@@ -20,6 +20,7 @@ public class U1_SP01_Junior1A : MonoBehaviour, Interfaces_Junior1A
     public bool IsViewed => _isViewed;
     void OnEnable()
     {
+        _micObj.GetComponent<Button>().interactable = true;
         CrossPlatformSpeechManager_junior.OnResultStatic += OnSpeechResult;
         StartCoroutine(Starter());
     }
@@ -38,6 +39,7 @@ public class U1_SP01_Junior1A : MonoBehaviour, Interfaces_Junior1A
             CrossPlatformSpeechManager_junior.Instance?.StartListening();
             _progressBar.gameObject.SetActive(true);
             _feedbackText.text = "Listening...";
+            _percentageText.text = "";
         }
         else
         {
@@ -82,6 +84,7 @@ public class U1_SP01_Junior1A : MonoBehaviour, Interfaces_Junior1A
     void OnSpeechResult(string spokenText)
     {
         if (_isProcessingResult) return;
+        MicToogle();
         EvaluateSpeech(spokenText, true);
     }
 
@@ -89,7 +92,7 @@ public class U1_SP01_Junior1A : MonoBehaviour, Interfaces_Junior1A
     {
         float score = SimilarityPercent(_audioClips[_currentAudioIndex].name, text);
         _feedbackText.text = text;
-
+        _percentageText.text = Mathf.RoundToInt(score * 100) + "%";
         if (_progressBar != null)
         {
             _progressBar.value = score;
@@ -122,6 +125,7 @@ public class U1_SP01_Junior1A : MonoBehaviour, Interfaces_Junior1A
             }
             else
             {
+                _micObj.GetComponent<Button>().interactable = false;
                 GameManager_Junior1A.Instance.Next(true);
                 _isViewed = true;
             }

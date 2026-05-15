@@ -44,7 +44,7 @@ public class GameManager_Junior1A : MonoBehaviour
     [SerializeField] int _currentSlideIndex;
     [SerializeField] bool _isLesssonOpen = true;
     [SerializeField] TopicData _currentTopicData;
-    [SerializeField] GameObject _next, _topicParent, _lessonParent, _wordSearch;
+    [SerializeField] GameObject _next, _topicParent, _lessonParent;
 
     [SerializeField] AudioSource _audioSource, _audioSourceSelection;
     [SerializeField] AudioClip _popClip, _wooshClip, _selectUnit, _selectTopic;
@@ -108,7 +108,11 @@ public class GameManager_Junior1A : MonoBehaviour
     }
     public void Back()
     {
-        if (_wordSearch.activeInHierarchy) _wordSearch.SetActive(false);
+        if (_selectedLessonIndex >= 0 && _selectedLessonIndex < _lessons.Length && _lessons[_selectedLessonIndex].Reward != null && _lessons[_selectedLessonIndex].Reward.activeInHierarchy)
+        {
+            _lessons[_selectedLessonIndex].Reward.SetActive(false);
+            return;
+        }
         else if (_isLesssonOpen)
         {
             Resources.UnloadUnusedAssets();
