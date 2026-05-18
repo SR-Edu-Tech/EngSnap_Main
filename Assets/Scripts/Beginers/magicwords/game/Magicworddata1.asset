@@ -1,0 +1,108 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d4ab6a43700263a45a8c71bb33547c2b, type: 3}
+  m_Name: Magicworddata1
+  m_EditorClassIdentifier: 
+  rounds:
+  - situationImage: {fileID: 601691274, guid: 76d981d59d5404441a98586b4aa2354d, type: 3}
+    situationText: You want a cookie from mom
+    questionAudio: {fileID: 8300000, guid: 93258cfb6da429947b490f1df0d59671, type: 3}
+    optionA: 'Sorry '
+    optionB: Please
+    optionC: ExcuseMe
+    correctIndex: 1
+    correctAudio: {fileID: 8300000, guid: 6feabe92f2f103b45af97409310a43b2, type: 3}
+    wrongAudio: {fileID: 8300000, guid: 01eb8213e3efd934a976460d74bcdda8, type: 3}
+  - situationImage: {fileID: 176872036, guid: 76d981d59d5404441a98586b4aa2354d, type: 3}
+    situationText: You accidentally bump into your friend
+    questionAudio: {fileID: 8300000, guid: 60779caf87aecba4dbdd16c0a83f249d, type: 3}
+    optionA: Thank you
+    optionB: Welcome
+    optionC: Sorry
+    correctIndex: 2
+    correctAudio: {fileID: 8300000, guid: 6feabe92f2f103b45af97409310a43b2, type: 3}
+    wrongAudio: {fileID: 8300000, guid: 01eb8213e3efd934a976460d74bcdda8, type: 3}
+  - situationImage: {fileID: 1626664586, guid: 76d981d59d5404441a98586b4aa2354d, type: 3}
+    situationText: Your friend gives you a present
+    questionAudio: {fileID: 8300000, guid: 6190d120d7f66654794ce543f4f91671, type: 3}
+    optionA: Thank you
+    optionB: Please
+    optionC: Sorry
+    correctIndex: 0
+    correctAudio: {fileID: 8300000, guid: 6feabe92f2f103b45af97409310a43b2, type: 3}
+    wrongAudio: {fileID: 8300000, guid: 01eb8213e3efd934a976460d74bcdda8, type: 3}
+  - situationImage: {fileID: 1703870455, guid: 76d981d59d5404441a98586b4aa2354d, type: 3}
+    situationText: You need to walk past some people
+    questionAudio: {fileID: 8300000, guid: 9fe20aaa65f9e244792d3dc0b870d3af, type: 3}
+    optionA: Sorry
+    optionB: ExcuseMe
+    optionC: Welcome
+    correctIndex: 1
+    correctAudio: {fileID: 8300000, guid: 6feabe92f2f103b45af97409310a43b2, type: 3}
+    wrongAudio: {fileID: 8300000, guid: 01eb8213e3efd934a976460d74bcdda8, type: 3}
+  - situationImage: {fileID: 21300000, guid: bb5e96dd7f1b56e40b70f91ae34cfa53, type: 3}
+    situationText: Your friend says thank you to you
+    questionAudio: {fileID: 8300000, guid: 93258cfb6da429947b490f1df0d59671, type: 3}
+    optionA: Please
+    optionB: Sorry
+    optionC: Welcome
+    correctIndex: 2
+    correctAudio: {fileID: 8300000, guid: 6feabe92f2f103b45af97409310a43b2, type: 3}
+    wrongAudio: {fileID: 8300000, guid: 01eb8213e3efd934a976460d74bcdda8, type: 3}
+  correctFX: {fileID: 8300000, guid: d56ab1cb9634628499496cdb1e891cae, type: 3}
+  wrongFX: {fileID: 8300000, guid: f6a8c8ed52549c34fa2f6957160823fa, type: 3}
+  lines:
+  - speakerName: Mike
+    speakerAvatar: {fileID: 21300000, guid: ee4095d0296ee4843a7fdaee89baf325, type: 3}
+    lineText: Hey Zoya! ________ give me a pencil.
+    blankAnswer: Please
+    lineAudio: {fileID: 8300000, guid: ad53c51dea181e046b32019724a66cba, type: 3}
+    afterBlankAudio: {fileID: 8300000, guid: 94d113863123b97499cf3e3060f14de2, type: 3}
+  - speakerName: Zoya
+    speakerAvatar: {fileID: 21300000, guid: 329a434ecfee308408961757fd955a59, type: 3}
+    lineText: Take it, I have two
+    blankAnswer: 
+    lineAudio: {fileID: 8300000, guid: 90dce358bdf553f4389d4916ffc04f98, type: 3}
+    afterBlankAudio: {fileID: 0}
+  - speakerName: Mike
+    speakerAvatar: {fileID: 21300000, guid: ee4095d0296ee4843a7fdaee89baf325, type: 3}
+    lineText: '________ '
+    blankAnswer: Thank you
+    lineAudio: {fileID: 0}
+    afterBlankAudio: {fileID: 8300000, guid: 3139ae841c2b8c843bdccfd35d1ae351, type: 3}
+  - speakerName: Zoya
+    speakerAvatar: {fileID: 21300000, guid: 329a434ecfee308408961757fd955a59, type: 3}
+    lineText: Will you ________ give me my pencil back?
+    blankAnswer: Please
+    lineAudio: {fileID: 8300000, guid: 4171d67a4856aa645b0e9b14d3944cf6, type: 3}
+    afterBlankAudio: {fileID: 8300000, guid: e34b3cbdcccadf64c9edf42563e61060, type: 3}
+  - speakerName: Mike
+    speakerAvatar: {fileID: 21300000, guid: ee4095d0296ee4843a7fdaee89baf325, type: 3}
+    lineText: I am so ________ Zoya. I forgot to bring it
+    blankAnswer: Sorry
+    lineAudio: {fileID: 8300000, guid: cb10e9f654c880b4e872ce61f32da96d, type: 3}
+    afterBlankAudio: {fileID: 8300000, guid: b66e279da66630942a498bf7dba664da, type: 3}
+  - speakerName: Zoya
+    speakerAvatar: {fileID: 21300000, guid: 329a434ecfee308408961757fd955a59, type: 3}
+    lineText: That is fine, bring it tomorrow
+    blankAnswer: 
+    lineAudio: {fileID: 8300000, guid: 76be2472a072b6144b8406a68a5ceafa, type: 3}
+    afterBlankAudio: {fileID: 0}
+  wordBankWords:
+  - Please
+  - Thank you
+  - Sorry
+  - Please
+  - Welcome
+  wordSelectSound: {fileID: 8300000, guid: d56ab1cb9634628499496cdb1e891cae, type: 3}
+  allDoneAudio: {fileID: 8300000, guid: 2530d7f315b694e4880db6a1c0fb2055, type: 3}
+  bgmClip: {fileID: 8300000, guid: d6a9c5b007bfee74d96686771cd945b6, type: 3}

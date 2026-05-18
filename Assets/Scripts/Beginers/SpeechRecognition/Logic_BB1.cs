@@ -1,3 +1,4 @@
+
 using System;
 using System.Text;
 using System.Collections;
@@ -5,11 +6,19 @@ using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 
-
-public class Logic_BB1 : MonoBehaviour
+public class Logic_BB1 : MonoBehaviour, IUnitCompletable
 {
-    // ── Question Data ──────────────────────────────────────────────────────────
+    // ── IUnitCompletable — auto-set at runtime, never assign in Inspector ──
+    [HideInInspector] public SharedUnitPanelController panel;
+    [HideInInspector] public SharedUnitButton          unitButton;
 
+    public void OnUnitStart(SharedUnitPanelController sharedPanel, SharedUnitButton sharedButton)
+    {
+        panel      = sharedPanel;
+        unitButton = sharedButton;
+    }
+
+    // ── Question Data ──────────────────────────────────────────────────────────
     [System.Serializable]
     public class SpeakingQuestion
     {
@@ -21,7 +30,6 @@ public class Logic_BB1 : MonoBehaviour
     }
 
     // ── Inspector ──────────────────────────────────────────────────────────────
-
     [Header("── Questions ───────────────────")]
     public SpeakingQuestion[] questions;
 
@@ -32,11 +40,11 @@ public class Logic_BB1 : MonoBehaviour
     public TextMeshProUGUI accuracyPercentLabel;
 
     [Header("── UI Controls ─────────────────")]
-    public Slider accuracySlider;
+    public Slider      accuracySlider;
     public CanvasGroup accuracyGroup;
-    public Button nextButton;
-    public Button playRecordingButton;
-    public Button replayQuestionButton;
+    public Button      nextButton;
+    public Button      playRecordingButton;
+    public Button      replayQuestionButton;
 
     [Header("── Audio ───────────────────────")]
     public AudioSource questionAudioSource;
@@ -47,21 +55,15 @@ public class Logic_BB1 : MonoBehaviour
 
     [Header("── Completion ──────────────────")]
     public GameObject completedPanel;
-    public Button finishButton;
-
-    [Header("── Navigation ──────────────────")]
-    public GameObject speechGamePanel;
-    public GameObject unitPanel;
+    public Button     finishButton;
 
     // ── Runtime ────────────────────────────────────────────────────────────────
-
     private int    _currentIndex       = 0;
     private string _lastSeenHypothesis = "";
     private int    _questionsCompleted = 0;
     private bool   _started            = false;
 
     // ── Unity Lifecycle ────────────────────────────────────────────────────────
-
     void Start()
     {
         _started = true;
@@ -92,7 +94,7 @@ public class Logic_BB1 : MonoBehaviour
         if (finishButton != null)
         {
             finishButton.onClick.RemoveAllListeners();
-            finishButton.onClick.AddListener(GoBackToUnitPanel);
+            finishButton.onClick.AddListener(OnFinishClicked);
         }
 
         if (accuracySlider != null)
@@ -122,15 +124,12 @@ public class Logic_BB1 : MonoBehaviour
         CrossPlatformSpeechManager_BB1.OnRecordingReadyStatic -= HandleRecordingReady;
     }
 
-    // ── Reset / Navigation ─────────────────────────────────────────────────────
-
+    // ── Reset ──────────────────────────────────────────────────────────────────
     void ResetToStart()
     {
         _currentIndex       = 0;
         _questionsCompleted = 0;
         _lastSeenHypothesis = "";
-
-        Debug.Log($"[Logic_BB1] ResetToStart — totalQuestions={questions?.Length}");
 
         if (completedPanel != null) completedPanel.SetActive(false);
 
@@ -138,32 +137,37 @@ public class Logic_BB1 : MonoBehaviour
             LoadQuestion(0);
     }
 
-    void GoBackToUnitPanel()
+    // ── Finish — return to unit panel and mark badge ───────────────────────────
+    void OnFinishClicked()
     {
-        if (unitPanel != null) unitPanel.SetActive(true);
-        GameObject panelToHide = speechGamePanel != null ? speechGamePanel : gameObject;
-        panelToHide.SetActive(false);
+        var cachedPanel  = panel;
+        var cachedButton = unitButton;
+
+        gameObject.SetActive(false);
+
+        if (cachedPanel != null && cachedButton != null)
+            cachedPanel.UnitFinished(cachedButton);
+        else
+            Debug.LogWarning("[Logic_BB1] panel or unitButton is null on finish. " +
+                             "Make sure IUnitCompletable is being called by SharedUnitPanelController.");
     }
 
     // ── Question Loading ───────────────────────────────────────────────────────
-
     void LoadQuestion(int index)
     {
         _currentIndex       = index;
         _lastSeenHypothesis = "";
 
-        Debug.Log($"[Logic_BB1] LoadQuestion({index}) — _questionsCompleted={_questionsCompleted} totalQuestions={questions.Length}");
-
         var q = questions[index];
 
-        if (questionText != null)        questionText.text        = q.targetText;
-        if (questionNumberText != null)  questionNumberText.text  = $"Question {index + 1} / {questions.Length}";
+        if (questionText       != null) questionText.text       = q.targetText;
+        if (questionNumberText != null) questionNumberText.text = $"Question {index + 1} / {questions.Length}";
         if (recognizedTextLabel != null) recognizedTextLabel.text = "";
 
         ResetAccuracyUI();
 
-        if (nextButton != null)          nextButton.interactable          = false;
-        if (playRecordingButton != null)  playRecordingButton.interactable = false;
+        if (nextButton          != null) nextButton.interactable         = false;
+        if (playRecordingButton != null) playRecordingButton.interactable = false;
 
         CrossPlatformSpeechManager_BB1.Instance?.ClearLastRecording();
 
@@ -179,7 +183,6 @@ public class Logic_BB1 : MonoBehaviour
     }
 
     // ── Speech Callbacks ───────────────────────────────────────────────────────
-
     void HandleResult(string transcript)
     {
         _lastSeenHypothesis = "";
@@ -222,14 +225,13 @@ public class Logic_BB1 : MonoBehaviour
     }
 
     // ── Accuracy ───────────────────────────────────────────────────────────────
-
     void EvaluateAccuracy(string hypothesis)
     {
         string reference = questions[_currentIndex].targetText;
         float  score     = SimilarityPercent(reference, hypothesis);
 
-        if (accuracySlider != null)       accuracySlider.value      = score;
-        if (accuracyPercentLabel != null)  accuracyPercentLabel.text = Mathf.RoundToInt(score * 100f) + "%";
+        if (accuracySlider      != null) accuracySlider.value      = score;
+        if (accuracyPercentLabel != null) accuracyPercentLabel.text = Mathf.RoundToInt(score * 100f) + "%";
 
         ShowAccuracyGroup();
 
@@ -239,8 +241,8 @@ public class Logic_BB1 : MonoBehaviour
 
     void ResetAccuracyUI()
     {
-        if (accuracySlider != null)       accuracySlider.value      = 0f;
-        if (accuracyPercentLabel != null)  accuracyPercentLabel.text = "";
+        if (accuracySlider      != null) accuracySlider.value      = 0f;
+        if (accuracyPercentLabel != null) accuracyPercentLabel.text = "";
         HideAccuracyGroup();
         if (nextButton != null) nextButton.interactable = false;
     }
@@ -248,22 +250,17 @@ public class Logic_BB1 : MonoBehaviour
     void HideAccuracyGroup()
     {
         if (accuracyGroup == null) return;
-        accuracyGroup.alpha          = 0f;
-        accuracyGroup.interactable   = false;
-        accuracyGroup.blocksRaycasts = false;
+        accuracyGroup.alpha = 0f; accuracyGroup.interactable = false; accuracyGroup.blocksRaycasts = false;
     }
 
     void ShowAccuracyGroup()
     {
         if (accuracyGroup == null) return;
-        accuracyGroup.alpha          = 1f;
-        accuracyGroup.interactable   = true;
-        accuracyGroup.blocksRaycasts = true;
+        accuracyGroup.alpha = 1f; accuracyGroup.interactable = true; accuracyGroup.blocksRaycasts = true;
     }
 
     // ── Button Handlers ────────────────────────────────────────────────────────
-
-    void OnPlayRecordingClicked()  => CrossPlatformSpeechManager_BB1.Instance?.PlayLastRecording();
+    void OnPlayRecordingClicked() => CrossPlatformSpeechManager_BB1.Instance?.PlayLastRecording();
 
     void OnReplayQuestionClicked()
     {
@@ -282,11 +279,8 @@ public class Logic_BB1 : MonoBehaviour
 
         _questionsCompleted++;
 
-        Debug.Log($"[Logic_BB1] OnNextClicked — _questionsCompleted={_questionsCompleted} totalQuestions={questions.Length} _currentIndex={_currentIndex}");
-        Debug.Log($"[Logic_BB1] OnNextClicked ENTRY — stack: {new System.Diagnostics.StackTrace()}");
         if (_questionsCompleted >= questions.Length)
         {
-            Debug.Log("[Logic_BB1] All questions done → ShowCompleted");
             ShowCompleted();
             return;
         }
@@ -295,7 +289,6 @@ public class Logic_BB1 : MonoBehaviour
     }
 
     // ── Completion ─────────────────────────────────────────────────────────────
-
     void ShowCompleted()
     {
         if (completedPanel != null)
@@ -310,30 +303,21 @@ public class Logic_BB1 : MonoBehaviour
     {
         cg.alpha = 0f;
         float t  = 0f;
-        while (t < 0.5f)
-        {
-            t        += Time.deltaTime;
-            cg.alpha  = Mathf.Clamp01(t / 0.5f);
-            yield return null;
-        }
+        while (t < 0.5f) { t += Time.deltaTime; cg.alpha = Mathf.Clamp01(t / 0.5f); yield return null; }
         cg.alpha = 1f;
     }
 
     // ── Legacy / Public API ────────────────────────────────────────────────────
-
-    public void finish()    => GoBackToUnitPanel();
+    public void finish()    => OnFinishClicked();
     public void ResetGame() => ResetToStart();
 
     // ── Levenshtein Similarity ─────────────────────────────────────────────────
-
     float SimilarityPercent(string reference, string hypothesis)
     {
         string a = Normalize(reference);
         string b = Normalize(hypothesis);
-
         if (string.IsNullOrEmpty(a) || string.IsNullOrEmpty(b)) return 0f;
         if (a == b) return 1f;
-
         int dist   = Levenshtein(a, b);
         int maxLen = Mathf.Max(a.Length, b.Length);
         return 1f - (float)dist / maxLen;

@@ -50,6 +50,7 @@ public class Masters_SelfIntroduction_Quiz_LessonOne : Masters_Lesson {
     private Quiz currentQuiz;
     private Masters_QuizButton currentlyPressedQuizButton;
     private bool canClickCheckButton;
+    private bool canClickOptionButton;
 
 
     protected override void Awake() {
@@ -84,6 +85,7 @@ public class Masters_SelfIntroduction_Quiz_LessonOne : Masters_Lesson {
             quizCountTMP.text = $"{++currentQuizIndex}/6";
 
             canClickCheckButton = false;
+            canClickOptionButton = false;
 
             Invoke(SET_QUIZ, timeBetweenEachQuizQuestion);
         } else {
@@ -92,10 +94,16 @@ public class Masters_SelfIntroduction_Quiz_LessonOne : Masters_Lesson {
             currentlyPressedQuizButton.GetButton().interactable = false;
             currentlyPressedQuizButton.GetButtonImage().color = incorrectColor;
             currentlyPressedQuizButton = null;
+
+            canClickOptionButton = true;
         }
     }
 
     private void OnQuizButtonClicked(Masters_QuizButton quizButton, int buttonIndex) {
+        if (!canClickOptionButton) {
+            return;
+        }
+
         if (currentlyPressedQuizButton != null) {
             //currentlyPressedQuizButton.GetButton().transition = Selectable.Transition.ColorTint;
             currentlyPressedQuizButton.GetButtonImage().color = defaultColor;
@@ -117,14 +125,14 @@ public class Masters_SelfIntroduction_Quiz_LessonOne : Masters_Lesson {
             return;
         }
 
-        canClickCheckButton = true;
-
         foreach (Masters_QuizButton quizButton in quizButtonArray) {
             //quizButton.GetButton().transition = Selectable.Transition.ColorTint;
             quizButton.GetButton().interactable = true;
             quizButton.GetButtonImage().color = defaultColor;
         }
 
+        canClickCheckButton = true;
+        canClickOptionButton = true;
         currentQuiz = quizArray[currentQuizIndex];
 
         StartCoroutine(AnimationCoroutine());

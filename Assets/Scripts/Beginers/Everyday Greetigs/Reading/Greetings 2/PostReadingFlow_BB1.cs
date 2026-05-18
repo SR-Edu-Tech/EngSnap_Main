@@ -4,12 +4,46 @@ using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 
-
-public class PostReadingFlow_BB1 : MonoBehaviour
+public class PostReadingFlow_BB1 : MonoBehaviour, IUnitCompletable
 {
-
     private string saveKey;
     private int currentScreen = 1;
+
+    // ── IUnitCompletable ──────────────────────────────────────────────────
+    // These are filled automatically by SharedUnitPanelController.
+    // Never assign in Inspector.
+    [HideInInspector] public SharedUnitPanelController unitPanel;
+    [HideInInspector] public SharedUnitButton          readingUnitButton;
+
+    public void OnUnitStart(SharedUnitPanelController sharedPanel, SharedUnitButton sharedButton)
+    {
+        unitPanel         = sharedPanel;
+        readingUnitButton = sharedButton;
+        saveKey           = $"{sharedButton.unitType}_flow";
+        currentScreen     = PlayerPrefs.GetInt(saveKey, 1);
+    }
+
+    /// <summary>
+    /// Called by Greetings_BB1 to hand off references BEFORE SetActive,
+    /// so OnEnable already has valid panel and button.
+    /// </summary>
+    public void OpenFromGreetings(SharedUnitPanelController sharedPanel, SharedUnitButton sharedButton)
+    {
+        if (sharedPanel == null || sharedButton == null)
+        {
+            Debug.LogError("[PostReadingFlow] OpenFromGreetings called with null references! " +
+                           "Make sure the Reading entry in TopicData_BB2 points to the Greetings_BB1 GameObject, " +
+                           "not the PostReadingFlow_BB1 GameObject.");
+            return;
+        }
+
+        unitPanel         = sharedPanel;
+        readingUnitButton = sharedButton;
+        saveKey           = $"{sharedButton.unitType}_flow";
+        currentScreen     = PlayerPrefs.GetInt(saveKey, 1);
+        gameObject.SetActive(true); // OnEnable fires here — references already set
+    }
+
     // ═══════════════════════════════════════════════════════
     // ── SCREEN 1 — RESPONSE PRACTICE
     // ═══════════════════════════════════════════════════════
@@ -18,18 +52,12 @@ public class PostReadingFlow_BB1 : MonoBehaviour
     public FlowOptionButton_BB1[] responseButtons;
     public AudioClip[]            responseAudios;
     public AudioSource            responseAudioSource;
-
-    [Tooltip("Audio clip played BEFORE the auto-play sequence begins (e.g. a question prompt)")]
-    public AudioClip              screen1QuestionAudio;   // NEW: question audio before responses
-
+    public AudioClip              screen1QuestionAudio;
     public Button                 nextButtonResponse;
-    [Tooltip("Seconds before Next is auto-enabled if sequence hasn't finished")]
     public float autoEnableSeconds = 25f;
 
     [Header("Response Button Scale")]
-    [Tooltip("Scale applied to a button while it is highlighted / playing")]
     public float responseHighlightScale = 1.08f;
-    [Tooltip("Speed of the scale pulse on highlighted button (cycles per second)")]
     public float responseScaleSpeed     = 2.5f;
 
     [Header("Response Colors")]
@@ -37,11 +65,7 @@ public class PostReadingFlow_BB1 : MonoBehaviour
     public Color responseTappedColor  = new Color(0.6f, 1f,    0.7f);
     public Color responsePlayingColor = new Color(1f,   0.92f, 0.4f);
 
-    // ═══════════════════════════════════════════════════════
-    // ── SCREEN TRANSITION
-    // ═══════════════════════════════════════════════════════
     [Header("── Screen Transitions ──")]
-    [Tooltip("Seconds to crossfade between screens")]
     public float screenFadeDuration = 0.4f;
 
     // ═══════════════════════════════════════════════════════
@@ -57,16 +81,11 @@ public class PostReadingFlow_BB1 : MonoBehaviour
     public RectTransform          popupPanelRect;
     public CanvasGroup            popupPanelCG;
     public TMP_Text               popupText;
-
-    [Tooltip("How long popup stays visible after bounce-in before auto-advancing")]
     public float popupHoldDuration  = 2.2f;
-    [Tooltip("Duration of popup bounce scale animation")]
     public float popupScaleDuration = 0.4f;
 
     [Header("Mood Button Pulse (Screen 2)")]
-    [Tooltip("Scale the idle mood buttons pulse to while waiting for a tap")]
     public float moodPulseScale = 1.06f;
-    [Tooltip("Pulse speed in cycles per second")]
     public float moodPulseSpeed = 2f;
 
     [Header("Mood Colors")]
@@ -81,13 +100,12 @@ public class PostReadingFlow_BB1 : MonoBehaviour
     public Image        studentAImage;
     public GameObject   studentABubble;
     public TMP_Text     studentAText;
-    public Button       studentABubbleButton;   // NEW: button on Student A's bubble
+    public Button       studentABubbleButton;
     public Image        studentBImage;
     public GameObject   studentBBubble;
     public TMP_Text     studentBText;
-    public Button       studentBBubbleButton;   // NEW: button on Student B's bubble
+    public Button       studentBBubbleButton;
 
-    [Tooltip("[0]=Student A first, [1]=Student B, [2]=Student A again")]
     public string[]    dialogueLines  = new string[3];
     public AudioClip[] dialogueAudios = new AudioClip[3];
     public AudioSource dialogueAudioSource;
@@ -97,37 +115,29 @@ public class PostReadingFlow_BB1 : MonoBehaviour
     public float  pauseBetween      = 0.3f;
 
     // ═══════════════════════════════════════════════════════
-    // ── NAVIGATION
-    // ═══════════════════════════════════════════════════════
-    [Header("── Navigation ──")]
-    public UnitPanelController_BB1 unitPanel;
-    public UnitButton_BB1          readingUnitButton;
-
-    // ═══════════════════════════════════════════════════════
     // PRIVATE STATE
     // ═══════════════════════════════════════════════════════
-    private HashSet<int> tappedResponses    = new HashSet<int>();
+    private HashSet<int> tappedResponses      = new HashSet<int>();
     private Coroutine    autoEnableCoroutine;
     private Coroutine    screen1Sequence;
-
-    // Screen 1 — per-button scale pulse coroutines
-    private Coroutine[] responseScaleRoutines;
-
-    // Screen 2 — pulse coroutines (one per mood button)
-    private Coroutine[] moodPulseRoutines;
-    private bool        moodButtonsClickable = false;
-
-    // Screen 3 — which dialogue lines have been revealed
-    private bool[] dialogueLineReady;
+    private Coroutine[]  responseScaleRoutines;
+    private Coroutine[]  moodPulseRoutines;
+    private bool         moodButtonsClickable  = false;
+    private bool[]       dialogueLineReady;
 
     // ═══════════════════════════════════════════════════════
     void OnEnable()
     {
-        if (readingUnitButton != null)
-        {
-            saveKey = readingUnitButton.unitID + "_flow";
+        // Debug: print stack trace so we can see what activated this GO
+        Debug.Log("[PostReadingFlow] OnEnable called. unitPanel=" + (unitPanel != null ? "SET" : "NULL") +
+                  " readingUnitButton=" + (readingUnitButton != null ? "SET" : "NULL") +
+                  "\nStack: " + new System.Diagnostics.StackTrace().ToString());
+
+        if (!string.IsNullOrEmpty(saveKey))
             currentScreen = PlayerPrefs.GetInt(saveKey, 1);
-        }
+        else
+            currentScreen = 1;
+
         PlayerPrefs.SetInt("reading_state", 2);
         RestoreScreen();
     }
@@ -135,24 +145,12 @@ public class PostReadingFlow_BB1 : MonoBehaviour
     void RestoreScreen()
     {
         SetCG(screenResponseCG, 0f, false);
-        SetCG(screenMoodCG, 0f, false);
+        SetCG(screenMoodCG,     0f, false);
         SetCG(screenDialogueCG, 0f, false);
 
-        if (currentScreen == 1)
-        {
-            SetCG(screenResponseCG, 1f, true);
-            OpenScreen1();
-        }
-        else if (currentScreen == 2)
-        {
-            SetCG(screenMoodCG, 1f, true);
-            OpenScreen2();
-        }
-        else
-        {
-            SetCG(screenDialogueCG, 1f, true);
-            OpenScreen3();
-        }
+        if      (currentScreen == 1) { SetCG(screenResponseCG, 1f, true); OpenScreen1(); }
+        else if (currentScreen == 2) { SetCG(screenMoodCG,     1f, true); OpenScreen2(); }
+        else                         { SetCG(screenDialogueCG, 1f, true); OpenScreen3(); }
     }
 
     // ═══════════════════════════════════════════════════════
@@ -161,8 +159,6 @@ public class PostReadingFlow_BB1 : MonoBehaviour
     void OpenScreen1()
     {
         tappedResponses.Clear();
-
-        // Allocate scale-pulse coroutine array
         responseScaleRoutines = new Coroutine[responseButtons.Length];
 
         if (nextButtonResponse != null)
@@ -177,7 +173,6 @@ public class PostReadingFlow_BB1 : MonoBehaviour
         {
             int idx = i;
             responseButtons[i].Initialize(responseDefaultColor, () => OnResponseTappedByPlayer(idx));
-            // Reset scale
             responseButtons[i].SetScale(Vector3.one);
         }
 
@@ -190,7 +185,6 @@ public class PostReadingFlow_BB1 : MonoBehaviour
 
     IEnumerator AutoPlaySequence()
     {
-        // ── Play question audio first, then begin response sequence ──
         if (responseAudioSource != null && screen1QuestionAudio != null)
         {
             responseAudioSource.Stop();
@@ -198,32 +192,19 @@ public class PostReadingFlow_BB1 : MonoBehaviour
             responseAudioSource.Play();
             yield return new WaitForSeconds(screen1QuestionAudio.length + 0.25f);
         }
-        else
-        {
-            yield return new WaitForSeconds(0.3f);
-        }
+        else yield return new WaitForSeconds(0.3f);
 
-        // ── Cycle through each response button ──
         for (int i = 0; i < responseButtons.Length; i++)
         {
-            // Highlight & scale-pulse the current button; reset others
             for (int j = 0; j < responseButtons.Length; j++)
             {
                 responseButtons[j].SetColor(j == i ? responsePlayingColor : responseDefaultColor);
-
-                // Stop any existing pulse on every button
-                if (responseScaleRoutines[j] != null)
-                {
-                    StopCoroutine(responseScaleRoutines[j]);
-                    responseScaleRoutines[j] = null;
-                }
+                if (responseScaleRoutines[j] != null) { StopCoroutine(responseScaleRoutines[j]); responseScaleRoutines[j] = null; }
                 responseButtons[j].SetScale(Vector3.one);
             }
 
-            // Start pulse only on the active button
             responseScaleRoutines[i] = StartCoroutine(PulseScale(responseButtons[i], responseHighlightScale, responseScaleSpeed));
 
-            // Play audio
             if (responseAudioSource != null && i < responseAudios.Length && responseAudios[i] != null)
             {
                 responseAudioSource.Stop();
@@ -233,22 +214,13 @@ public class PostReadingFlow_BB1 : MonoBehaviour
             }
             else yield return new WaitForSeconds(0.8f);
 
-            // Stop pulse, snap back to normal scale
-            if (responseScaleRoutines[i] != null)
-            {
-                StopCoroutine(responseScaleRoutines[i]);
-                responseScaleRoutines[i] = null;
-            }
+            if (responseScaleRoutines[i] != null) { StopCoroutine(responseScaleRoutines[i]); responseScaleRoutines[i] = null; }
             responseButtons[i].SetScale(Vector3.one);
-
             responseButtons[i].SetColor(responseTappedColor);
             tappedResponses.Add(i);
         }
 
-        // All done — set every button to tapped color
-        for (int j = 0; j < responseButtons.Length; j++)
-            responseButtons[j].SetColor(responseTappedColor);
-
+        for (int j = 0; j < responseButtons.Length; j++) responseButtons[j].SetColor(responseTappedColor);
         EnableScreen1Next();
     }
 
@@ -258,24 +230,16 @@ public class PostReadingFlow_BB1 : MonoBehaviour
         {
             responseButtons[j].SetColor(j == index ? responsePlayingColor
                 : (tappedResponses.Contains(j) ? responseTappedColor : responseDefaultColor));
-
-            // Stop any scale pulse on non-tapped buttons
             if (j != index && responseScaleRoutines != null && responseScaleRoutines[j] != null)
             {
-                StopCoroutine(responseScaleRoutines[j]);
-                responseScaleRoutines[j] = null;
+                StopCoroutine(responseScaleRoutines[j]); responseScaleRoutines[j] = null;
                 responseButtons[j].SetScale(Vector3.one);
             }
         }
 
-        // Pulse the tapped button while it plays
         if (responseScaleRoutines != null)
         {
-            if (responseScaleRoutines[index] != null)
-            {
-                StopCoroutine(responseScaleRoutines[index]);
-                responseScaleRoutines[index] = null;
-            }
+            if (responseScaleRoutines[index] != null) { StopCoroutine(responseScaleRoutines[index]); responseScaleRoutines[index] = null; }
             responseScaleRoutines[index] = StartCoroutine(PulseScale(responseButtons[index], responseHighlightScale, responseScaleSpeed));
         }
 
@@ -295,57 +259,34 @@ public class PostReadingFlow_BB1 : MonoBehaviour
             ? responseAudioSource.clip.length + 0.1f : 0.8f;
         yield return new WaitForSeconds(len);
 
-        // Stop pulse
         if (responseScaleRoutines != null && responseScaleRoutines[index] != null)
         {
-            StopCoroutine(responseScaleRoutines[index]);
-            responseScaleRoutines[index] = null;
+            StopCoroutine(responseScaleRoutines[index]); responseScaleRoutines[index] = null;
         }
         responseButtons[index].SetScale(Vector3.one);
         responseButtons[index].SetColor(responseTappedColor);
         tappedResponses.Add(index);
     }
 
-    IEnumerator AutoEnableTimer()
-    {
-        yield return new WaitForSeconds(autoEnableSeconds);
-        EnableScreen1Next();
-    }
+    IEnumerator AutoEnableTimer() { yield return new WaitForSeconds(autoEnableSeconds); EnableScreen1Next(); }
 
     void EnableScreen1Next()
     {
         if (autoEnableCoroutine != null) { StopCoroutine(autoEnableCoroutine); autoEnableCoroutine = null; }
-
-        // Stop all remaining pulses
         if (responseScaleRoutines != null)
-        {
             for (int j = 0; j < responseScaleRoutines.Length; j++)
             {
-                if (responseScaleRoutines[j] != null)
-                {
-                    StopCoroutine(responseScaleRoutines[j]);
-                    responseScaleRoutines[j] = null;
-                }
-                if (j < responseButtons.Length)
-                    responseButtons[j].SetScale(Vector3.one);
+                if (responseScaleRoutines[j] != null) { StopCoroutine(responseScaleRoutines[j]); responseScaleRoutines[j] = null; }
+                if (j < responseButtons.Length) responseButtons[j].SetScale(Vector3.one);
             }
-        }
-
-        if (nextButtonResponse != null)
-        {
-            nextButtonResponse.gameObject.SetActive(true);
-            nextButtonResponse.interactable = true;
-        }
+        if (nextButtonResponse != null) { nextButtonResponse.gameObject.SetActive(true); nextButtonResponse.interactable = true; }
     }
 
     void OnScreen1Next()
     {
         currentScreen = 2;
-        PlayerPrefs.SetInt(saveKey, currentScreen);
-        PlayerPrefs.Save();
-
+        if (!string.IsNullOrEmpty(saveKey)) { PlayerPrefs.SetInt(saveKey, currentScreen); PlayerPrefs.Save(); }
         if (screen1Sequence != null) StopCoroutine(screen1Sequence);
-
         StartCoroutine(CrossFade(screenResponseCG, screenMoodCG, OpenScreen2));
     }
 
@@ -373,7 +314,6 @@ public class PostReadingFlow_BB1 : MonoBehaviour
 
     IEnumerator Screen2Sequence()
     {
-        // Play the question audio
         if (moodAudioSource != null && moodQuestionAudio != null)
         {
             moodAudioSource.Stop();
@@ -383,12 +323,10 @@ public class PostReadingFlow_BB1 : MonoBehaviour
         }
         else yield return new WaitForSeconds(0.5f);
 
-        // Reveal buttons
         if (moodButtonsRoot != null) moodButtonsRoot.SetActive(true);
         foreach (var btn in moodButtons) btn.SetInteractable(true);
         moodButtonsClickable = true;
 
-        // Start idle pulse on ALL mood buttons while waiting for a tap
         for (int i = 0; i < moodButtons.Length; i++)
         {
             int idx = i;
@@ -401,13 +339,8 @@ public class PostReadingFlow_BB1 : MonoBehaviour
         if (moodPulseRoutines == null) return;
         for (int i = 0; i < moodPulseRoutines.Length; i++)
         {
-            if (moodPulseRoutines[i] != null)
-            {
-                StopCoroutine(moodPulseRoutines[i]);
-                moodPulseRoutines[i] = null;
-            }
-            if (i < moodButtons.Length)
-                moodButtons[i].SetScale(Vector3.one);
+            if (moodPulseRoutines[i] != null) { StopCoroutine(moodPulseRoutines[i]); moodPulseRoutines[i] = null; }
+            if (i < moodButtons.Length) moodButtons[i].SetScale(Vector3.one);
         }
     }
 
@@ -415,20 +348,15 @@ public class PostReadingFlow_BB1 : MonoBehaviour
     {
         if (!moodButtonsClickable) return;
         moodButtonsClickable = false;
-
-        // Stop ALL idle pulses
         StopAllMoodPulses();
 
-        // Color + lock all buttons
         for (int i = 0; i < moodButtons.Length; i++)
         {
             moodButtons[i].SetColor(i == index ? moodSelectedColor : moodDefaultColor);
             moodButtons[i].SetInteractable(false);
         }
 
-        // Pulse ONLY the chosen button while popup shows
         moodPulseRoutines[index] = StartCoroutine(PulseScale(moodButtons[index], moodPulseScale, moodPulseSpeed));
-
         if (popupText != null) popupText.text = moodButtons[index].label;
 
         if (moodAudioSource != null && index < moodOptionAudios.Length && moodOptionAudios[index] != null)
@@ -443,16 +371,10 @@ public class PostReadingFlow_BB1 : MonoBehaviour
 
     IEnumerator BouncePopupThenAdvance(int selectedIndex)
     {
-        if (popupPanelRect != null)
-        {
-            popupPanelRect.gameObject.SetActive(true);
-            popupPanelRect.localScale = Vector3.zero;
-        }
-        if (popupPanelCG != null) popupPanelCG.alpha = 1f;
+        if (popupPanelRect != null) { popupPanelRect.gameObject.SetActive(true); popupPanelRect.localScale = Vector3.zero; }
+        if (popupPanelCG  != null) popupPanelCG.alpha = 1f;
 
-        // Phase 1: scale 0 → 1.18
-        float phase1 = popupScaleDuration * 0.65f;
-        float elapsed = 0f;
+        float phase1 = popupScaleDuration * 0.65f, elapsed = 0f;
         while (elapsed < phase1)
         {
             elapsed += Time.deltaTime;
@@ -461,9 +383,7 @@ public class PostReadingFlow_BB1 : MonoBehaviour
             yield return null;
         }
 
-        // Phase 2: scale 1.18 → 1.0
-        float phase2 = popupScaleDuration * 0.35f;
-        elapsed = 0f;
+        float phase2 = popupScaleDuration * 0.35f; elapsed = 0f;
         while (elapsed < phase2)
         {
             elapsed += Time.deltaTime;
@@ -475,11 +395,9 @@ public class PostReadingFlow_BB1 : MonoBehaviour
 
         yield return new WaitForSeconds(popupHoldDuration);
 
-        // Stop the selected button's pulse before advancing
         if (moodPulseRoutines != null && moodPulseRoutines[selectedIndex] != null)
         {
-            StopCoroutine(moodPulseRoutines[selectedIndex]);
-            moodPulseRoutines[selectedIndex] = null;
+            StopCoroutine(moodPulseRoutines[selectedIndex]); moodPulseRoutines[selectedIndex] = null;
             moodButtons[selectedIndex].SetScale(Vector3.one);
         }
 
@@ -487,9 +405,7 @@ public class PostReadingFlow_BB1 : MonoBehaviour
         if (popupPanelRect  != null) popupPanelRect.gameObject.SetActive(false);
 
         currentScreen = 3;
-        PlayerPrefs.SetInt(saveKey, currentScreen);
-        PlayerPrefs.Save();
-
+        if (!string.IsNullOrEmpty(saveKey)) { PlayerPrefs.SetInt(saveKey, currentScreen); PlayerPrefs.Save(); }
         StartCoroutine(CrossFade(screenMoodCG, screenDialogueCG, OpenScreen3));
     }
 
@@ -498,17 +414,14 @@ public class PostReadingFlow_BB1 : MonoBehaviour
     // ═══════════════════════════════════════════════════════
     void OpenScreen3()
     {
-        dialogueLineReady = new bool[dialogueLines.Length]; // all false
-
+        dialogueLineReady = new bool[dialogueLines.Length];
         SetImageAlpha(studentAImage, 0f);
         SetImageAlpha(studentBImage, 0f);
         if (studentABubble != null) studentABubble.SetActive(false);
         if (studentBBubble != null) studentBBubble.SetActive(false);
 
-        // Wire bubble tap buttons — disabled until line is ready
-        WireBubbleButton(studentABubbleButton, 0, 2); // line 0 and 2 belong to Student A
-        WireBubbleButton(studentBBubbleButton, 1);    // line 1 belongs to Student B
-
+        WireBubbleButton(studentABubbleButton, 0, 2);
+        WireBubbleButton(studentBBubbleButton, 1);
         DisableBubbleButton(studentABubbleButton);
         DisableBubbleButton(studentBBubbleButton);
 
@@ -523,38 +436,23 @@ public class PostReadingFlow_BB1 : MonoBehaviour
         StartCoroutine(RunDialogue());
     }
 
-    // Wire a bubble button so tapping it replays the most recently shown line for that student.
-    // latestLineIndex tracks whichever line index was shown last for this student.
     void WireBubbleButton(Button btn, params int[] lineIndices)
     {
         if (btn == null) return;
         btn.onClick.RemoveAllListeners();
         btn.onClick.AddListener(() =>
         {
-            // Play the highest-index line that is currently ready
             for (int k = lineIndices.Length - 1; k >= 0; k--)
             {
                 int li = lineIndices[k];
                 if (dialogueLineReady != null && li < dialogueLineReady.Length && dialogueLineReady[li])
-                {
-                    PlayDialogueAudio(li);
-                    break;
-                }
+                    { PlayDialogueAudio(li); break; }
             }
         });
     }
 
-    void EnableBubbleButton(Button btn)
-    {
-        if (btn == null) return;
-        btn.interactable = true;
-    }
-
-    void DisableBubbleButton(Button btn)
-    {
-        if (btn == null) return;
-        btn.interactable = false;
-    }
+    void EnableBubbleButton(Button btn)  { if (btn != null) btn.interactable = true;  }
+    void DisableBubbleButton(Button btn) { if (btn != null) btn.interactable = false; }
 
     void PlayDialogueAudio(int lineIndex)
     {
@@ -567,24 +465,18 @@ public class PostReadingFlow_BB1 : MonoBehaviour
 
     IEnumerator RunDialogue()
     {
-        // Student A — line 0
         yield return StartCoroutine(FadeImage(studentAImage, 0f, 1f));
         yield return StartCoroutine(ShowAndSpeak(studentABubble, studentAText, 0));
-        dialogueLineReady[0] = true;
-        EnableBubbleButton(studentABubbleButton);
+        dialogueLineReady[0] = true; EnableBubbleButton(studentABubbleButton);
         yield return new WaitForSeconds(pauseBetween);
 
-        // Student B — line 1
         yield return StartCoroutine(FadeImage(studentBImage, 0f, 1f));
         yield return StartCoroutine(ShowAndSpeak(studentBBubble, studentBText, 1));
-        dialogueLineReady[1] = true;
-        EnableBubbleButton(studentBBubbleButton);
+        dialogueLineReady[1] = true; EnableBubbleButton(studentBBubbleButton);
         yield return new WaitForSeconds(pauseBetween);
 
-        // Student A — line 2
         yield return StartCoroutine(ShowAndSpeak(studentABubble, studentAText, 2));
         dialogueLineReady[2] = true;
-        // studentABubbleButton is already enabled; clicking it now plays line 2
         yield return new WaitForSeconds(pauseBetween);
 
         if (nextButtonDialogue != null)
@@ -597,8 +489,7 @@ public class PostReadingFlow_BB1 : MonoBehaviour
     IEnumerator ShowAndSpeak(GameObject bubble, TMP_Text textComp, int lineIndex)
     {
         if (bubble   != null) bubble.SetActive(true);
-        if (textComp != null && lineIndex < dialogueLines.Length)
-            textComp.text = dialogueLines[lineIndex];
+        if (textComp != null && lineIndex < dialogueLines.Length) textComp.text = dialogueLines[lineIndex];
 
         if (dialogueAudioSource != null && lineIndex < dialogueAudios.Length && dialogueAudios[lineIndex] != null)
         {
@@ -610,18 +501,31 @@ public class PostReadingFlow_BB1 : MonoBehaviour
         else yield return new WaitForSeconds(1f);
     }
 
+    // ── KEY FIX: call UnitFinished BEFORE deactivating this GO ───────────
     void OnScreen3Next()
     {
+        StopAllCoroutines();
         if (dialogueAudioSource != null) dialogueAudioSource.Stop();
+
+        // Clear saved progress for this unit
+        if (!string.IsNullOrEmpty(saveKey)) { PlayerPrefs.DeleteKey(saveKey); PlayerPrefs.Save(); }
+
+        // Cache references before deactivating (SetActive(false) clears nothing but good practice)
+        var cachedPanel  = unitPanel;
+        var cachedButton = readingUnitButton;
+
+        // Deactivate self first
         gameObject.SetActive(false);
-        if (readingUnitButton != null) readingUnitButton.MarkCompleted();
-        if (unitPanel         != null) unitPanel.UnitFinished(readingUnitButton);
-        PlayerPrefs.DeleteKey(saveKey);
+
+        // Then notify panel — this shows unit buttons + marks badge complete
+        if (cachedPanel != null && cachedButton != null)
+            cachedPanel.UnitFinished(cachedButton);
+        else
+            Debug.LogWarning("PostReadingFlow_BB1: unitPanel or readingUnitButton is null on finish!");
     }
 
     // ═══════════════════════════════════════════════════════
-    // SHARED PULSE HELPER
-    // Continuously scales the button between 1.0 and targetScale using a sine wave.
+    // HELPERS
     // ═══════════════════════════════════════════════════════
     IEnumerator PulseScale(FlowOptionButton_BB1 btn, float targetScale, float speed)
     {
@@ -635,34 +539,27 @@ public class PostReadingFlow_BB1 : MonoBehaviour
         }
     }
 
-    // ═══════════════════════════════════════════════════════
-    // HELPERS
-    // ═══════════════════════════════════════════════════════
     IEnumerator CrossFade(CanvasGroup outCG, CanvasGroup inCG, System.Action onComplete)
     {
         if (inCG != null) SetCG(inCG, 0f, true);
-
         float elapsed = 0f;
         while (elapsed < screenFadeDuration)
         {
             elapsed += Time.deltaTime;
-            float t  = Mathf.Clamp01(elapsed / screenFadeDuration);
+            float t = Mathf.Clamp01(elapsed / screenFadeDuration);
             if (outCG != null) outCG.alpha = 1f - t;
             if (inCG  != null) inCG.alpha  = t;
             yield return null;
         }
-
         if (outCG != null) SetCG(outCG, 0f, false);
         if (inCG  != null) SetCG(inCG,  1f, true);
-
         onComplete?.Invoke();
     }
 
     IEnumerator FadeImage(Image img, float from, float to)
     {
         if (img == null) yield break;
-        float elapsed = 0f;
-        Color c = img.color;
+        float elapsed = 0f; Color c = img.color;
         while (elapsed < imageFadeDuration)
         {
             elapsed += Time.deltaTime;
@@ -676,31 +573,27 @@ public class PostReadingFlow_BB1 : MonoBehaviour
     static void SetCG(CanvasGroup cg, float alpha, bool interactive)
     {
         if (cg == null) return;
-        cg.alpha          = alpha;
-        cg.interactable   = interactive;
-        cg.blocksRaycasts = interactive;
+        cg.alpha = alpha; cg.interactable = interactive; cg.blocksRaycasts = interactive;
     }
 
     static void SetImageAlpha(Image img, float a)
     {
-        if (img == null) return;
-        Color c = img.color; c.a = a; img.color = c;
+        if (img == null) return; Color c = img.color; c.a = a; img.color = c;
     }
 
     public void OnBackClicked()
     {
-        PlayerPrefs.SetInt(saveKey, currentScreen);
-        PlayerPrefs.Save();
-
+        if (!string.IsNullOrEmpty(saveKey)) { PlayerPrefs.SetInt(saveKey, currentScreen); PlayerPrefs.Save(); }
         StopAllCoroutines();
-
         if (responseAudioSource != null) responseAudioSource.Stop();
         if (moodAudioSource     != null) moodAudioSource.Stop();
         if (dialogueAudioSource != null) dialogueAudioSource.Stop();
-
         gameObject.SetActive(false);
-
-        if (unitPanel != null)
-            unitPanel.gameObject.SetActive(true);
+        if (unitPanel != null) unitPanel.gameObject.SetActive(true);
     }
+
+   // public void unitfinished()
+    //{
+      //  panel.UnitFinished(unitButton);
+  //  }
 }

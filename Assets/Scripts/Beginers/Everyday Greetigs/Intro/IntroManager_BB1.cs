@@ -4,11 +4,12 @@ using UnityEngine.UI;
 using TMPro;
 using DG.Tweening;
 using UnityEngine.Animations;
-public class IntroManager_BB1 : MonoBehaviour
+
+public class IntroManager_BB1 : MonoBehaviour, IUnitCompletable
 {
-    [Header("Callback")]
-    public UnitPanelController_BB1 panel;   // drag the parent Topic panel here
-    public UnitButton_BB1 unitButton;       // drag the Intro UnitButton_BB1 here
+    [Header("Callback — auto-set at runtime by SharedUnitPanelController")]
+    [HideInInspector] public SharedUnitPanelController panel;
+    [HideInInspector] public SharedUnitButton unitButton;
 
     [Header("Audio")]
     public AudioSource bgmSource;
@@ -21,8 +22,8 @@ public class IntroManager_BB1 : MonoBehaviour
     public TextMeshProUGUI badgeText;
     public TextMeshProUGUI mainTitle;
     public GameObject introBox;
-    public TextMeshProUGUI[] introLines;    // 0: Listen, 1: Speak, 2: Play
-    public Image[] introIcons;              // 0: Ear,    1: Mic,   2: Controller
+    public TextMeshProUGUI[] introLines;
+    public Image[] introIcons;
     public RectTransform flashcardIcon;
     public Button startButton;
 
@@ -30,39 +31,38 @@ public class IntroManager_BB1 : MonoBehaviour
 
     [Header("Config")]
     public string badgeTextValue = "Unit I";
-   // public Color badgeTextColor  = new Color(0.5f, 0f, 1f);
-    //public Color badgeBgColor    = new Color(1f, 0.5f, 0f);
     public string mainTitleText  = "Everyday Greetings";
-   // public Color mainTitleColor  = new Color(0.1f, 0.1f, 0.5f);
     public float letterAnimDelay = 0.05f;
     public float lineAnimDelay   = 0.4f;
     public float lineFadeDuration = 0.35f;
 
-    // ── Unity Lifecycle ───────────────────────────────────────────────────
+    // ── IUnitCompletable ──────────────────────────────────────────────────
+    public void OnUnitStart(SharedUnitPanelController sharedPanel, SharedUnitButton sharedButton)
+    {
+        panel      = sharedPanel;
+        unitButton = sharedButton;
+    }
 
+    // ── Unity Lifecycle ───────────────────────────────────────────────────
     void OnEnable()
     {
-        // Re-run the intro every time the GameObject is activated
         StartIntro();
 
         if (animator != null)
         {
-            animator.Play("monkey",0,0f);
-            animator.speed = 0f; 
+            animator.Play("monkey", 0, 0f);
+            animator.speed = 0f;
         }
-     
-     Invoke("monkeyanimation", 2f);
 
-
+        Invoke("monkeyanimation", 2f);
     }
 
     void monkeyanimation()
     {
-       // Animation.reset("monkey");
         if (animator != null)
         {
             animator.speed = 1f;
-            animator.Play("monkey",0,0f);
+            animator.Play("monkey", 0, 0f);
         }
     }
 
@@ -72,25 +72,19 @@ public class IntroManager_BB1 : MonoBehaviour
     }
 
     // ── Public API ────────────────────────────────────────────────────────
-
-    /// <summary>
-    /// Call this (or wire the Start button) to finish the intro and return to unit panel.
-    /// </summary>
     public void OnIntroFinished()
     {
         if (panel != null && unitButton != null)
             panel.UnitFinished(unitButton);
         else
-            gameObject.SetActive(false); // fallback
+            gameObject.SetActive(false);
     }
 
     // ── Private ───────────────────────────────────────────────────────────
-
     void StartIntro()
     {
         StopAllCoroutines();
 
-        // Play BGM
         if (bgmSource != null && bgmClip != null)
         {
             bgmSource.clip = bgmClip;
@@ -98,47 +92,33 @@ public class IntroManager_BB1 : MonoBehaviour
             bgmSource.Play();
         }
 
-        // Reset UI
-        if (unitBadge  != null) unitBadge.gameObject.SetActive(false);
-        if (mainTitle  != null) mainTitle.gameObject.SetActive(false);
-        if (introBox   != null) introBox.SetActive(false);
+        if (unitBadge     != null) unitBadge.gameObject.SetActive(false);
+        if (mainTitle     != null) mainTitle.gameObject.SetActive(false);
+        if (introBox      != null) introBox.SetActive(false);
         if (flashcardIcon != null) flashcardIcon.gameObject.SetActive(false);
-        if (startButton != null) startButton.gameObject.SetActive(false);
+        if (startButton   != null) startButton.gameObject.SetActive(false);
 
-        foreach (var line in introLines)
-        {
-            SetAlpha(line, 0f);
-            line.gameObject.SetActive(false);
-        }
-        foreach (var icon in introIcons)
-        {
-            SetAlpha(icon, 0f);
-            icon.gameObject.SetActive(false);
-        }
+        foreach (var line in introLines) { SetAlpha(line, 0f); line.gameObject.SetActive(false); }
+        foreach (var icon in introIcons) { SetAlpha(icon, 0f); icon.gameObject.SetActive(false); }
 
         StartCoroutine(IntroSequence());
     }
- 
+
     IEnumerator IntroSequence()
     {
-        // 1. Badge drop-in
         if (unitBadge != null)
         {
             unitBadge.gameObject.SetActive(true);
-          //  if (badgeText != null) { badgeText.text = badgeTextValue; badgeText.color = badgeTextColor; }
             yield return StartCoroutine(AnimateBadgeDropIn());
         }
 
-        // 2. Main title
         if (mainTitle != null)
         {
             mainTitle.gameObject.SetActive(true);
-            mainTitle.text  = "";
-           // mainTitle.color = mainTitleColor;
+            mainTitle.text = "";
             yield return StartCoroutine(AnimateTitle(mainTitleText));
         }
 
-        // 3. Intro box lines & icons
         if (introBox != null) introBox.SetActive(true);
 
         int itemCount = Mathf.Min(introLines.Length, introIcons.Length);
@@ -153,7 +133,6 @@ public class IntroManager_BB1 : MonoBehaviour
             yield return new WaitForSeconds(lineAnimDelay);
         }
 
-        // 4. Character speech
         if (characterAudioSource != null && characterSpeechClip != null)
         {
             characterAudioSource.clip = characterSpeechClip;
@@ -161,24 +140,20 @@ public class IntroManager_BB1 : MonoBehaviour
             yield return new WaitForSeconds(characterSpeechClip.length);
         }
 
-        // 5. Flashcard flip
         if (flashcardIcon != null)
         {
             flashcardIcon.gameObject.SetActive(true);
             yield return StartCoroutine(AnimateFlashcardFlip());
         }
 
-        // 6. Start button — wired here to OnIntroFinished
         if (startButton != null)
         {
             startButton.gameObject.SetActive(true);
             startButton.onClick.RemoveAllListeners();
             startButton.onClick.AddListener(OnIntroFinished);
-           AnimateStartButtonPulse();
+            AnimateStartButtonPulse();
         }
     }
-
-    // ── Animations (unchanged from original) ─────────────────────────────
 
     IEnumerator AnimateBadgeDropIn()
     {
@@ -212,19 +187,7 @@ public class IntroManager_BB1 : MonoBehaviour
         flashcardIcon.localScale = Vector3.one;
     }
 
-    public void AnimateStartButtonPulse()
-    {
-       // float pulseScale = 1.05f, duration = 0.7f;
-       // Vector3 orig = startButton.transform.localScale;
-       // while (startButton.gameObject.activeSelf)
-        //{
-          //  float t = 0f;
-          //  while (t < duration / 2f) { t += Time.deltaTime; startButton.transform.localScale = orig * Mathf.Lerp(1f, pulseScale, t / duration); yield return null; }
-           // t = 0f;
-            //while (t < duration / 2f) { t += Time.deltaTime; startButton.transform.localScale = orig * Mathf.Lerp(pulseScale, 1f, t / duration); yield return null; }
-       // }
-        //startButton.transform.DOScale(Vector2.one * 0.75f, 0.5f).SetLoops(-1, LoopType.Yoyo);
-    }
+    public void AnimateStartButtonPulse() { }
 
     IEnumerator AnimateTitle(string title)
     {

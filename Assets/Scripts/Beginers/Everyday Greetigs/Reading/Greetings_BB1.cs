@@ -5,42 +5,55 @@ using UnityEngine.UI;
 using TMPro;
 
 /// <summary>
-/// Greetings_BB1.cs
-/// Attach to an empty GameObject named "Greetings_BB1" in your scene.
-/// Manages row reveal, audio playback, pair highlighting, and Play All sequence.
+/// Greetings_BB1 — first half of the Reading unit.
+/// Implements IUnitCompletable so SharedUnitPanelController wires panel + button.
+/// When the player clicks Next, it passes panel + button to PostReadingFlow_BB1
+/// and activates it. PostReadingFlow_BB1 calls UnitFinished at the very end.
 /// </summary>
-public class Greetings_BB1 : MonoBehaviour
+public class Greetings_BB1 : MonoBehaviour, IUnitCompletable
 {
+    // ── IUnitCompletable — filled automatically by SharedUnitPanelController ──
+    [HideInInspector] public SharedUnitPanelController panel;
+    [HideInInspector] public SharedUnitButton          unitButton;
+
+    public void OnUnitStart(SharedUnitPanelController sharedPanel, SharedUnitButton sharedButton)
+    {
+        panel      = sharedPanel;
+        unitButton = sharedButton;
+    }
+
+    // ── Link to second half of this Reading unit ──────────────────────────
+    [Header("── Next Screen (PostReadingFlow) ──")]
+    [Tooltip("Drag the PostReadingFlow_BB1 GameObject here")]
+    public PostReadingFlow_BB1 postReadingFlow;
+
+    // ── Data ──────────────────────────────────────────────────────────────
     [Header("Data Arrays")]
-    public string[] greetingTexts;
+    public string[]   greetingTexts;
     public AudioClip[] greetingAudios;
-    public string[] responseTexts;
+    public string[]   responseTexts;
     public AudioClip[] responseAudios;
 
     [Header("Prefabs and Containers")]
     public GameObject greetingPrefab;
     public GameObject responsePrefab;
-    public Transform greetingContainer;
-    public Transform responseContainer;
-    public float verticalSpacing = 100f;
+    public Transform  greetingContainer;
+    public Transform  responseContainer;
+    public float      verticalSpacing = 100f;
 
     [Header("Highlight Colors")]
-    public Color defaultColor = Color.white;
-    public Color highlightColor = new Color(1f, 0.85f, 0.9f); // soft pink
-    public Color playAllColor = new Color(1f, 0.75f, 0.3f);   // warm amber for Play All
+    public Color defaultColor   = Color.white;
+    public Color highlightColor = new Color(1f, 0.85f, 0.9f);
+    public Color playAllColor   = new Color(1f, 0.75f, 0.3f);
 
     [Header("Button Scale Settings")]
-    [Tooltip("Scale multiplier applied to buttons when a row is highlighted")]
     public float highlightScale = 1.08f;
-    [Tooltip("Duration of the scale tween in seconds")]
-    public float scaleDuration = 0.15f;
+    public float scaleDuration  = 0.15f;
 
     [Header("Play All Settings")]
-    [Tooltip("How long to highlight a pair during Play All before moving to next")]
     public float playAllPauseDuration = 1.8f;
 
     [Header("Animate-In Sound")]
-    [Tooltip("Short whoosh/pop played each time a greeting or response slides in. One AudioSource is created automatically.")]
     public AudioClip animateInSound;
     private AudioSource _animateSFX;
 
@@ -48,21 +61,17 @@ public class Greetings_BB1 : MonoBehaviour
     public Button nextButton;
     public Button replayButton;
 
-    private List<GreetingRow_BB1> rows = new List<GreetingRow_BB1>();
-    private bool isPlayingAll = false;
-    private Coroutine playAllCoroutine;
-    private Coroutine _rowPlayCoroutine; // tracks the greeting→response sequence started by a tap
+    private List<GreetingRow_BB1> rows             = new List<GreetingRow_BB1>();
+    private bool                  isPlayingAll      = false;
+    private Coroutine             playAllCoroutine;
+    private Coroutine             _rowPlayCoroutine;
 
-    // ─────────────────────────────────────────────
+    // ── Unity ─────────────────────────────────────────────────────────────
     void OnEnable()
     {
-        // FIRST TIME INIT ONLY
         if (rows.Count == 0)
-        {
             InitializeRows();
-        }
 
-        // Ensure a dedicated AudioSource exists for the animate-in SFX
         if (_animateSFX == null)
         {
             _animateSFX = gameObject.AddComponent<AudioSource>();
@@ -72,7 +81,6 @@ public class Greetings_BB1 : MonoBehaviour
         StopAllCoroutines();
         StopAllAudios();
         ResetVisuals();
-
         StartCoroutine(StartSequence());
     }
 
@@ -100,24 +108,16 @@ public class Greetings_BB1 : MonoBehaviour
     {
         foreach (var row in rows)
         {
-            if (row.greetingRect != null)
-                row.greetingRect.gameObject.SetActive(false);
-
-            if (row.responseRect != null)
-                row.responseRect.gameObject.SetActive(false);
-
+            if (row.greetingRect != null) row.greetingRect.gameObject.SetActive(false);
+            if (row.responseRect != null) row.responseRect.gameObject.SetActive(false);
             row.SetHighlight(defaultColor);
-            row.SetButtonScale(Vector3.one); // reset scale
+            row.SetButtonScale(Vector3.one);
         }
 
-        // Hide both buttons until the full sequence completes
-        if (nextButton != null)
-            nextButton.gameObject.SetActive(false);
-        if (replayButton != null)
-            replayButton.gameObject.SetActive(false);
+        if (nextButton   != null) nextButton.gameObject.SetActive(false);
+        if (replayButton != null) replayButton.gameObject.SetActive(false);
     }
 
-    // Stop all audios in all rows
     void StopAllAudios()
     {
         foreach (var row in rows)
@@ -127,46 +127,28 @@ public class Greetings_BB1 : MonoBehaviour
         }
     }
 
-    // ─────────────────────────────────────────────
-    // START SEQUENCE
-    // ─────────────────────────────────────────────
+    // ── Start Sequence ────────────────────────────────────────────────────
     IEnumerator StartSequence()
     {
-        yield return new WaitForSeconds(0.3f); // small pause
-
-        // Play all audios sequentially with animation
+        yield return new WaitForSeconds(0.3f);
         yield return StartCoroutine(PlayAllSequence(true));
 
-        // Show buttons only after the full sequence finishes
-        if (nextButton != null) nextButton.gameObject.SetActive(true);
+        if (nextButton   != null) nextButton.gameObject.SetActive(true);
         if (replayButton != null) replayButton.gameObject.SetActive(true);
     }
 
-    // ─────────────────────────────────────────────
-    // CALLED BY GreetingRow_BB1 when a cell is tapped
-    // ─────────────────────────────────────────────
+    // ── Row Tap ───────────────────────────────────────────────────────────
     public void OnRowTapped(GreetingRow_BB1 tappedRow)
     {
-        if (isPlayingAll) return; // Don't allow taps during Play All
+        if (isPlayingAll) return;
 
-        // Cancel any in-progress greeting→response sequence from a previous tap
-        if (_rowPlayCoroutine != null)
-        {
-            StopCoroutine(_rowPlayCoroutine);
-            _rowPlayCoroutine = null;
-        }
+        if (_rowPlayCoroutine != null) { StopCoroutine(_rowPlayCoroutine); _rowPlayCoroutine = null; }
 
-        // Stop ALL audio immediately so nothing from the previous tap bleeds through
         StopAllAudios();
-
-        // Clear all highlights and scales
         ClearAllHighlights();
 
-        // Highlight + scale up the tapped pair
         tappedRow.SetHighlight(highlightColor);
         tappedRow.SetButtonScale(Vector3.one * highlightScale, scaleDuration);
-
-        // Play greeting then response
         tappedRow.PlayGreetingAudio();
         _rowPlayCoroutine = StartCoroutine(PlayResponseAfterGreeting(tappedRow));
     }
@@ -176,26 +158,21 @@ public class Greetings_BB1 : MonoBehaviour
         float len = (row.greetingAudio != null && row.greetingAudio.clip != null)
             ? row.greetingAudio.clip.length + 0.15f : 0.5f;
         yield return new WaitForSeconds(len);
-
         row.PlayResponseAudio();
         _rowPlayCoroutine = null;
     }
 
-    // ─────────────────────────────────────────────
-    // REPLAY BUTTON
-    // ─────────────────────────────────────────────
+    // ── Replay ────────────────────────────────────────────────────────────
     public void OnReplayClicked()
     {
-        // Stop everything first so audio restarts cleanly from the beginning
         StopAllCoroutines();
         StopAllAudios();
         ClearAllHighlights();
 
-        isPlayingAll = false;
+        isPlayingAll     = false;
         playAllCoroutine = null;
 
-        // Hide buttons while replaying; they re-appear after sequence finishes
-        if (nextButton != null) nextButton.gameObject.SetActive(false);
+        if (nextButton   != null) nextButton.gameObject.SetActive(false);
         if (replayButton != null) replayButton.gameObject.SetActive(false);
 
         playAllCoroutine = StartCoroutine(PlayAllSequenceAndShowButtons());
@@ -204,38 +181,54 @@ public class Greetings_BB1 : MonoBehaviour
     IEnumerator PlayAllSequenceAndShowButtons()
     {
         yield return StartCoroutine(PlayAllSequence(false));
-
-        // Re-show buttons once replay finishes
-        if (nextButton != null) nextButton.gameObject.SetActive(true);
+        if (nextButton   != null) nextButton.gameObject.SetActive(true);
         if (replayButton != null) replayButton.gameObject.SetActive(true);
     }
 
-    // ─────────────────────────────────────────────
-    // NEXT BUTTON
-    // ─────────────────────────────────────────────
+    // ── Next Button → hand off to PostReadingFlow ─────────────────────────
     public void OnNextClicked()
     {
-        // Stop all coroutines and audio immediately so nothing bleeds into the next screen
         StopAllCoroutines();
         StopAllAudios();
-        isPlayingAll = false;
+        isPlayingAll     = false;
         playAllCoroutine = null;
 
-        // Disable both buttons
-        if (nextButton != null) nextButton.gameObject.SetActive(false);
+        if (nextButton   != null) nextButton.gameObject.SetActive(false);
         if (replayButton != null) replayButton.gameObject.SetActive(false);
 
         ClearAllHighlights();
 
-        PlayerPrefs.SetInt("reading_state", 2); // move to next panel
-        PlayerPrefs.Save();
-
+        // Deactivate self
         gameObject.SetActive(false);
+
+        // Hand panel + button to PostReadingFlow then activate it
+        if (postReadingFlow == null)
+        {
+            Debug.LogError("[Greetings_BB1] postReadingFlow field is not assigned in Inspector!");
+            return;
+        }
+
+        if (panel == null || unitButton == null)
+        {
+            Debug.LogError("[Greetings_BB1] panel or unitButton is null! " +
+                           "OnUnitStart was never called — check that the Reading entry in TopicData_BB2 " +
+                           "points to THIS Greetings_BB1 GameObject, not PostReadingFlow_BB1.");
+            return;
+        }
+
+        postReadingFlow.OpenFromGreetings(panel, unitButton);
     }
 
-    // ─────────────────────────────────────────────
-    // PLAY ALL SEQUENCE
-    // ─────────────────────────────────────────────
+    // ── Back ──────────────────────────────────────────────────────────────
+    public void OnBackClicked()
+    {
+        StopAllCoroutines();
+        StopAllAudios();
+        gameObject.SetActive(false);
+        if (panel != null) panel.gameObject.SetActive(true);
+    }
+
+    // ── Play All Sequence ─────────────────────────────────────────────────
     IEnumerator PlayAllSequence(bool animate = false)
     {
         isPlayingAll = true;
@@ -244,9 +237,8 @@ public class Greetings_BB1 : MonoBehaviour
         {
             ClearAllHighlights();
             rows[i].SetHighlight(playAllColor);
-            rows[i].SetButtonScale(Vector3.one * highlightScale, scaleDuration); // scale up active row
+            rows[i].SetButtonScale(Vector3.one * highlightScale, scaleDuration);
 
-            // ── GREETING ──────────────────────────────────────
             StopAllAudios();
 
             if (animate)
@@ -264,7 +256,6 @@ public class Greetings_BB1 : MonoBehaviour
                 ? rows[i].greetingAudio.clip.length + 0.15f : 0.6f;
             yield return new WaitForSeconds(greetingLen);
 
-            // ── RESPONSE ──────────────────────────────────────
             StopAllAudios();
 
             if (animate)
@@ -282,18 +273,15 @@ public class Greetings_BB1 : MonoBehaviour
                 ? rows[i].responseAudio.clip.length + 0.2f : 0.6f;
             yield return new WaitForSeconds(responseLen + playAllPauseDuration);
 
-            // Reset scale after pair finishes
             rows[i].SetButtonScale(Vector3.one, scaleDuration);
         }
 
         ClearAllHighlights();
-        isPlayingAll = false;
+        isPlayingAll     = false;
         playAllCoroutine = null;
     }
 
-    // ─────────────────────────────────────────────
-    // HELPERS
-    // ─────────────────────────────────────────────
+    // ── Helpers ───────────────────────────────────────────────────────────
     void ClearAllHighlights()
     {
         foreach (var row in rows)
@@ -303,26 +291,9 @@ public class Greetings_BB1 : MonoBehaviour
         }
     }
 
-    // ─────────────────────────────────────────────
-    // ANIMATE-IN SOUND HELPER
-    // ─────────────────────────────────────────────
     void PlayAnimateInSound()
     {
         if (_animateSFX != null && animateInSound != null)
             _animateSFX.PlayOneShot(animateInSound);
-    }
-
-    public void OnBackClicked()
-    {
-        PlayerPrefs.SetInt("reading_state", 1);
-        PlayerPrefs.Save();
-
-        StopAllCoroutines();
-        StopAllAudios();
-
-        gameObject.SetActive(false);
-
-        if (transform.parent != null)
-            transform.parent.gameObject.SetActive(false);
     }
 }

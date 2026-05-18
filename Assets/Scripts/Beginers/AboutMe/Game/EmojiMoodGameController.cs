@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
+using System.Runtime.Serialization;
 
 /// <summary>
 /// Emoji Mood Matching Game
@@ -30,7 +31,7 @@ using TMPro;
 ///   • nextGamePanel       — sibling panel enabled when Next is pressed
 /// ─────────────────────────────────────────────────────────────────────────
 /// </summary>
-public class EmojiMoodGameController : MonoBehaviour
+public class EmojiMoodGameController : MonoBehaviour, IUnitCompletable
 {
     // ── Data ─────────────────────────────────────────────────────────────
     [Header("Questions")]
@@ -42,6 +43,7 @@ public class EmojiMoodGameController : MonoBehaviour
     [Tooltip("TMP_Text that shows the mood phrase word card.")]
     public TMP_Text moodCardText;
 
+   
     [Tooltip("Exactly 4 buttons. Their own Image component is used for glow/color feedback.")]
     public Button[] emojiButtons;
 
@@ -103,9 +105,22 @@ public class EmojiMoodGameController : MonoBehaviour
     // Which display slot currently holds the correct emoji (set each round)
     private int correctSlot = -1;
 
+     [SerializeField]public GameObject screen1;
+
+
     // ═════════════════════════════════════════════════════════════════════
     //  LIFECYCLE
     // ═════════════════════════════════════════════════════════════════════
+
+
+        [HideInInspector] public SharedUnitPanelController panel;
+    [HideInInspector] public SharedUnitButton unitButton;
+
+    public void OnUnitStart(SharedUnitPanelController sharedPanel, SharedUnitButton sharedButton)
+    {
+        panel      = sharedPanel;
+        unitButton = sharedButton;
+    }
 
     void Awake()
     {
@@ -361,6 +376,8 @@ public class EmojiMoodGameController : MonoBehaviour
         if (nextGamePanel != null)
             nextGamePanel.SetActive(true);
             rootpanel.SetActive(false); 
+            panel.UnitFinished(unitButton);
+           screen1.SetActive(true);
     }
 
     // ═════════════════════════════════════════════════════════════════════

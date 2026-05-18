@@ -17,12 +17,21 @@ using UnityEngine;
 ///
 /// No other scripts need to know about this manager.
 /// </summary>
-public class ReadingManager_MyClass_Reading : MonoBehaviour
+public class ReadingManager_MyClass_Reading : MonoBehaviour, IUnitCompletable
 {
     [Header("Screens — assign in Inspector")]
     [SerializeField] private GameObject screen1;
     [SerializeField] private GameObject screen2;
     [SerializeField] private GameObject screen3;
+
+        [HideInInspector] public SharedUnitPanelController panel;
+    [HideInInspector] public SharedUnitButton unitButton;
+
+    public void OnUnitStart(SharedUnitPanelController sharedPanel, SharedUnitButton sharedButton)
+    {
+        panel      = sharedPanel;
+        unitButton = sharedButton;
+    }
 
     private void OnEnable()
     {
@@ -38,4 +47,10 @@ public class ReadingManager_MyClass_Reading : MonoBehaviour
         // Activate Screen 1 — its OnEnable handles the full reset.
         if (screen1 != null) screen1.SetActive(true);
     }
+
+    public void UnitFinished()
+    {
+        panel.UnitFinished(unitButton);
+        
+        }
 }

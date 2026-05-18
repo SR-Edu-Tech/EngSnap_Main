@@ -14,7 +14,7 @@ using TMPro;
 /// FEEDBACK CHANGE: correct/wrong feedback is shown by coloring each draggable
 /// word card's background Image component instead of the label text color.
 /// </summary>
-public class DragDropGameController : MonoBehaviour
+public class DragDropGameController : MonoBehaviour, IUnitCompletable
 {
     [Header("Data")]
     public DragWordData[] words;
@@ -33,9 +33,9 @@ public class DragDropGameController : MonoBehaviour
     public GameObject finishPanel;
     public Button finishButton;
 
-    [Header("Unit System")]
-    public UnitPanelController_BB1 unitPanel;
-    public UnitButton_BB1 unitButton;
+    //[Header("Unit System")]
+    //public UnitPanelController_BB1 unitPanel;
+    //public UnitButton_BB1 unitButton;
 
     [Header("Spawn Layout")]
     public float spawnSpacingX = 220f;
@@ -51,7 +51,14 @@ public class DragDropGameController : MonoBehaviour
     private bool listenersWired = false;
 
     // ─────────────────────────────────────────────────────────────────────
+    [HideInInspector] public SharedUnitPanelController panel;
+    [HideInInspector] public SharedUnitButton unitButton;
 
+    public void OnUnitStart(SharedUnitPanelController sharedPanel, SharedUnitButton sharedButton)
+    {
+        panel      = sharedPanel;
+        unitButton = sharedButton;
+    }
     void Awake()
     {
         // Wire listeners in Awake so they are ready before the first OnEnable
@@ -236,7 +243,9 @@ public class DragDropGameController : MonoBehaviour
         // Both child panels (Image + DragDrop) go inactive together.
         // Next time the player opens this unit, unitGameObject is re-enabled,
         // ImageOptionPanel (active by default) fires OnEnable and resets to Q0.
-        if (unitPanel != null && unitButton != null)
-            unitPanel.UnitFinished(unitButton);
+       // if (unitPanel != null && unitButton != null)
+          //  unitPanel.UnitFinished(unitButton);
+
+            panel.UnitFinished(unitButton);
     }
 }

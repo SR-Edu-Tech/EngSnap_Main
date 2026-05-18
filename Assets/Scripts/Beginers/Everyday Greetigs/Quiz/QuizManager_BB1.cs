@@ -4,19 +4,20 @@ using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 
-/// <summary>
-/// Master controller for the BB1 Quiz gameplay screen.
-/// Passes correctFX / wrongFX clips from QuizData to QuizQuestionUI_BB1
-/// so they can be played instantly on button tap.
-/// </summary>
-public class QuizManager_BB1 : MonoBehaviour
+public class QuizManager_BB1 : MonoBehaviour, IUnitCompletable
 {
     [Header("Data")]
     public QuizData_BB1 quizData;
 
-    [Header("Panel Integration")]
-    public UnitPanelController_BB1 panel;
-    public UnitButton_BB1          unitButton;
+    // ── IUnitCompletable — auto-set at runtime, never assign in Inspector ──
+    [HideInInspector] public SharedUnitPanelController panel;
+    [HideInInspector] public SharedUnitButton          unitButton;
+
+    public void OnUnitStart(SharedUnitPanelController sharedPanel, SharedUnitButton sharedButton)
+    {
+        panel      = sharedPanel;
+        unitButton = sharedButton;
+    }
 
     [Header("Controllers / UI")]
     public QuizAudioController_BB1 audioController;
@@ -45,26 +46,15 @@ public class QuizManager_BB1 : MonoBehaviour
     private bool quizCompleted        = false;
     private bool inReviewMode         = false;
 
-    // ── Unity lifecycle ───────────────────────────────────────────────────
-
-    void OnEnable()
-    {
-        BeginQuiz();
-    }
-
-    void OnDisable()
-    {
-        if (audioController != null) audioController.StopAll();
-        StopAllCoroutines();
-    }
+    // ── Unity ─────────────────────────────────────────────────────────────
+    void OnEnable()  => BeginQuiz();
+    void OnDisable() { if (audioController != null) audioController.StopAll(); StopAllCoroutines(); }
 
     // ── Entry Point ───────────────────────────────────────────────────────
-
     void BeginQuiz()
     {
-        string uid = (unitButton != null && !string.IsNullOrEmpty(unitButton.unitID))
-                     ? unitButton.unitID
-                     : "default";
+        // Build save key from unitButton type if available
+        string uid = (unitButton != null) ? unitButton.unitType.ToString() : "default";
 
         saveKey_progress = uid + "_quizProgress";
         saveKey_score    = uid + "_quizScore";
@@ -81,13 +71,13 @@ public class QuizManager_BB1 : MonoBehaviour
         else
         {
             currentQuestionIndex = PlayerPrefs.GetInt(saveKey_progress, 0);
-            correctCount         = PlayerPrefs.GetInt(saveKey_score, 0);
+            correctCount         = PlayerPrefs.GetInt(saveKey_score,    0);
         }
 
         quizCompleted = false;
         inReviewMode  = false;
 
-        // ── Pass FX clips to QuestionUI so it can play them instantly on tap ──
+        // Pass FX clips to QuestionUI so it can play them instantly on tap
         if (questionUI != null && quizData != null)
         {
             questionUI.correctFX = quizData.correctFX;
@@ -106,7 +96,6 @@ public class QuizManager_BB1 : MonoBehaviour
     }
 
     // ── Intro ─────────────────────────────────────────────────────────────
-
     IEnumerator PlayIntroThenStart()
     {
         if (audioController != null && quizData != null)
@@ -114,11 +103,8 @@ public class QuizManager_BB1 : MonoBehaviour
 
         bool showIntro = (currentQuestionIndex == 0);
 
-        if (showIntro && introPanelGO != null)
-            introPanelGO.SetActive(true);
-
-        if (questionUI != null)
-            questionUI.gameObject.SetActive(false);
+        if (showIntro && introPanelGO != null) introPanelGO.SetActive(true);
+        if (questionUI != null) questionUI.gameObject.SetActive(false);
 
         if (showIntro && quizData != null && quizData.introVO != null)
         {
@@ -128,30 +114,20 @@ public class QuizManager_BB1 : MonoBehaviour
             yield return new WaitForSeconds(0.3f);
         }
 
-        if (introPanelGO != null)
-            introPanelGO.SetActive(false);
-
-        if (questionUI != null)
-            questionUI.gameObject.SetActive(true);
+        if (introPanelGO != null) introPanelGO.SetActive(false);
+        if (questionUI   != null) questionUI.gameObject.SetActive(true);
 
         ShowCurrentQuestion();
     }
 
     // ── Question Flow ─────────────────────────────────────────────────────
-
     void ShowCurrentQuestion()
     {
         if (quizData == null || quizData.questions == null) return;
-        if (currentQuestionIndex >= quizData.questions.Count)
-        {
-            FinishQuiz();
-            return;
-        }
+        if (currentQuestionIndex >= quizData.questions.Count) { FinishQuiz(); return; }
 
         UpdateHUD();
-
-        var question = quizData.questions[currentQuestionIndex];
-        questionUI.ShowQuestion(question, OnQuestionAnswered);
+        questionUI.ShowQuestion(quizData.questions[currentQuestionIndex], OnQuestionAnswered);
     }
 
     void OnQuestionAnswered(bool wasCorrect)
@@ -159,22 +135,16 @@ public class QuizManager_BB1 : MonoBehaviour
         if (wasCorrect)
         {
             correctCount++;
-            // correctVO plays AFTER the instant correctFX — manager handles the VO
             if (audioController != null && quizData != null)
                 audioController.PlayVO(quizData.correctVO);
         }
         else
         {
-            // wrongVO plays AFTER the instant wrongFX
             if (audioController != null && quizData != null)
                 audioController.PlayVO(quizData.wrongVO);
         }
 
-        if (inReviewMode)
-        {
-            StartCoroutine(DelayThen(1.5f, ReturnToSummary));
-            return;
-        }
+        if (inReviewMode) { StartCoroutine(DelayThen(1.5f, ReturnToSummary)); return; }
 
         currentQuestionIndex++;
         SaveProgress();
@@ -182,7 +152,6 @@ public class QuizManager_BB1 : MonoBehaviour
     }
 
     // ── Summary / Finish ──────────────────────────────────────────────────
-
     void FinishQuiz()
     {
         quizCompleted = true;
@@ -217,20 +186,26 @@ public class QuizManager_BB1 : MonoBehaviour
     {
         if (audioController != null) audioController.StopAll();
 
-        if (panel != null && unitButton != null)
-            panel.UnitFinished(unitButton);
+        // Cache before deactivating
+        var cachedPanel  = panel;
+        var cachedButton = unitButton;
+
+        gameObject.SetActive(false);
+
+        if (cachedPanel != null && cachedButton != null)
+            cachedPanel.UnitFinished(cachedButton);
         else
-            gameObject.SetActive(false);
+        {
+            Debug.LogWarning("[QuizManager] panel or unitButton is null on finish. " +
+                             "Make sure the Quiz content GO is the IUnitCompletable entry point.");
+        }
     }
 
     void OnReviewQuestion(int questionIndex)
     {
-        if (quizData == null || questionIndex < 0 || questionIndex >= quizData.questions.Count)
-            return;
-
+        if (quizData == null || questionIndex < 0 || questionIndex >= quizData.questions.Count) return;
         inReviewMode         = true;
         currentQuestionIndex = questionIndex;
-
         summaryUI.Hide();
         questionUI.gameObject.SetActive(true);
         ShowCurrentQuestion();
@@ -266,33 +241,22 @@ public class QuizManager_BB1 : MonoBehaviour
 
         summaryUI.Hide();
         questionUI.gameObject.SetActive(true);
-
         if (introPanelGO != null) introPanelGO.SetActive(false);
         ShowCurrentQuestion();
     }
 
-    // ── Back button ───────────────────────────────────────────────────────
-
+    // ── Back Button ───────────────────────────────────────────────────────
     void OnBackClicked()
     {
         if (!quizCompleted) SaveProgress();
-
         if (audioController != null) audioController.StopAll();
         StopAllCoroutines();
 
-        if (panel != null)
-        {
-            gameObject.SetActive(false);
-            panel.gameObject.SetActive(true);
-        }
-        else
-        {
-            gameObject.SetActive(false);
-        }
+        gameObject.SetActive(false);
+        if (panel != null) panel.gameObject.SetActive(true);
     }
 
     // ── HUD ───────────────────────────────────────────────────────────────
-
     void UpdateHUD()
     {
         if (quizData == null) return;
@@ -303,15 +267,14 @@ public class QuizManager_BB1 : MonoBehaviour
                 ? "Quiz Complete!"
                 : $"Question {currentQuestionIndex + 1} of {total}";
 
-        if (progressBar != null)
+        if (progressBar    != null)
             progressBar.value = total > 0 ? (float)currentQuestionIndex / total : 0f;
 
         if (liveScoreLabel != null)
             liveScoreLabel.text = $"Score: {correctCount}";
     }
 
-    // ── Save / Load helpers ───────────────────────────────────────────────
-
+    // ── Save / Load ───────────────────────────────────────────────────────
     void SaveProgress()
     {
         PlayerPrefs.SetInt(saveKey_progress, currentQuestionIndex);
@@ -328,7 +291,6 @@ public class QuizManager_BB1 : MonoBehaviour
     }
 
     // ── Utility ───────────────────────────────────────────────────────────
-
     IEnumerator DelayThen(float seconds, System.Action action)
     {
         yield return new WaitForSeconds(seconds);

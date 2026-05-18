@@ -52,6 +52,8 @@ public class Screen3Controller_MyClass_Reading : MonoBehaviour
     [Header("Screen Navigation")]
     [SerializeField] private GameObject nextScreenObject;   // activate to go to next screen
 
+  
+
     // ── Runtime ────────────────────────────────────────────────────────────
 
     private List<PhraseCardView_MyClass_Reading> _cards = new List<PhraseCardView_MyClass_Reading>();
@@ -298,6 +300,7 @@ private IEnumerator TransitionToNextScreen()
 
     if (nextScreenObject != null)
         nextScreenObject.SetActive(true);
+       
 
     yield return null;
 

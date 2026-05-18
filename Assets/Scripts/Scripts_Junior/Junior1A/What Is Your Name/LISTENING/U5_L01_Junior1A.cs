@@ -27,6 +27,7 @@ public class U5_L01_Junior1A : MonoBehaviour
         foreach (Transform button in _cardParent)
         {
             button.gameObject.SetActive(true);
+            button.GetComponent<PopEffect_Junior1A>().enabled = true;
             yield return new WaitForSeconds(.1f);
         }
         foreach (Transform button in _cardParent)

@@ -26,6 +26,7 @@ public class U4_L01_Junior1A : MonoBehaviour, Interfaces_Junior1A
         yield return new WaitForSeconds(_introClip.length);
         foreach (Transform button in _cardParent)
         {
+            button.GetComponent<PopEffect_Junior1A>().enabled = true;
             button.gameObject.SetActive(true);
             yield return new WaitForSeconds(.1f);
         }

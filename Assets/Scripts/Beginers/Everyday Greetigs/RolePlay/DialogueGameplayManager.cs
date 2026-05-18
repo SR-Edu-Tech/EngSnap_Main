@@ -11,7 +11,7 @@ using TMPro;
 /// On Enable  → resumes from last saved screen (PlayerPrefs key: "DialogueGameplay_Screen")
 /// On Disable → saves current screen progress.
 /// </summary>
-public class DialogueGameplayManager : MonoBehaviour
+public class DialogueGameplayManager : MonoBehaviour, IUnitCompletable
 {
     // ─────────────────────────────────────────────────────────────
     //  INSPECTOR REFERENCES
@@ -41,6 +41,15 @@ public class DialogueGameplayManager : MonoBehaviour
     private const string PREFS_KEY = "DialogueGameplay_Screen";
     private int  currentScreen       = 1;   // 1, 2, or 3
     private bool allScreensCompleted = false; // prevents OnDisable overwriting the reset
+
+        [HideInInspector] public SharedUnitPanelController panel;
+    [HideInInspector] public SharedUnitButton unitButton;
+
+    public void OnUnitStart(SharedUnitPanelController sharedPanel, SharedUnitButton sharedButton)
+    {
+        panel      = sharedPanel;
+        unitButton = sharedButton;
+    }
 
     // ─────────────────────────────────────────────────────────────
     //  UNITY CALLBACKS
@@ -143,6 +152,19 @@ public class DialogueGameplayManager : MonoBehaviour
             screen3Root.SetActive(false);
            // wellDoneBanner.SetActive(false);
             completedScreen.SetActive(true);
+           
+
+            
         }
+
+
     }
+
+    public void OnUnitComplete()
+    {
+        
+        panel.UnitFinished(unitButton);
+    }
+        // Both child panel}}s (Image + DragDrop) go inactive together.
+        // Next time the player opens this unit, unitGameObject is re-enabled,
 }

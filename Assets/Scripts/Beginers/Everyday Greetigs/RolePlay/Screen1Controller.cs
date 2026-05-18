@@ -3,6 +3,7 @@ using System.Collections;
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
+using UnityEngine.Animations;
 
 /// <summary>
 /// Screen 1 — Ben (player) meets Mary.
@@ -47,6 +48,9 @@ public class Screen1Controller : MonoBehaviour
     [Header("── Feedback ──")]
     public float shakeDuration  = 0.4f;
     public float shakeMagnitude = 10f;      // degrees for shake
+
+    public Animator maryAnimator;             // optional, for talking/idle animations
+    public Animator benAnimator;              // optional, for talking/idle animations
 
     // ─────────────────────────────────────────────────────────────
     //  PRIVATE
@@ -141,12 +145,14 @@ public class Screen1Controller : MonoBehaviour
         // Ben speaks
         benSpeechBubble.SetActive(true);
         benSpeechText.text = "Hi, Mary! I am fine, thanks. What about you?";
+        benAnimator.SetTrigger("mouthanimationboy");
         //SetTalking(benAnimator, true);
         PlayClip(benReplyClip);
 
         yield return new WaitForSeconds(GetClipLength(benReplyClip, 3.0f));
         //SetTalking(benAnimator, false);
         benSpeechBubble.SetActive(false);
+        benAnimator.SetTrigger("mouthanimationboyfalse");
 
         // Mary responds
         yield return new WaitForSeconds(0.4f);

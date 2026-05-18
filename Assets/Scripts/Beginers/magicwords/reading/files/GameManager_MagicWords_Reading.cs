@@ -6,7 +6,7 @@ using UnityEngine;
 /// Manages transitions between Panel 1 (Word Bubbles) and Panel 2 (Situation Cards).
 /// Attach to a persistent GameObject named "GameManager" in the scene.
 /// </summary>
-public class GameManager_MagicWords_Reading : MonoBehaviour
+public class GameManager_MagicWords_Reading : MonoBehaviour, IUnitCompletable
 {
     public static GameManager_MagicWords_Reading Instance { get; private set; }
 
@@ -30,6 +30,16 @@ public class GameManager_MagicWords_Reading : MonoBehaviour
     public AudioClip sfxUnitComplete;
 
     private AudioSource _globalAudio;
+
+      [HideInInspector] public SharedUnitPanelController panel;
+    [HideInInspector] public SharedUnitButton          unitButton;
+
+    public void OnUnitStart(SharedUnitPanelController sharedPanel, SharedUnitButton sharedButton)
+    {
+        panel      = sharedPanel;
+        unitButton = sharedButton;
+    }
+
 
     // ── State ─────────────────────────────────────────────────────────────────
     public enum GamePanel { Panel1_WordBubbles, Panel2_SituationCards }
@@ -83,6 +93,10 @@ public class GameManager_MagicWords_Reading : MonoBehaviour
 
         // TODO: Replace with your scene management / curriculum flow
         Debug.Log("[MagicWords] Unit complete! Load next unit here.");
+
+        panel.UnitFinished(unitButton);
+
+
     }
 
     /// <summary>Replay from beginning (Panel 1).</summary>

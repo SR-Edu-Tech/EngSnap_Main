@@ -4,7 +4,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 
-public class RoleplayManager_Aboutme_BB1 : MonoBehaviour
+public class RoleplayManager_Aboutme_BB1 : MonoBehaviour, IUnitCompletable
 {
   // ─────────────────────────────────────────────────────────────────────────
     // DATA STRUCTURES
@@ -120,6 +120,15 @@ public Image questionImageUI;                 // Optional
     // Guards OnEnable from running the reset before Start() has executed once
     private bool _started = false;
  
+
+     [HideInInspector] public SharedUnitPanelController panel;
+    [HideInInspector] public SharedUnitButton unitButton;
+
+    public void OnUnitStart(SharedUnitPanelController sharedPanel, SharedUnitButton sharedButton)
+    {
+        panel      = sharedPanel;
+        unitButton = sharedButton;
+    }
     // ─────────────────────────────────────────────────────────────────────────
     // LIFECYCLE
     // ─────────────────────────────────────────────────────────────────────────
@@ -682,5 +691,10 @@ public Image questionImageUI;                 // Optional
     {
         if (character != null && sprite != null)
             character.sprite = sprite;
+    }
+
+    public void UnitFinished()
+    {
+        panel.UnitFinished(unitButton);
     }
 }

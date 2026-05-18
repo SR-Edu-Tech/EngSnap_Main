@@ -33,7 +33,7 @@ using TMPro;
 /// Preschool / Kindergarten / Nursery learning games
 /// </summary>
 
-public class QuizManager_Myclass_Quiz : MonoBehaviour
+public class QuizManager_Myclass_Quiz : MonoBehaviour, IUnitCompletable
 {
     //═══════════════════════════════════════
     // QUESTION TYPES
@@ -137,6 +137,16 @@ public class QuizManager_Myclass_Quiz : MonoBehaviour
     private bool canAnswer;
 
     private int correctAnswers;
+
+
+        [HideInInspector] public SharedUnitPanelController panel;
+    [HideInInspector] public SharedUnitButton unitButton;
+
+    public void OnUnitStart(SharedUnitPanelController sharedPanel, SharedUnitButton sharedButton)
+    {
+        panel      = sharedPanel;
+        unitButton = sharedButton;
+    }
 
     //═══════════════════════════════════════
     // START
@@ -602,4 +612,9 @@ public class QuizManager_Myclass_Quiz : MonoBehaviour
     // Load first question
     LoadQuestion(0);
 }
+
+public void UnitFinished()
+    {
+        panel.UnitFinished(unitButton);
+    }
 }
