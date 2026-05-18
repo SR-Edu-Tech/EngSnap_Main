@@ -54,9 +54,14 @@ public class GameAuthManager : MonoBehaviour
             string.IsNullOrEmpty(AppSession.UserName))
         {
             string savedToken = PlayerPrefs.GetString("ACCESS_TOKEN");
-            string userName   = DecodeUserNameFromJwt(savedToken);
-            AppSession.UserName = userName;
-            Debug.Log($"[GameAuthManager] Restored user from saved token: {userName}");
+
+string userName = DecodeUserNameFromJwt(savedToken);
+AppSession.UserName = userName;
+
+string studentId = DecodeStudentIdFromJwt(savedToken);
+AppSession.StudentId = studentId;
+
+Debug.Log("RESTORED STUDENT ID = " + studentId);
         }
     }
 
@@ -371,7 +376,6 @@ public class JwtPayload
     public string role_name;
     public string student_id;
 }
-
 [System.Serializable]
 public class CoursesResponse
 {
