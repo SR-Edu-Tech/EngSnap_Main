@@ -70,7 +70,7 @@ public class GameAuthManager : MonoBehaviour
         {
             Debug.Log("Already Logged In");
             ShowGreeting(AppSession.UserName);
-            StartCoroutine(GetStudentCourses());
+            StartCoroutine(GetStudentCourses(AppSession.StudentId));
         }
         else
         {
@@ -88,6 +88,12 @@ public class GameAuthManager : MonoBehaviour
 
     IEnumerator LoginCoroutine()
     {
+
+        if (Application.internetReachability == NetworkReachability.NotReachable)
+{
+        statusText.text = "No Internet Connection";
+        yield break;
+}
         statusText.text = "Logging in...";
 
         WWWForm form = new WWWForm();
@@ -115,12 +121,16 @@ public class GameAuthManager : MonoBehaviour
                 AppSession.UserName = userName;
                 ShowGreeting(userName);
 
+                string studentId  = DecodeStudentIdFromJwt(response.access_token);
+                AppSession.StudentId = studentId;
+
+
                 Debug.Log($"Token Saved | User from JWT: {userName}");
 
                 statusText.text = "Login Successful";
                 loginPanel.SetActive(false);
 
-                StartCoroutine(GetStudentCourses());
+                StartCoroutine(GetStudentCourses(AppSession.StudentId));
             }
             else
             {
@@ -170,6 +180,41 @@ public class GameAuthManager : MonoBehaviour
         }
     }
 
+    private string DecodeStudentIdFromJwt(string jwt)
+{
+    try
+    {
+        string[] parts = jwt.Split('.');
+
+        if (parts.Length != 3)
+        {
+            Debug.LogError("[JWT] Invalid token format.");
+            return string.Empty;
+        }
+
+        string payload = parts[1]
+            .Replace('-', '+')
+            .Replace('_', '/');
+
+        switch (payload.Length % 4)
+        {
+            case 2: payload += "=="; break;
+            case 3: payload += "="; break;
+        }
+
+        string json = Encoding.UTF8.GetString(Convert.FromBase64String(payload));
+
+        JwtPayload jwtPayload = JsonUtility.FromJson<JwtPayload>(json);
+
+        return jwtPayload?.student_id ?? string.Empty;
+    }
+    catch (Exception ex)
+    {
+        Debug.LogError($"[JWT] Failed to decode student ID: {ex.Message}");
+        return string.Empty;
+    }
+}
+
     // ── Greeting helper — updates ALL assigned TMP fields ─────────────────────
 
     private void ShowGreeting(string userName)
@@ -193,11 +238,11 @@ public class GameAuthManager : MonoBehaviour
 
     // ── Courses ───────────────────────────────────────────────────────────────
 
-    IEnumerator GetStudentCourses()
+    IEnumerator GetStudentCourses(string student_id)
     {
         statusText.text = "Getting Courses...";
 
-        string studentUUID = "315f5cb6-7313-4066-b5d7-cc63174314dc";
+        string studentUUID = student_id;
         string url = baseUrl + "/student-courses-with-lock/" + studentUUID;
 
         UnityWebRequest request = UnityWebRequest.Get(url);
@@ -324,7 +369,7 @@ public class JwtPayload
     public string user_name;
     public string user_email;
     public string role_name;
-    public string user_id;
+    public string student_id;
 }
 
 [System.Serializable]

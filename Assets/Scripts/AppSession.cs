@@ -25,6 +25,7 @@ public static class AppSession
     /// Populated from the login API response field "user_name".
     /// </summary>
     public static string UserName { get; set; }
+    public static string StudentId { get; set; }
  
     /// <summary>Clears stored session data (call on logout).</summary>
     public static void Clear()

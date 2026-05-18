@@ -1,8 +1,11 @@
 package com.yourgame.speech;
 
 import android.app.Activity;
+import android.content.Context;
 import android.content.Intent;
+import android.media.AudioManager;
 import android.os.Bundle;
+import android.os.Handler;
 import android.speech.RecognitionListener;
 import android.speech.RecognizerIntent;
 import android.speech.SpeechRecognizer;
@@ -18,8 +21,12 @@ public class SpeechPlugin implements RecognitionListener {
     private Activity activity;
     private String unityGameObjectName;
     private String unityCallbackMethod;
+    
+    private AudioManager audioManager;
+    private int originalMusicVolume = -1;
+    private int originalSystemVolume = -1;
+    private Handler unMuteHandler = new Handler();
 
-    // ── Singleton ──────────────────────────────────────────────────────────────
     public static SpeechPlugin getInstance() {
         if (instance == null) {
             instance = new SpeechPlugin();
@@ -27,14 +34,14 @@ public class SpeechPlugin implements RecognitionListener {
         return instance;
     }
 
-    // ── Init ────────────────────────────────────────────────────────────────────
-    // Call this from Unity C# once at Start()
-    // gameObjectName  : name of the C# GameObject that receives callbacks
-    // callbackMethod  : name of the C# method to call with the result string
     public void init(final String gameObjectName, final String callbackMethod) {
         this.unityGameObjectName = gameObjectName;
         this.unityCallbackMethod = callbackMethod;
         this.activity = UnityPlayer.currentActivity;
+        
+        if (this.activity != null) {
+            this.audioManager = (AudioManager) activity.getSystemService(Context.AUDIO_SERVICE);
+        }
 
         activity.runOnUiThread(new Runnable() {
             @Override
@@ -48,8 +55,47 @@ public class SpeechPlugin implements RecognitionListener {
         });
     }
 
-    // ── Start Listening ─────────────────────────────────────────────────────────
+    // Mutes system and media volumes to hide the Google Assistant beep
+    private void muteBeep() {
+        if (audioManager != null) {
+            unMuteHandler.removeCallbacksAndMessages(null);
+
+            int musicVol = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC);
+            if (musicVol > 0) {
+                originalMusicVolume = musicVol;
+                audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, 0, 0);
+            }
+            
+            int sysVol = audioManager.getStreamVolume(AudioManager.STREAM_SYSTEM);
+            if (sysVol > 0) {
+                originalSystemVolume = sysVol;
+                audioManager.setStreamVolume(AudioManager.STREAM_SYSTEM, 0, 0);
+            }
+        }
+    }
+
+    // Restores volumes after a short delay
+    private void unmuteBeep() {
+        unMuteHandler.postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                if (audioManager != null) {
+                    if (originalMusicVolume != -1) {
+                        audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, originalMusicVolume, 0);
+                        originalMusicVolume = -1;
+                    }
+                    if (originalSystemVolume != -1) {
+                        audioManager.setStreamVolume(AudioManager.STREAM_SYSTEM, originalSystemVolume, 0);
+                        originalSystemVolume = -1;
+                    }
+                }
+            }
+        }, 500);
+    }
+
     public void startListening() {
+        muteBeep();
+        
         activity.runOnUiThread(new Runnable() {
             @Override
             public void run() {
@@ -58,15 +104,15 @@ public class SpeechPlugin implements RecognitionListener {
                         RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
                 intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.ENGLISH);
                 intent.putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1);
-                // Partial results while speaking (optional)
                 intent.putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true);
                 speechRecognizer.startListening(intent);
             }
         });
     }
 
-    // ── Stop Listening ──────────────────────────────────────────────────────────
     public void stopListening() {
+        muteBeep();
+        
         activity.runOnUiThread(new Runnable() {
             @Override
             public void run() {
@@ -77,7 +123,6 @@ public class SpeechPlugin implements RecognitionListener {
         });
     }
 
-    // ── Destroy ─────────────────────────────────────────────────────────────────
     public void destroy() {
         activity.runOnUiThread(new Runnable() {
             @Override
@@ -90,31 +135,27 @@ public class SpeechPlugin implements RecognitionListener {
         });
     }
 
-    // ── RecognitionListener callbacks ───────────────────────────────────────────
-
     @Override
     public void onReadyForSpeech(Bundle params) {
-        // Microphone opened, listening started
+        unmuteBeep();
         UnityPlayer.UnitySendMessage(unityGameObjectName, "OnSpeechReady", "");
     }
 
     @Override
     public void onBeginningOfSpeech() {
-        // User started speaking
         UnityPlayer.UnitySendMessage(unityGameObjectName, "OnSpeechBegin", "");
     }
 
     @Override
     public void onEndOfSpeech() {
-        // User stopped speaking — processing begins
+        muteBeep();
         UnityPlayer.UnitySendMessage(unityGameObjectName, "OnSpeechEnd", "");
     }
 
     @Override
     public void onResults(Bundle results) {
-        // Final transcription result
-        ArrayList<String> matches =
-                results.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION);
+        unmuteBeep();
+        ArrayList<String> matches = results.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION);
         if (matches != null && !matches.isEmpty()) {
             UnityPlayer.UnitySendMessage(unityGameObjectName, unityCallbackMethod, matches.get(0));
         }
@@ -122,9 +163,7 @@ public class SpeechPlugin implements RecognitionListener {
 
     @Override
     public void onPartialResults(Bundle partialResults) {
-        // Real-time partial result while user is still speaking
-        ArrayList<String> partial =
-                partialResults.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION);
+        ArrayList<String> partial = partialResults.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION);
         if (partial != null && !partial.isEmpty()) {
             UnityPlayer.UnitySendMessage(unityGameObjectName, "OnSpeechPartial", partial.get(0));
         }
@@ -132,6 +171,7 @@ public class SpeechPlugin implements RecognitionListener {
 
     @Override
     public void onError(int error) {
+        unmuteBeep();
         String msg;
         switch (error) {
             case SpeechRecognizer.ERROR_NO_MATCH:       msg = "No speech match found";      break;
@@ -145,7 +185,7 @@ public class SpeechPlugin implements RecognitionListener {
         UnityPlayer.UnitySendMessage(unityGameObjectName, "OnSpeechError", msg);
     }
 
-    @Override public void onRmsChanged(float rmsdB) { /* mic volume — optional */ }
-    @Override public void onBufferReceived(byte[] buffer) { /* raw audio — optional */ }
-    @Override public void onEvent(int eventType, Bundle params) { /* reserved — optional */ }
+    @Override public void onRmsChanged(float rmsdB) { }
+    @Override public void onBufferReceived(byte[] buffer) { }
+    @Override public void onEvent(int eventType, Bundle params) { }
 }
