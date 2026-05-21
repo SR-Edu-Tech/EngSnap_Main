@@ -8,11 +8,11 @@ using System.IO;
 using UnityEngine;
 using UnityEngine.Networking;
 using UnityEngine.UI;
-using Whisper;
-public class SpeechRecognitionTest : MonoBehaviour
-{
+//using Whisper;
+public class SpeechRecognitionTest : MonoBehaviour{}
+/*{
     // Events to notify other scripts (WordMatchEvaluator subscribes to these)
-    public static event Action OnRecognitionStart;
+  /*  public static event Action OnRecognitionStart;
     public static event Action<string> OnRecognitionFinished;
 
     [Header("UI")]
@@ -48,7 +48,7 @@ public class SpeechRecognitionTest : MonoBehaviour
     [Header("Local Whisper")]
     public string modelFileName = "ggml-base.bin";
 
-    [SerializeField] private WhisperManager whisper;
+   // [SerializeField] private WhisperManager whisper;
     private bool whisperReady = false;
 
     void Awake()
@@ -205,9 +205,9 @@ public void StopRecordingAndSend()
     #endregion
 
     #region Playback / Save
-    private IEnumerator RunLocalWhisper(AudioClip clip)
+private IEnumerator RunLocalWhisper(AudioClip clip)
     {
-        if (whisper == null || clip == null)
+        //if (whisper == null || clip == null)
         {
             UpdateStatus("Whisper not ready");
             yield break;
@@ -218,9 +218,9 @@ public void StopRecordingAndSend()
         float[] samples = new float[clip.samples * clip.channels];
         clip.GetData(samples, 0);
 
-        var task = whisper.GetTextAsync(samples, clip.frequency, clip.channels);
+      //  var task = whisper.GetTextAsync(samples, clip.frequency, clip.channels);
 
-        while (!task.IsCompleted)
+       // while (!task.IsCompleted)
             yield return null;
 
         if (task.Exception != null)
@@ -444,4 +444,4 @@ public static class WavUtility
 
         return wav;
     }
-}
+}*/

@@ -28,7 +28,7 @@ public class SpeakingGameController : MonoBehaviour
 {
     // ── Question Data ──────────────────────────────────────────────────────────
 
-    [System.Serializable]
+   /* [System.Serializable]
     public class SpeakingQuestion
     {
         [Tooltip("The word or phrase the player must say")]
@@ -183,4 +183,4 @@ public void ResetGame()
 
     LoadQuestion(0);
 }
-}
+*/}

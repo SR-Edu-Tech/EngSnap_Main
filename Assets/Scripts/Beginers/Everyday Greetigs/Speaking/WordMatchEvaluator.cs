@@ -6,7 +6,7 @@ using UnityEngine.UI;
 
 public class WordMatchEvaluator : MonoBehaviour
 {
-    [Header("UI")]
+    /*[Header("UI")]
     public TextMeshProUGUI targetWordLabel;       // set by SlideController
     public TextMeshProUGUI recognizedTextLabel;   // ASR output
     public Slider accuracySlider;                 // 0..1
@@ -235,4 +235,4 @@ public void ResetAllUI()
 
         return d[n, m];
     }
-}
+*/}

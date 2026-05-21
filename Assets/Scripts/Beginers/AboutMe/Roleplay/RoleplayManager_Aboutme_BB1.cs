@@ -15,6 +15,10 @@ public class RoleplayManager_Aboutme_BB1 : MonoBehaviour, IUnitCompletable
     {
         [TextArea] public string text;
         public bool isCorrect;
+
+        [Header("Boy reply for THIS choice (overrides turn-level boyText/boyAudio when set)")]
+        [TextArea] public string boyText;
+        public AudioClip boyAudio;
     }
  
     [System.Serializable]
@@ -322,6 +326,7 @@ public Image questionImageUI;                 // Optional
  
         for (int i = 0; i < choiceButtons.Length; i++)
         {
+            choiceButtons[i].gameObject.SetActive(true);   // FIX: re-activate in case a previous wrong shrink hid it
             choiceBGs[i].color = cardNormal;
             choiceTexts[i].text = turn.choices[i].text;
             choiceButtons[i].transform.localScale = Vector3.zero;
@@ -372,9 +377,15 @@ public Image questionImageUI;                 // Optional
         yield return new WaitForSeconds(0.2f);
  
         DialogueTurn turn = turns[_turnIndex];
+        ChoiceOption chosen = turn.choices[index];
+
+        // Use the choice-specific boy reply if filled in, otherwise fall back to the turn-level reply
+        string  boyReplyText  = !string.IsNullOrEmpty(chosen.boyText)  ? chosen.boyText  : turn.boyText;
+        AudioClip boyReplyAudio = chosen.boyAudio != null               ? chosen.boyAudio : turn.boyAudio;
+
         yield return StartCoroutine(
             SpeakAndBubble(boyCharacter, boyTalkSprite, boyIdleSprite,
-                           turn.boyText, turn.boyAudio, isGirl: false));
+                           boyReplyText, boyReplyAudio, isGirl: false));
         yield return new WaitForSeconds(0.4f);
         yield return StartCoroutine(
             SpeakAndBubble(girlCharacter, girlTalkSprite, girlIdleSprite,
@@ -395,25 +406,39 @@ public Image questionImageUI;                 // Optional
         yield return StartCoroutine(ShakeCard(choiceButtons[index].transform));
         yield return StartCoroutine(ShrinkCard(choiceButtons[index].transform, 0.25f));
  
-        int correctIdx = -1;
+        // Highlight ALL correct answers (supports multiple correct options)
+        List<int> correctIndices = new List<int>();
         for (int i = 0; i < turns[_turnIndex].choices.Length; i++)
-            if (turns[_turnIndex].choices[i].isCorrect) { correctIdx = i; break; }
- 
-        if (correctIdx >= 0)
+            if (turns[_turnIndex].choices[i].isCorrect) correctIndices.Add(i);
+
+        List<Coroutine> celebrations = new List<Coroutine>();
+        foreach (int ci in correctIndices)
         {
-            choiceBGs[correctIdx].color = cardCorrect;
-            yield return StartCoroutine(CorrectCardCelebrate(choiceButtons[correctIdx].transform, correctIdx));
+            choiceBGs[ci].color = cardCorrect;
+            celebrations.Add(StartCoroutine(CorrectCardCelebrate(choiceButtons[ci].transform, ci)));
         }
- 
+        foreach (var c in celebrations)
+            yield return c;
+
         yield return new WaitForSeconds(0.4f);
         yield return StartCoroutine(SlidePanelDown(choicePanel.transform, 0.3f));
         choicePanel.SetActive(false);
         yield return new WaitForSeconds(0.2f);
  
         DialogueTurn turn = turns[_turnIndex];
+
+        // Use the first correct choice's boy reply for the wrong-answer flow
+        ChoiceOption firstCorrect = correctIndices.Count > 0
+            ? turn.choices[correctIndices[0]]
+            : null;
+        string    boyReplyText  = (firstCorrect != null && !string.IsNullOrEmpty(firstCorrect.boyText))
+            ? firstCorrect.boyText  : turn.boyText;
+        AudioClip boyReplyAudio = (firstCorrect != null && firstCorrect.boyAudio != null)
+            ? firstCorrect.boyAudio : turn.boyAudio;
+
         yield return StartCoroutine(
             SpeakAndBubble(boyCharacter, boyTalkSprite, boyIdleSprite,
-                           turn.boyText, turn.boyAudio, isGirl: false));
+                           boyReplyText, boyReplyAudio, isGirl: false));
         yield return new WaitForSeconds(0.4f);
         yield return StartCoroutine(
             SpeakAndBubble(girlCharacter, girlTalkSprite, girlIdleSprite,
@@ -516,7 +541,9 @@ public Image questionImageUI;                 // Optional
             yield return null;
         }
         t.localScale = Vector3.zero;
-        t.gameObject.SetActive(false);
+        // NOTE: intentionally NOT calling SetActive(false) here —
+        // ShowChoiceCards re-uses this button next turn and SpringScale
+        // restores its scale, so hiding it would cause it to stay invisible.
     }
  
     IEnumerator ShakeCard(Transform t)

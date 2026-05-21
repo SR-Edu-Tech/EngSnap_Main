@@ -149,10 +149,11 @@ public class StoryModeManager : MonoBehaviour, IUnitCompletable
                 var btn = sb.buttonObject.GetComponent<Button>();
                 if (btn != null)
                 {
-                    btn.interactable = true;
+                    btn.interactable = false;
                     btn.onClick.RemoveAllListeners();
                 }
                 SetButtonColor(sb, sb.defaultColor);
+                sb.buttonObject.SetActive(false); // hide on reset — shown only when scene is active
             }
         }
 
@@ -212,9 +213,23 @@ public class StoryModeManager : MonoBehaviour, IUnitCompletable
 
         var scene = scenes[index];
 
+        // FIX 1: Hide ALL scenes and disable+hide ALL their buttons first.
+        // Previous scene buttons are completely gone before new scene appears.
         foreach (var s in scenes)
+        {
             if (s.sceneRoot) s.sceneRoot.SetActive(false);
 
+            if (s.buttons == null) continue;
+            foreach (var sb in s.buttons)
+            {
+                if (sb.buttonObject == null) continue;
+                var oldBtn = sb.buttonObject.GetComponent<Button>();
+                if (oldBtn != null) oldBtn.interactable = false;
+                sb.buttonObject.SetActive(false); // hide — belongs to its own scene only
+            }
+        }
+
+        // Show only the new scene root
         if (scene.sceneRoot) scene.sceneRoot.SetActive(true);
 
         if (titleText)    titleText.text    = scene.title;
@@ -224,15 +239,18 @@ public class StoryModeManager : MonoBehaviour, IUnitCompletable
         if (nextButtonLabel != null)
             nextButtonLabel.text = (index == scenes.Length - 1) ? "Finish ✓" : "Next →";
 
+        // FIX 2: Show this scene's buttons but keep locked until narration ends.
         for (int i = 0; i < scene.buttons.Length; i++)
         {
             var sb = scene.buttons[i];
             sb.played = false;
             if (sb.buttonObject == null) continue;
 
+            sb.buttonObject.SetActive(true);        // visible — scene is now active
             SetButtonColor(sb, sb.defaultColor);
+
             var btn = sb.buttonObject.GetComponent<Button>();
-            btn.interactable = false;
+            btn.interactable = false;               // locked until narration ends
             btn.onClick.RemoveAllListeners();
             int captured = i;
             btn.onClick.AddListener(() => OnButtonTapped(captured));
@@ -245,6 +263,7 @@ public class StoryModeManager : MonoBehaviour, IUnitCompletable
     {
         yield return StartCoroutine(FadeIn());
 
+        // FIX 3: Wait for full narration before enabling buttons.
         NarrationSource.Stop();
         if (scene.narrationClip != null)
         {
@@ -252,10 +271,12 @@ public class StoryModeManager : MonoBehaviour, IUnitCompletable
             yield return new WaitForSeconds(scene.narrationClip.length);
         }
 
+        // Narration finished — NOW enable buttons
         foreach (var sb in scene.buttons)
         {
             if (sb.buttonObject == null) continue;
-            sb.buttonObject.GetComponent<Button>().interactable = true;
+            var btn = sb.buttonObject.GetComponent<Button>();
+            if (btn != null) btn.interactable = true;
         }
 
         PulseNextButton();

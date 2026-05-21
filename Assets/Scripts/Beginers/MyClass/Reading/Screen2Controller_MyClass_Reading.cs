@@ -52,8 +52,10 @@ public class Screen2Controller_MyClass_Reading : MonoBehaviour
     [SerializeField] private float pauseBetweenWords  = 0.35f;
 
     [Header("Screen Navigation")]
-    [SerializeField] private GameObject screen3Object;
+[SerializeField] private GameObject screen3Object;
 
+[Tooltip("If true, pressing Next finishes the unit instead of going to Screen 3")]
+[SerializeField] private bool isLastScreen = false;  // ← ADD THIS
     // ── Runtime ────────────────────────────────────────────────────────────
 
     private List<VocabularyCardData_MyClass_Reading[]> _groupData = new();
@@ -263,23 +265,38 @@ public class Screen2Controller_MyClass_Reading : MonoBehaviour
 
     // ── Navigation ────────────────────────────────────────────────────────
 
-    private IEnumerator TransitionToScreen3()
+   private IEnumerator TransitionToScreen3()
+{
+    float t = 0f;
+    while (t < 1f)
     {
-        float t = 0f;
-        while (t < 1f)
-        {
-            t += Time.deltaTime / 0.35f;
-            panelCG.alpha = Mathf.Lerp(1f, 0f, UIAnimator_MyClass_Reading.EaseInOut(t));
-            yield return null;
-        }
-        panelCG.alpha = 0f;
+        t += Time.deltaTime / 0.35f;
+        panelCG.alpha = Mathf.Lerp(1f, 0f, UIAnimator_MyClass_Reading.EaseInOut(t));
+        yield return null;
+    }
+    panelCG.alpha = 0f;
 
+    yield return null;
+
+    // ✅ If this is the last screen, finish the unit instead of going to Screen 3
+    if (isLastScreen)
+    {
+        gameObject.SetActive(false);
+        var manager = FindAnyObjectByType<ReadingManager_MyClass_Reading>();
+        if (manager != null)
+        {
+            manager.UnitFinished();
+            manager.gameObject.SetActive(false);
+        }
+    }
+    else
+    {
         if (screen3Object != null)
             screen3Object.SetActive(true);
 
-        yield return null;
         gameObject.SetActive(false);
     }
+}
 
     // ── Helpers ───────────────────────────────────────────────────────────
 

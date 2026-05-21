@@ -29,9 +29,24 @@ public class SharedUnitPanelController : MonoBehaviour
     private GameObject       _activeContentGO;
     private SharedUnitButton[] _buttons;
 
+    public GameObject gamebg;
+    public GameObject soundManager;  
+
     void Awake()
     {
         _buttons = unitButtonsRoot.GetComponentsInChildren<SharedUnitButton>(true);
+
+        if (registry||unitButtonsRoot.activeSelf==true)
+        {
+            gamebg.SetActive(false);
+            soundManager.SetActive(false);
+        }
+        else
+        {
+            gamebg.SetActive(true);
+            soundManager.SetActive(true);
+        }
+           
     }
 
     // ── Called by TopicSelectorRegistry ──────────────────────────────────
@@ -78,15 +93,16 @@ public class SharedUnitPanelController : MonoBehaviour
 
         // Keep existing SpeakingGameController reset behaviour
         var speaking = contentGO.GetComponentInChildren<SpeakingGameController>(true);
-        speaking?.ResetGame();
+        //speaking?.ResetGame();
     }
 
     // ── Called by content screen (via IUnitCompletable) ───────────────────
     public void UnitFinished(SharedUnitButton unitButton)
     {
-        HideActiveContent();
-        unitButton.MarkCompleted(_activeTopic);
-        ShowButtons();
+         TopicData_BB2 topicSnapshot = _activeTopic; // capture before HideActiveContent clears it
+    HideActiveContent();
+    unitButton.MarkCompleted(topicSnapshot);     // use snapshot
+    ShowButtons();   
     }
 
     // ── Back button on unit panel ─────────────────────────────────────────
@@ -112,4 +128,20 @@ public class SharedUnitPanelController : MonoBehaviour
         }
         _activeButton = null;
     }
+
+  
+     void Update()
+{
+    if (unitButtonsRoot.activeSelf)
+    {
+        gamebg.SetActive(false);
+        soundManager.SetActive(false);
+    }
+    else
+    {
+        gamebg.SetActive(true);
+        soundManager.SetActive(true);
+    }
+}
+    
 }

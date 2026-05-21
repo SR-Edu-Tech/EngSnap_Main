@@ -29,7 +29,7 @@ public class UnitPanelController_BB1 : MonoBehaviour
           var speaking = unitButton.unitGameObject.GetComponent<SpeakingGameController>();
     if (speaking != null)
     {
-        speaking.ResetGame();
+        //speaking.ResetGame();
     }
     }
 

@@ -20,13 +20,13 @@ public class SpeakingAutoNext : MonoBehaviour
         {
             yield return new WaitForSeconds(checkDelay);
 
-            if (evaluator != null && evaluator.CurrentScore >= evaluator.passThreshold)
-            {
-                completed = true;
+            //if (evaluator != null && evaluator.CurrentScore >= evaluator.passThreshold)
+          //  {
+               // completed = true;
 
                 // Move to next slide in ListeningGameplay
                 //ListeningGameplay.Instance.SendMessage("OnSlideComplete");
-            }
+           // }
         }
     }
 }
