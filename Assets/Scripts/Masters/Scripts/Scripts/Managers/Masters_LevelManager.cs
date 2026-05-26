@@ -302,8 +302,7 @@ public class Masters_LevelManager : Masters_Singleton<Masters_LevelManager> {
     public void OnBackButtonClicked() {
         switch (currentScreen) {
             case Masters_CurrentScreen.UnitSelection:
-                Resources.UnloadUnusedAssets();
-                SceneManager.LoadSceneAsync("mainScene");
+                //OnBackButtonClickedInHomeScreen();
                 break;
             case Masters_CurrentScreen.TopicSelection:
                 ChangeToUnitSelectionScreen();
@@ -313,6 +312,38 @@ public class Masters_LevelManager : Masters_Singleton<Masters_LevelManager> {
                 break;
         }
     }
+
+    //private void OnBackButtonClickedInHomeScreen() {
+    //    StartCoroutine(ReturnToMain());
+    //}
+
+    //private IEnumerator ReturnToMain() {
+    //    string thisBundleScene = SceneManager.GetActiveScene().name;
+
+    //    // Find main scene — it stays alive because we loaded this scene additively
+    //    Scene mainScene = default;
+    //    for (int i = 0; i < SceneManager.sceneCount; i++) {
+    //        Scene s = SceneManager.GetSceneAt(i);
+    //        if (s.name != thisBundleScene) {
+    //            mainScene = s;
+    //            break;
+    //        }
+    //    }
+
+    //    if (mainScene.IsValid())
+    //        SceneManager.SetActiveScene(mainScene);
+
+    //    // Unload only the bundle scene — main scene is untouched
+    //    yield return SceneManager.UnloadSceneAsync(thisBundleScene);
+    //    yield return Resources.UnloadUnusedAssets();
+
+    //    // Tell main scene to restore the correct home screen
+    //    GameObject receiver = GameObject.Find("MainSceneReceiver");
+    //    if (receiver != null)
+    //        receiver.SendMessage("OnBundleSceneExited");
+    //    else
+    //        Debug.LogError("[BackToMainMenu] MainSceneReceiver GameObject not found in main scene.");
+    //}
 
 
 }

@@ -1,42 +1,25 @@
 using UnityEngine;
 
-/// <summary>
-/// Replaces UnitPanelController_BB1.
-/// ONE shared Unit Panel that works for every topic.
-///
-/// WIRING IN INSPECTOR:
-///   registry        → drag the GameObject with TopicSelectorRegistry
-///   unitButtonsRoot → parent GameObject holding all SharedUnitButton children
-///
-/// FLOW:
-///   1. TopicSelectorRegistry calls Open(topicData)
-///      → panel activates, all buttons initialised for this topic
-///   2. Player clicks a unit button → StartUnit() called
-///      → buttons hidden, correct content GO shown
-///   3. Content screen calls UnitFinished()
-///      → content hidden, badge marked, buttons shown again
-///   4. Player clicks Back → BackToTopics()
-///      → returns to topic selection
-/// </summary>
 public class SharedUnitPanelController : MonoBehaviour
 {
     [Header("Wiring")]
     public TopicSelectorRegistry registry;
     public GameObject            unitButtonsRoot;
+    public RewardPanel_BB2       rewardPanel;
 
-    private TopicData_BB2  _activeTopic;
+    private TopicData_BB2    _activeTopic;
     private SharedUnitButton _activeButton;
     private GameObject       _activeContentGO;
     private SharedUnitButton[] _buttons;
 
     public GameObject gamebg;
-    public GameObject soundManager;  
+    public GameObject soundManager;
 
     void Awake()
     {
         _buttons = unitButtonsRoot.GetComponentsInChildren<SharedUnitButton>(true);
 
-        if (registry||unitButtonsRoot.activeSelf==true)
+        if (registry || unitButtonsRoot.activeSelf == true)
         {
             gamebg.SetActive(false);
             soundManager.SetActive(false);
@@ -46,7 +29,6 @@ public class SharedUnitPanelController : MonoBehaviour
             gamebg.SetActive(true);
             soundManager.SetActive(true);
         }
-           
     }
 
     // ── Called by TopicSelectorRegistry ──────────────────────────────────
@@ -82,16 +64,12 @@ public class SharedUnitPanelController : MonoBehaviour
         unitButtonsRoot.SetActive(false);
         contentGO.SetActive(true);
 
-        // Notify content screen via interface.
-        // Use GetComponentInChildren so the script can live on a child GO
-        // (e.g. Greetings_BB1 is a child of the Reading content root).
         var completable = contentGO.GetComponentInChildren<IUnitCompletable>(true);
         if (completable != null)
             completable.OnUnitStart(this, unitButton);
         else
             Debug.LogWarning($"SharedUnitPanelController: No IUnitCompletable found on '{contentGO.name}' or its children.");
 
-        // Keep existing SpeakingGameController reset behaviour
         var speaking = contentGO.GetComponentInChildren<SpeakingGameController>(true);
         //speaking?.ResetGame();
     }
@@ -99,10 +77,70 @@ public class SharedUnitPanelController : MonoBehaviour
     // ── Called by content screen (via IUnitCompletable) ───────────────────
     public void UnitFinished(SharedUnitButton unitButton)
     {
-         TopicData_BB2 topicSnapshot = _activeTopic; // capture before HideActiveContent clears it
-    HideActiveContent();
-    unitButton.MarkCompleted(topicSnapshot);     // use snapshot
-    ShowButtons();   
+        TopicData_BB2 topicSnapshot  = _activeTopic;
+        UnitType_BB1  justCompleted  = unitButton.unitType;   // capture before hiding
+
+        HideActiveContent();
+        unitButton.MarkCompleted(topicSnapshot);
+        ShowButtons();
+
+        // Pass justCompleted so the check doesn't depend on PlayerPrefs read-back
+        // of the key that was written milliseconds ago in this same frame.
+        if (AreAllUnitsComplete(topicSnapshot, justCompleted) && !WasRewardAlreadyShown(topicSnapshot))
+        {
+            MarkRewardShown(topicSnapshot);
+            ShowRewardPanel(topicSnapshot);
+        }
+    }
+
+    // ── All-units-complete check ──────────────────────────────────────────
+    // justCompletedType is treated as complete in-memory, bypassing any
+    // PlayerPrefs read-back delay for the key written in this same frame.
+    private bool AreAllUnitsComplete(TopicData_BB2 topicData, UnitType_BB1 justCompletedType)
+    {
+        if (topicData == null || topicData.unitEntries == null) return false;
+        foreach (var entry in topicData.unitEntries)
+        {
+            if (entry.unitType == justCompletedType) continue;   // just completed — treat as done
+            string key = topicData.GetSaveKey(entry.unitType);
+            if (PlayerPrefs.GetInt(key, 0) != 1) return false;
+        }
+        return true;
+    }
+
+    // ── Reward-shown flag (persisted so it survives app restart) ─────────
+    private string RewardShownKey(TopicData_BB2 topicData) => $"{topicData.topicID}_rewardShown";
+
+    private bool WasRewardAlreadyShown(TopicData_BB2 topicData)
+    {
+        if (topicData == null) return true;   // safe default — don't show
+        return PlayerPrefs.GetInt(RewardShownKey(topicData), 0) == 1;
+    }
+
+    private void MarkRewardShown(TopicData_BB2 topicData)
+    {
+        if (topicData == null) return;
+        PlayerPrefs.SetInt(RewardShownKey(topicData), 1);
+        PlayerPrefs.Save();
+    }
+
+    private void ShowRewardPanel(TopicData_BB2 topicData)
+    {
+        if (rewardPanel == null) return;
+        rewardPanel.Show(topicData, this);
+    }
+
+    /// <summary>Next button on reward panel — back to topic selection.</summary>
+    public void OnRewardNext()
+    {
+        if (rewardPanel != null) rewardPanel.Hide();
+        registry.BackToTopicSelection();
+    }
+
+    /// <summary>Replay button on reward panel — stay on unit panel.</summary>
+    public void OnRewardReplay()
+    {
+        if (rewardPanel != null) rewardPanel.Hide();
     }
 
     // ── Back button on unit panel ─────────────────────────────────────────
@@ -111,12 +149,14 @@ public class SharedUnitPanelController : MonoBehaviour
         registry.BackToTopicSelection();
     }
 
-    // ── Helpers ───────────────────────────────────────────────────────────
     private void ShowButtons()
     {
+        // Activate FIRST so all child GameObjects are live when Initialise()
+        // calls completionBadge.SetActive() — avoids badges not showing on
+        // first open because SetActive on inactive children is deferred by Unity.
+        unitButtonsRoot.SetActive(true);
         foreach (var btn in _buttons)
             btn.Initialise(this, _activeTopic);
-        unitButtonsRoot.SetActive(true);
     }
 
     private void HideActiveContent()
@@ -129,19 +169,17 @@ public class SharedUnitPanelController : MonoBehaviour
         _activeButton = null;
     }
 
-  
-     void Update()
-{
-    if (unitButtonsRoot.activeSelf)
+    void Update()
     {
-        gamebg.SetActive(false);
-        soundManager.SetActive(false);
+        if (unitButtonsRoot.activeSelf)
+        {
+            gamebg.SetActive(false);
+            soundManager.SetActive(false);
+        }
+        else
+        {
+            gamebg.SetActive(true);
+            soundManager.SetActive(true);
+        }
     }
-    else
-    {
-        gamebg.SetActive(true);
-        soundManager.SetActive(true);
-    }
-}
-    
 }

@@ -132,29 +132,21 @@ public class Screen1_ClassroomTapGame_MyClass_Game : MonoBehaviour
     //  UNITY LIFECYCLE
     // ─────────────────────────────────────────────────────────────
 
-    // ── set by ResetAndStart(), consumed by OnEnable ──
-    private bool pendingStart = false;
-
     void Start()
     {
-        // First activation is handled by OnEnable which fires right after Start.
-        // Nothing needed here.
+        // Intentionally empty.
+        // GameFlowManager.OpenGame() calls SetActive(true) then ResetAndStart().
+        // ResetAndStart() is always the entry point — never Start() or OnEnable().
     }
 
     void OnEnable()
     {
-        // Fired every time the panel is activated (SetActive(true)).
-        // GameFlowManager calls ResetAndStart() immediately after SetActive,
-        // but we also handle the very first activation here via pendingStart.
-        if (pendingStart)
-        {
-            pendingStart = false;
-            StartCoroutine(BeginRound(0));
-
-
-        }
-
-        ResetAndStart();
+        // Intentionally empty.
+        // DO NOT call ResetAndStart() here.
+        // GameFlowManager guarantees it calls ResetAndStart() right after SetActive(true),
+        // so the panel is always active when the coroutine starts.
+        // Calling it here too would start TWO coroutine chains simultaneously,
+        // causing rounds to run in parallel and audio to double-fire.
     }
 
     /// <summary>

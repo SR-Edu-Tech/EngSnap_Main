@@ -9,6 +9,9 @@ public class HomeScreenManager : MonoBehaviour
     // ── Singleton ─────────────────────────────────────────────────────────────
     public static HomeScreenManager Instance { get; private set; }
 
+  
+    
+
     // ── Screens ───────────────────────────────────────────────────────────────
     [Header("Screens")]
     [SerializeField] private GameObject homeScreen;
@@ -58,6 +61,9 @@ public class HomeScreenManager : MonoBehaviour
     [Header("Data")]
     [SerializeField] private PanelConfig panelConfig;
 
+    [Header("Main Camera")]
+[SerializeField] private Camera mainCamera; // drag your main scene camera here in Inspector
+
     [System.Serializable]
     public class HomeScreenEntry
     {
@@ -74,6 +80,8 @@ public class HomeScreenManager : MonoBehaviour
     private readonly List<GameObject> _allHomeScreens = new List<GameObject>();
     private GameObject                _activeHomeScreen = null;
     private Button                    _activeLearnButton = null;
+
+    private static GameObject         _rememberedHomeScreen = null; // ← ADD THIS
 
     // ─────────────────────────────────────────────────────────────────────────
     private void Awake()
@@ -251,15 +259,17 @@ public class HomeScreenManager : MonoBehaviour
 
         splashscreenAudio.gameObject.SetActive(false);
 
-        if (_homeScreenMap.TryGetValue(data.homeScreenId, out GameObject screen))
-        {
-            screen.SetActive(true);
-            _activeHomeScreen = screen;
-        }
-        else
-        {
-            Debug.LogError($"[HomeScreen] No HomeScreen found for ID: {data.homeScreenId}");
-        }
+    if (_homeScreenMap.TryGetValue(data.homeScreenId, out GameObject screen))
+{
+    screen.SetActive(true);
+    _activeHomeScreen = screen;
+    Debug.Log($"[HomeScreen] _activeHomeScreen set to: {screen.name}");
+}
+else
+{
+    Debug.LogError($"[HomeScreen] homeScreenId '{data.homeScreenId}' not found in map. " +
+                   $"Available IDs: {string.Join(", ", _homeScreenMap.Keys)}");
+}
 
         ShowScreen(null);
     }
@@ -283,29 +293,58 @@ public class HomeScreenManager : MonoBehaviour
         subPanelBackground.sprite = sprite;
     }
 
-    public void OnLearnClicked(Button sourceButton = null)
+// In OnLearnClicked — remove the camera disable from here
+public void OnLearnClicked(Button sourceButton = null)
+{
+    string url   = AppSession.PendingBundleUrl;
+    string scene = AppSession.PendingSceneName;
+
+    if (string.IsNullOrEmpty(url) || string.IsNullOrEmpty(scene))
     {
-        string url   = AppSession.PendingBundleUrl;
-        string scene = AppSession.PendingSceneName;
-
-        if (string.IsNullOrEmpty(url) || string.IsNullOrEmpty(scene))
-        {
-            Debug.LogError("[HomeScreen] Learn clicked but no URL/Scene in AppSession.");
-            return;
-        }
-        if (AssetBundleLoader.Instance == null)
-        {
-            Debug.LogError("[HomeScreen] AssetBundleLoader singleton not found.");
-            return;
-        }
-
-        _activeLearnButton = sourceButton;
-        if (_activeLearnButton != null) _activeLearnButton.interactable = false;
-
-        ShowLoadingOverlay(true);
-        AssetBundleLoader.Instance.LoadSceneFromBundle(url, scene);
+        Debug.LogError("[HomeScreen] Learn clicked but no URL/Scene in AppSession.");
+        return;
+    }
+    if (AssetBundleLoader.Instance == null)
+    {
+        Debug.LogError("[HomeScreen] AssetBundleLoader singleton not found.");
+        return;
     }
 
+    _activeLearnButton = sourceButton;
+    if (_activeLearnButton != null) _activeLearnButton.interactable = false;
+
+    _rememberedHomeScreen = _activeHomeScreen;
+
+    // ❌ REMOVE: if (mainCamera != null) mainCamera.gameObject.SetActive(false);
+    // Camera stays ON during loading so the overlay is visible
+
+    ShowLoadingOverlay(true);
+    AssetBundleLoader.Instance.LoadSceneFromBundle(url, scene);
+}
+// ── Called by MainSceneReceiver when back button is pressed in bundle scene ──
+public void RestoreAfterBundle()
+{
+    Debug.Log($"[HomeScreenManager] RestoreAfterBundle called. " +
+              $"Remembered: {(_rememberedHomeScreen != null ? _rememberedHomeScreen.name : "NULL")}");
+
+    if (mainCamera != null) mainCamera.gameObject.SetActive(true); // ← ADD THIS
+
+    if (_rememberedHomeScreen != null)
+    {
+        _rememberedHomeScreen.SetActive(true);
+        _activeHomeScreen     = _rememberedHomeScreen;
+        _rememberedHomeScreen = null;
+        Debug.Log("[HomeScreenManager] Home screen restored successfully.");
+    }
+    else
+    {
+        Debug.LogWarning("[HomeScreenManager] _rememberedHomeScreen was null, showing default.");
+        homeScreen.SetActive(true);
+    }
+
+    ShowLoadingOverlay(false);
+    ReEnableLearnButton();
+}
     private void HandleProgress(float t)
     {
         if (progressBar)   progressBar.value  = t;
@@ -316,6 +355,8 @@ public class HomeScreenManager : MonoBehaviour
     {
         ShowLoadingOverlay(false);
         ReEnableLearnButton();
+
+         if (mainCamera != null) mainCamera.gameObject.SetActive(false);
     }
 
     private void HandleError(string msg)

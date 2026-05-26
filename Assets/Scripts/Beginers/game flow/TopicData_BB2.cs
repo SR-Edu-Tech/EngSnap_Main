@@ -19,6 +19,11 @@ public class TopicData_BB2 : MonoBehaviour
     [Header("Topic Identity")]
     public string topicID;           // e.g. "EverydayGreetings" — must be UNIQUE
 
+    [Header("Reward Panel")]
+    public string championTitle;     // e.g. "Everyday Greetings Champion"
+    [Tooltip("Words learned in this topic shown in the reward strip")]
+    public string[] learnedWords;    // e.g. "Hello", "Thank You", "Goodbye"
+
     [Header("Unit Content GameObjects")]
     public TopicUnitEntry[] unitEntries;
 
@@ -41,4 +46,6 @@ public class TopicUnitEntry
 {
     public UnitType_BB1 unitType;
     public GameObject   contentGameObject;
+    [Tooltip("Label shown on the star when it pops in the reward panel")]
+    public string       unitDisplayName;   // e.g. "Intro", "Listening", "Reading"
 }

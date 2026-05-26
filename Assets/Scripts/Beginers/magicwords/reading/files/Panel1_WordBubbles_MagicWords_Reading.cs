@@ -72,6 +72,12 @@ public class Panel1_WordBubbles_MagicWords_Reading : MonoBehaviour
     private bool _allSpawned   = false;
     private bool _introPlaying = false;
 
+    // BUG FIX: tracks which bubble indices have been counted toward _tappedCount.
+    // Without this, re-tapping any bubble increments _tappedCount again, making
+    // CheckAllTapped() fire before all bubbles have been tapped at least once.
+    private System.Collections.Generic.HashSet<int> _countedBubbles =
+        new System.Collections.Generic.HashSet<int>();
+
     private AudioSource _sfxSource;
     private AudioSource _voiceSource;
 
@@ -124,6 +130,8 @@ public class Panel1_WordBubbles_MagicWords_Reading : MonoBehaviour
         _tappedCount  = 0;
         _allSpawned   = false;
         _introPlaying = false;
+
+        _countedBubbles.Clear(); // BUG FIX: reset per-bubble tap tracking on panel reset
 
         if (nextButtonObject != null) nextButtonObject.SetActive(false);
     }
@@ -198,8 +206,14 @@ public class Panel1_WordBubbles_MagicWords_Reading : MonoBehaviour
 
         PlayVoice(data.bubbleIntroAudio);
 
-        _tappedCount++;
-        CheckAllTapped();
+        // BUG FIX: only count the first tap on each unique bubble.
+        // Re-tapping a bubble used to increment _tappedCount again, causing
+        // CheckAllTapped() to fire before every bubble had been tapped once.
+        if (_countedBubbles.Add(index))   // Add() returns false if already present
+        {
+            _tappedCount++;
+            CheckAllTapped();
+        }
     }
 
     private void CheckAllTapped()

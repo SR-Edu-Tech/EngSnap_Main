@@ -41,8 +41,9 @@ public class AssetBundleLoader : MonoBehaviour
     /// Downloads (or uses cached) bundle at <paramref name="url"/> then loads
     /// <paramref name="sceneName"/> as single or additive scene.
     /// </summary>
+    // Line ~45 — change Single to Additive
     public void LoadSceneFromBundle(string url, string sceneName,
-                                    LoadSceneMode mode = LoadSceneMode.Single)
+                                LoadSceneMode mode = LoadSceneMode.Additive) // ← was Single
     {
         if (IsLoading)
         {
@@ -169,4 +170,31 @@ public class AssetBundleLoader : MonoBehaviour
             _cache.Remove(url);
         }
     }
+
+    public void UnloadBundleScene(string sceneName, System.Action onComplete = null)
+{
+    StartCoroutine(UnloadRoutine(sceneName, onComplete));
+}
+
+private IEnumerator UnloadRoutine(string sceneName, System.Action onComplete)
+{
+    Scene bundleScene = SceneManager.GetSceneByName(sceneName);
+
+    if (bundleScene.isLoaded)
+    {
+        for (int i = 0; i < SceneManager.sceneCount; i++)
+        {
+            Scene s = SceneManager.GetSceneAt(i);
+            if (s.name != sceneName)
+            {
+                SceneManager.SetActiveScene(s);
+                break;
+            }
+        }
+        yield return SceneManager.UnloadSceneAsync(bundleScene);
+    }
+
+    yield return Resources.UnloadUnusedAssets();
+    onComplete?.Invoke();
+}
 }

@@ -2,19 +2,6 @@ using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 
-/// <summary>
-/// Replaces UnitButton_BB1.
-/// Sits on each unit button inside the ONE shared Unit Panel.
-/// No direct content GO reference needed — the panel resolves it from TopicData_BB2.
-///
-/// WIRING IN INSPECTOR:
-///   unitType        → pick the type (Intro, Listening, Reading...)
-///   button          → the Button component on this GO
-///   tmpLabel        → TMP text (optional)
-///   label           → Legacy text (optional)
-///   completionBadge → tick/star child GO (optional)
-///   displayName     → text shown on the button
-/// </summary>
 public class SharedUnitButton : MonoBehaviour
 {
     [Header("Unit Type")]
@@ -36,6 +23,7 @@ public class SharedUnitButton : MonoBehaviour
         if (label    != null) label.text    = displayName;
         if (tmpLabel != null) tmpLabel.text = displayName;
 
+        // Badge always starts hidden — Initialise() will set correct state per topic
         if (completionBadge != null) completionBadge.SetActive(false);
 
         button.onClick.RemoveAllListeners();
@@ -43,21 +31,33 @@ public class SharedUnitButton : MonoBehaviour
     }
 
     /// <summary>
-    /// Called by SharedUnitPanelController every time the panel opens for a topic.
-    /// Wires the panel and refreshes the badge for the active topic.
+    /// Called every time the panel opens for a topic (including topic switches).
+    /// Always resets badge first, then reads the correct save key for THIS topic.
     /// </summary>
     public void Initialise(SharedUnitPanelController panel, TopicData_BB2 topicData)
     {
         _panel = panel;
-        RefreshBadge(topicData);
+
+        // Always reset badge to hidden first — avoids bleed-over from a previous topic
+        if (completionBadge != null) completionBadge.SetActive(false);
+
+        // Only show badge if this unitType actually exists in the current topic
+        // AND has been saved as complete for this specific topic
+        if (topicData != null && TopicHasThisUnit(topicData))
+        {
+            string key     = topicData.GetSaveKey(unitType);
+            bool completed = PlayerPrefs.GetInt(key, 0) == 1;
+            if (completionBadge != null) completionBadge.SetActive(completed);
+        }
     }
 
-    private void RefreshBadge(TopicData_BB2 topicData)
+    /// <summary>Returns true if this button's unitType is present in the topic's entries.</summary>
+    private bool TopicHasThisUnit(TopicData_BB2 topicData)
     {
-        if (completionBadge == null || topicData == null) return;
-        string key      = topicData.GetSaveKey(unitType);
-        bool completed  = PlayerPrefs.GetInt(key, 0) == 1;
-        completionBadge.SetActive(completed);
+        if (topicData.unitEntries == null) return false;
+        foreach (var entry in topicData.unitEntries)
+            if (entry.unitType == unitType) return true;
+        return false;
     }
 
     /// <summary>Shows badge and saves completion for the given topic.</summary>
@@ -72,8 +72,5 @@ public class SharedUnitButton : MonoBehaviour
         }
     }
 
-    private void OnClicked()
-    {
-        _panel?.StartUnit(this);
-    }
+    private void OnClicked() => _panel?.StartUnit(this);
 }

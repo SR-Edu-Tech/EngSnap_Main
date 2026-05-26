@@ -194,6 +194,7 @@ public class ListeningScreen_BB1 : MonoBehaviour, IUnitCompletable
         if (replayButton != null)
         {
             replayButton.gameObject.SetActive(enableReplay);
+            replayButton.interactable = false;          // disabled until first audio ends
             replayButton.onClick.RemoveAllListeners();
             replayButton.onClick.AddListener(() =>
             {
@@ -213,13 +214,16 @@ public class ListeningScreen_BB1 : MonoBehaviour, IUnitCompletable
         if (slowButton != null)
         {
             slowButton.gameObject.SetActive(true);
+            slowButton.interactable = false;            // disabled until first audio ends
             slowButton.onClick.RemoveAllListeners();
             slowButton.onClick.AddListener(() =>
             {
                 isSlowMode    = !isSlowMode;
                 playbackSpeed = isSlowMode ? 0.75f : 1.0f;
                 UpdateSlowButtonVisual();
-                PlayAudio();
+                // Apply new pitch without restarting — continue from current position
+                if (audioSource != null && audioSource.isPlaying)
+                    audioSource.pitch = playbackSpeed;
             });
         }
     }
@@ -286,6 +290,7 @@ public class ListeningScreen_BB1 : MonoBehaviour, IUnitCompletable
 
     void OnLineItemClicked(int index)
     {
+        if (!audioCompleted) return;  // block clicks until first full poem finishes
         if (segmentCoroutine != null) StopCoroutine(segmentCoroutine);
         segmentCoroutine = StartCoroutine(PlayAudioSegment(index));
     }
@@ -314,12 +319,14 @@ public class ListeningScreen_BB1 : MonoBehaviour, IUnitCompletable
         List<Vector2> timingWindows    = BuildTimingWindows();
         int           currentHighlight = -1;
         bool          audioStarted    = false;
-        float         capturedSpeed   = playbackSpeed;
 
         while (true)
         {
-            float elapsed = (float)(AudioSettings.dspTime - playStartDsp) * capturedSpeed;
-            if (!audioStarted && elapsed > 0.01f) audioStarted = true;
+            // Use audioSource.time directly so highlight stays correct
+            // even when pitch (playback speed) is changed mid-play.
+            float elapsed = audioSource.time;
+
+            if (!audioStarted && audioSource.isPlaying) audioStarted = true;
             if (audioStarted && !audioSource.isPlaying) break;
 
             int nextHighlight = -1;
@@ -349,6 +356,11 @@ public class ListeningScreen_BB1 : MonoBehaviour, IUnitCompletable
 
         if (isSlowMode) { isSlowMode = false; playbackSpeed = 1.0f; UpdateSlowButtonVisual(); }
         audioCompleted = true;
+
+        // Enable replay and slow buttons now that audio has played at least once
+        if (replayButton != null) replayButton.interactable = true;
+        if (slowButton   != null) slowButton.interactable   = true;
+
         CheckCompletion();
     }
 
@@ -426,4 +438,4 @@ public class ListeningScreen_BB1 : MonoBehaviour, IUnitCompletable
         gameObject.SetActive(false);
         if (panel != null) panel.gameObject.SetActive(true);
     }
-} 
+}

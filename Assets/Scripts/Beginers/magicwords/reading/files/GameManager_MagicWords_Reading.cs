@@ -45,6 +45,11 @@ public class GameManager_MagicWords_Reading : MonoBehaviour, IUnitCompletable
     public enum GamePanel { Panel1_WordBubbles, Panel2_SituationCards }
     public GamePanel CurrentPanel { get; private set; } = GamePanel.Panel1_WordBubbles;
 
+    // BUG FIX: tracks whether the very first ShowPanel call has happened.
+    // Start() calls ShowPanel(Panel1) to set the initial state — we skip the
+    // transition SFX on that first call so no sound plays on scene load.
+    private bool _firstShowDone = false;
+
     // ─────────────────────────────────────────────────────────────────────────
     void Awake()
     {
@@ -67,16 +72,24 @@ public class GameManager_MagicWords_Reading : MonoBehaviour, IUnitCompletable
 
     // ─────────────────────────────────────────────────────────────────────────
     /// <summary>Activate the requested panel and deactivate the other.</summary>
-    public void ShowPanel(GamePanel panel)
+    public void ShowPanel(GamePanel targetPanel)
     {
-        CurrentPanel = panel;
+        // BUG FIX: parameter was named 'panel', shadowing the
+        // 'SharedUnitPanelController panel' field. Renamed to 'targetPanel'
+        // to eliminate the ambiguity and prevent future accidental field access.
 
-        bool showP1 = (panel == GamePanel.Panel1_WordBubbles);
+        CurrentPanel = targetPanel;
+
+        bool showP1 = (targetPanel == GamePanel.Panel1_WordBubbles);
         panel1WordBubbles.SetActive(showP1);
         panel2SituationCards.SetActive(!showP1);
 
-        if (sfxPanelTransition != null)
+        // BUG FIX: skip transition SFX on the first call (scene startup).
+        // Previously the jingle AND the transition sound both fired on Start().
+        if (_firstShowDone && sfxPanelTransition != null)
             _globalAudio.PlayOneShot(sfxPanelTransition);
+
+        _firstShowDone = true;
     }
 
     /// <summary>Called by Panel 1 NEXT button → load Panel 2.</summary>

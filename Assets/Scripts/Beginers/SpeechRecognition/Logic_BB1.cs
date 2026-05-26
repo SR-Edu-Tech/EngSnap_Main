@@ -62,6 +62,10 @@ public class Logic_BB1 : MonoBehaviour, IUnitCompletable
     private int    _questionsCompleted = 0;
     private bool   _started            = false;
 
+
+    [Header("── Toggle Button ───────────────")]
+public ToggleToTalkButton_BB1 toggleToTalkButton;
+
     // ── Unity Lifecycle ────────────────────────────────────────────────────────
     void Start()
     {
@@ -271,20 +275,27 @@ public class Logic_BB1 : MonoBehaviour, IUnitCompletable
         }
     }
 
-    public void OnNextClicked()
+public void OnNextClicked()
+{
+    if (nextButton != null) nextButton.interactable = false;
+
+    // ✅ Stop listening and reset the mic button before moving on
+    CrossPlatformSpeechManager.Instance?.StopListening();
+    if (toggleToTalkButton != null) toggleToTalkButton.ForceIdle();
+
+    _questionsCompleted++;
+
+    recognizedTextLabel.text = "";
+    accuracyPercentLabel.text = "";
+
+    if (_questionsCompleted >= questions.Length)
     {
-        if (nextButton != null) nextButton.interactable = false;
-
-        _questionsCompleted++;
-
-        if (_questionsCompleted >= questions.Length)
-        {
-            ShowCompleted();
-            return;
-        }
-
-        LoadQuestion(_currentIndex + 1);
+        ShowCompleted();
+        return;
     }
+
+    LoadQuestion(_currentIndex + 1);
+}
 
     // ── Completion ─────────────────────────────────────────────────────────────
     void ShowCompleted()
