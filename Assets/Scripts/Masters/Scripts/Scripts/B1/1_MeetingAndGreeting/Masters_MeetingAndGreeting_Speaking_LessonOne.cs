@@ -77,7 +77,7 @@ public class Masters_MeetingAndGreeting_Speaking_LessonOne : Masters_Lesson {
     }
 
     private void OnSkipButtonClicked() {
-        progressCountTMP.text = $"{++currentSpeechToTextIndex}/3";
+        progressCountTMP.text = $"{++currentSpeechToTextIndex}/8";
         SetPhraseCardAndSpeechToText();
         Masters_AudioManager.Instance.PlaySoundEffect(Masters_SFX.SelectPositive);
     }
@@ -148,7 +148,7 @@ public class Masters_MeetingAndGreeting_Speaking_LessonOne : Masters_Lesson {
         if (progressBar.value > 0.75) {
             // Similarity greater than 75%
             Masters_AudioManager.Instance.PlaySoundEffect(Masters_SFX.Correct);
-            progressCountTMP.text = $"{++currentSpeechToTextIndex}/3";
+            progressCountTMP.text = $"{++currentSpeechToTextIndex}/8";
             Invoke(SET_PHRASE_CARD_AND_SPEECH_TO_TEXT, timeToLoadNextSpeechToText);
             return;
 

@@ -75,6 +75,8 @@ public class Masters_MyLearningHub_Game_LessonOne : Masters_Lesson {
             currentlySelectedButtonImage.color = defaultColor;
         }
 
+        Masters_AudioManager.Instance.PlaySoundEffect(Masters_SFX.SelectPositive);
+
         currentlySelectedButtonImage = expression.GetComponent<Image>();
         currentlySelectedButtonImage.color = selectedColor;
 

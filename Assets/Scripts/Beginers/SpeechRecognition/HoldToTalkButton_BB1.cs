@@ -7,12 +7,12 @@ public class HoldToTalkButton : MonoBehaviour, IPointerDownHandler, IPointerUpHa
     public void OnPointerDown(PointerEventData eventData)
     {
        // transform.GetChild(1).GetComponent<TextMeshProUGUI>().text = "Listening...";
-        CrossPlatformSpeechManager_BB1.Instance?.StartListening();
+        CrossPlatformSpeechManager.Instance?.StartListening();
     }
 
     public void OnPointerUp(PointerEventData eventData)
     {
        // transform.GetChild(1).GetComponent<TextMeshProUGUI>().text = "";
-        CrossPlatformSpeechManager_BB1.Instance?.StopListening();
+        CrossPlatformSpeechManager.Instance?.StopListening();
     }
 }

@@ -14,6 +14,7 @@ public class ReadingListenAndTap_S1A : MonoBehaviour
         public Image bg;
         public Image highlightImage;
         public AudioClip audioClip;
+        public AudioClip slowAudioClip;
 
         [HideInInspector] public bool hasPlayed = false;
     }
@@ -34,6 +35,16 @@ public class ReadingListenAndTap_S1A : MonoBehaviour
     public AudioSource audioSource;
     public AudioClip introClip;
     public AudioClip popClip;
+
+    [Header("Toggles (Optional)")]
+    public Button slowButton;
+    public Button repeatButton;
+    public Image slowBG;
+    public Image repeatBG;
+    public Color activeToggleColor = Color.green;
+
+    private bool isSlowOn = false;
+    private bool isRepeatOn = false;
 
     [Header("Colors")]
     public Color normalText = Color.black;
@@ -65,6 +76,7 @@ public class ReadingListenAndTap_S1A : MonoBehaviour
     {
         ResetUIState();
         ResetGame();
+        SetupButtons();
         StartCoroutine(IntroFlow());
     }
 
@@ -74,6 +86,38 @@ public class ReadingListenAndTap_S1A : MonoBehaviour
             audioSource.Stop();
 
         StopAllCoroutines();
+    }
+
+    void SetupButtons()
+    {
+        if (slowButton != null)
+        {
+            slowButton.onClick.RemoveAllListeners();
+            slowButton.onClick.AddListener(ToggleSlow);
+        }
+
+        if (repeatButton != null)
+        {
+            repeatButton.onClick.RemoveAllListeners();
+            repeatButton.onClick.AddListener(ToggleRepeat);
+        }
+    }
+
+    void ToggleSlow()
+    {
+        if (!canInteract) return;
+        isSlowOn = !isSlowOn;
+        if (slowBG != null) slowBG.color = isSlowOn ? activeToggleColor : normalBG;
+    }
+
+    void ToggleRepeat()
+    {
+        if (!canInteract) return;
+        isRepeatOn = !isRepeatOn;
+        if (repeatBG != null) repeatBG.color = isRepeatOn ? activeToggleColor : normalBG;
+        
+        if (audioSource != null)
+            audioSource.loop = isRepeatOn;
     }
 
     void ResetUIState()
@@ -100,6 +144,11 @@ public class ReadingListenAndTap_S1A : MonoBehaviour
         nextButton.SetActive(false);
         canInteract = false;
         currentPlayingOption = null;
+
+        isSlowOn = false;
+        isRepeatOn = false;
+        if (slowBG != null) slowBG.color = normalBG;
+        if (repeatBG != null) repeatBG.color = normalBG;
 
         foreach (var opt in options)
         {
@@ -231,11 +280,25 @@ public class ReadingListenAndTap_S1A : MonoBehaviour
 
         opt.button.transform.localScale = Vector3.one * 1.1f;
 
-        if (opt.audioClip && audioSource)
+        if (audioSource)
         {
-            audioSource.clip = opt.audioClip;
-            audioSource.Play();
-            yield return new WaitForSeconds(opt.audioClip.length);
+            AudioClip clipToPlay = (isSlowOn && opt.slowAudioClip != null) ? opt.slowAudioClip : opt.audioClip;
+            
+            if (clipToPlay != null)
+            {
+                audioSource.clip = clipToPlay;
+                audioSource.loop = isRepeatOn && isManual;
+                audioSource.Play();
+                
+                if (audioSource.loop)
+                {
+                    yield return new WaitWhile(() => audioSource.isPlaying);
+                }
+                else
+                {
+                    yield return new WaitForSeconds(clipToPlay.length);
+                }
+            }
         }
 
         if (!isManual)

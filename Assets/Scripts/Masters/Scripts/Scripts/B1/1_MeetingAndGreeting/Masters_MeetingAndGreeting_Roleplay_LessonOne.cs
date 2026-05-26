@@ -178,7 +178,21 @@ public class Masters_MeetingAndGreeting_Roleplay_LessonOne : Masters_Lesson {
     }
 
     private void LoadNextRoleplay() {
-        if (dialogueIndex == studentRoleplayDialogueArray.Length) {
+        if (dialogueIndex >= studentRoleplayDialogueArray.Length) {
+            if (dialogueIndex == npcRoleplayDialogueArray.Length - 1) {
+                currentNpcRoleplayDialogue = npcRoleplayDialogueArray[dialogueIndex++];
+                npcCloud.SetActive(false);
+                studentCloud.SetActive(false);
+                npcDialogueTMP.text = currentNpcRoleplayDialogue.dialogueButtonText;
+                sliderImage.color = defaultColor;
+                npcCloud.SetActive(true);
+                studentDialogueTMP.text = "";
+                micPromptTMP.gameObject.SetActive(false);
+                skipButton.interactable = false;
+                Masters_AudioManager.Instance.PlayVoiceOver(currentNpcRoleplayDialogue.dialogueAudioClip);
+                Invoke(LOAD_NEXT_ROLEPLAY, timeBetweenRoleplay);
+                return;
+            }
             // Over
 
             npcAndStudentGameObject.transform.DOScale(Vector2.zero, animationSpeed).SetEase(Ease.OutExpo);
@@ -197,10 +211,10 @@ public class Masters_MeetingAndGreeting_Roleplay_LessonOne : Masters_Lesson {
         currentStudentRoleplayDialogue = studentRoleplayDialogueArray[dialogueIndex];
 
         npcDialogueTMP.text = currentNpcRoleplayDialogue.dialogueButtonText;
-        progressBar.value = 0f;
         sliderImage.color = defaultColor;
         npcCloud.SetActive(true);
         studentDialogueTMP.text = "";
+        micPromptTMP.gameObject.SetActive(false);
         micPromptTMP.text = $"Talk into the mic: {currentStudentRoleplayDialogue.dialogueButtonText}";
         micPromptTMP.gameObject.SetActive(true);
         Masters_AudioManager.Instance.PlayVoiceOver(currentNpcRoleplayDialogue.dialogueAudioClip);

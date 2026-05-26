@@ -1,0 +1,17 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fc153ab9b77094c4da88a98f4388b36f, type: 3}
+  m_Name: Reading cards who am i 3
+  m_EditorClassIdentifier: 
+  wordLabel: Glass
+  illustration: {fileID: -1610526237, guid: e6d6c89a629d9654f941eb69defee337, type: 3}
+  wordAudio: {fileID: 8300000, guid: 7d4c471c3c18157418978b4556c16169, type: 3}

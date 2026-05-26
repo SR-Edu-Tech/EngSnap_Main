@@ -15,7 +15,8 @@ public class SpeakingGameplay_S1A : MonoBehaviour
     [SerializeField] TextMeshProUGUI _feedbackText;
     [SerializeField] Slider _progressBar;
     [SerializeField, Range(0f, 1f)] float passThreshold = 0.75f;
-    [SerializeField] bool _isProcessingResult = false;
+    // NOTE: removed [SerializeField]  was causing isProcessingResult to persist across sessions
+    private bool _isProcessingResult = false;
     [SerializeField] private GameObject nextButton;
     [SerializeField] private Button _phraseBoxButton;
 
@@ -42,25 +43,23 @@ public class SpeakingGameplay_S1A : MonoBehaviour
 
     void OnEnable()
     {
-        CrossPlatformSpeechManager_S1A.OnResultStatic += OnSpeechResult;
-        CrossPlatformSpeechManager_S1A.OnPartialStatic += OnSpeechPartial;
-        CrossPlatformSpeechManager_S1A.OnReadyStatic += OnMicReady;
-
-        if (CrossPlatformSpeechManager_S1A.Instance != null)
-            CrossPlatformSpeechManager_S1A.Instance.onEnd.AddListener(OnMicEnd);
+        // Subscribe to the ONE shared manager
+        CrossPlatformSpeechManager.OnResultStatic += OnSpeechResult;
+        CrossPlatformSpeechManager.OnPartialStatic += OnSpeechPartial;
+        CrossPlatformSpeechManager.OnReadyStatic += OnMicReady;
+        CrossPlatformSpeechManager.OnEndStatic += OnMicEnd;
 
         ResetUI();
+        if (_audioSource != null) _audioSource.Stop();
         StartCoroutine(IntroSequence());
     }
 
     void OnDisable()
     {
-        CrossPlatformSpeechManager_S1A.OnResultStatic -= OnSpeechResult;
-        CrossPlatformSpeechManager_S1A.OnPartialStatic -= OnSpeechPartial;
-        CrossPlatformSpeechManager_S1A.OnReadyStatic -= OnMicReady;
-
-        if (CrossPlatformSpeechManager_S1A.Instance != null)
-            CrossPlatformSpeechManager_S1A.Instance.onEnd.RemoveListener(OnMicEnd);
+        CrossPlatformSpeechManager.OnResultStatic -= OnSpeechResult;
+        CrossPlatformSpeechManager.OnPartialStatic -= OnSpeechPartial;
+        CrossPlatformSpeechManager.OnReadyStatic -= OnMicReady;
+        CrossPlatformSpeechManager.OnEndStatic -= OnMicEnd;
 
         StopAllCoroutines();
         if (_audioSource) _audioSource.Stop();
@@ -71,14 +70,17 @@ public class SpeakingGameplay_S1A : MonoBehaviour
         canPlay = false;
         _isListeningToggled = false;
         _waitingForFinalEvaluation = false;
+        _isProcessingResult = false;   // always reset on rentry
+        _latestSpokenText = "";
+
         _currentLineShowBox.SetActive(false);
         _micObj.SetActive(false);
         _currentLineShowBox.transform.localScale = Vector3.zero;
         _micObj.transform.localScale = Vector3.zero;
-        
+
         if (nextButton) nextButton.SetActive(false);
         if (_feedbackText != null) _feedbackText.text = "";
-        
+
         if (titleText != null) SetupCanvasGroup(titleText);
 
         if (_phraseBoxButton != null)
@@ -90,15 +92,15 @@ public class SpeakingGameplay_S1A : MonoBehaviour
         {
             Button boxBtn = _currentLineShowBox.GetComponent<Button>();
             if (boxBtn == null) boxBtn = _currentLineShowBox.AddComponent<Button>();
-            
+
             Image img = _currentLineShowBox.GetComponent<Image>();
             if (img == null)
             {
                 img = _currentLineShowBox.AddComponent<Image>();
-                img.color = new Color(0, 0, 0, 0); 
+                img.color = new Color(0, 0, 0, 0);
             }
             img.raycastTarget = true;
-            
+
             boxBtn.onClick.RemoveAllListeners();
             boxBtn.onClick.AddListener(PlayAudioClip);
         }
@@ -130,8 +132,18 @@ public class SpeakingGameplay_S1A : MonoBehaviour
 
         StartCoroutine(TitleAnim());
 
+        // Timeoutguarded wait  never hangs if audio was left playing by another lesson
         if (_introClip)
-            yield return new WaitWhile(() => _audioSource.isPlaying);
+        {
+            float timeout = _introClip.length + 1f;
+            float waited = 0f;
+            while (_audioSource.isPlaying && waited < timeout)
+            {
+                waited += Time.deltaTime;
+                yield return null;
+            }
+            _audioSource.Stop();
+        }
 
         if (popClip) _audioSource.PlayOneShot(popClip);
         _micObj.SetActive(true);
@@ -140,7 +152,7 @@ public class SpeakingGameplay_S1A : MonoBehaviour
         yield return new WaitForSeconds(0.2f);
 
         ShowTargetWord();
-        
+
         yield return new WaitForSeconds(0.5f);
         canPlay = true;
         SetMicInteractable(true);
@@ -149,15 +161,12 @@ public class SpeakingGameplay_S1A : MonoBehaviour
     public void PlayAudioClip()
     {
         if (!canPlay) return;
-
-        Debug.Log($"[Speaking] Box clicked! Audio index: {_currentAudioIndex}, Clips count: {(_audioClips != null ? _audioClips.Length : 0)}");
         if (_coroutine != null) StopCoroutine(_coroutine);
         _coroutine = StartCoroutine(PlayClip());
     }
 
     IEnumerator PlayClip()
     {
-        // If already playing this clip, stop it (interruptable)
         if (_audioSource.isPlaying)
         {
             _audioSource.Stop();
@@ -166,20 +175,18 @@ public class SpeakingGameplay_S1A : MonoBehaviour
         }
 
         SetSpeakerIcon(true);
-        
+
         if (_audioClips != null && _currentAudioIndex < _audioClips.Length && _audioClips[_currentAudioIndex] != null)
         {
             _audioSource.clip = _audioClips[_currentAudioIndex];
             _audioSource.Play();
-            Debug.Log($"[Speaking] Playing clip: {_audioClips[_currentAudioIndex].name}");
             yield return new WaitForSeconds(_audioSource.clip.length);
         }
         else
         {
-            Debug.LogWarning($"[Speaking] No audio clip at index {_currentAudioIndex}. Make sure Audio Clips array is filled in the Inspector!");
             yield return new WaitForSeconds(0.5f);
         }
-        
+
         SetSpeakerIcon(false);
     }
 
@@ -195,15 +202,15 @@ public class SpeakingGameplay_S1A : MonoBehaviour
     void ShowTargetWord()
     {
         TextMeshProUGUI tmp = _currentLineShowBox.transform.GetChild(0).GetComponent<TextMeshProUGUI>();
-        
+
         string targetText = "";
-        if (_phraseTexts != null && _currentAudioIndex < _phraseTexts.Length && !string.IsNullOrEmpty(_phraseTexts[_currentAudioIndex])) 
+        if (_phraseTexts != null && _currentAudioIndex < _phraseTexts.Length && !string.IsNullOrEmpty(_phraseTexts[_currentAudioIndex]))
             targetText = _phraseTexts[_currentAudioIndex];
         else if (_audioClips != null && _currentAudioIndex < _audioClips.Length && _audioClips[_currentAudioIndex] != null)
             targetText = _audioClips[_currentAudioIndex].name;
 
         tmp.text = targetText;
-        
+
         if (_progressBar != null)
         {
             _progressBar.value = 0f;
@@ -227,7 +234,6 @@ public class SpeakingGameplay_S1A : MonoBehaviour
         _isProcessingResult = false;
     }
 
-    // Methods for Mic Event Trigger
     public void SetMicStateListening()
     {
         if (micStateText) micStateText.text = "Listening...";
@@ -238,7 +244,6 @@ public class SpeakingGameplay_S1A : MonoBehaviour
         if (micStateText) micStateText.text = "Tap to talk";
     }
 
-    // Hooks for Unity EventTrigger
     public void OnMicToggleClicked()
     {
         if (!canPlay || _isProcessingResult) return;
@@ -250,16 +255,15 @@ public class SpeakingGameplay_S1A : MonoBehaviour
             if (_feedbackText != null) _feedbackText.text = "";
             if (_progressBar != null) _progressBar.value = 0f;
             if (micStateText) micStateText.text = "Starting Mic...";
-            CrossPlatformSpeechManager_S1A.Instance?.StartListening();
+            CrossPlatformSpeechManager.Instance?.StartListening();
         }
         else
         {
             _isListeningToggled = false;
             _waitingForFinalEvaluation = true;
             if (micStateText) micStateText.text = "Evaluating...";
-            CrossPlatformSpeechManager_S1A.Instance?.StopListening();
-            
-            // Wait for the OS to send the final transcription buffers (OnMicEnd)
+            CrossPlatformSpeechManager.Instance?.StopListening();
+
             if (_evalFallback != null) StopCoroutine(_evalFallback);
             _evalFallback = StartCoroutine(ForceEvaluateFallback());
         }
@@ -279,15 +283,11 @@ public class SpeakingGameplay_S1A : MonoBehaviour
 
     void OnMicReady()
     {
-        if (_isListeningToggled)
-        {
-            SetMicStateListening();
-        }
+        if (_isListeningToggled) SetMicStateListening();
     }
 
     void OnMicEnd()
     {
-        // OS has completely shut down the mic. Safe to evaluate the final transcription.
         if (_waitingForFinalEvaluation)
         {
             _waitingForFinalEvaluation = false;
@@ -298,10 +298,9 @@ public class SpeakingGameplay_S1A : MonoBehaviour
 
     void OnSpeechResult(string spokenText)
     {
-        Debug.Log($"[Speaking] Final result from OS: '{spokenText}'");
+        Debug.Log($"[Speaking] Final result: '{spokenText}'");
         if (_isProcessingResult) return;
         if (!_isListeningToggled && !_waitingForFinalEvaluation) return;
-        
         _latestSpokenText = spokenText;
     }
 
@@ -309,37 +308,36 @@ public class SpeakingGameplay_S1A : MonoBehaviour
     {
         if (_isProcessingResult) return;
         if (!_isListeningToggled && !_waitingForFinalEvaluation) return;
-        
-        Debug.Log($"[Speaking] Partial: '{partialText}'");
         _latestSpokenText = partialText;
     }
 
     void EvaluateSpeech(string text, bool final)
     {
         string targetText = "";
-        if (_phraseTexts != null && _currentAudioIndex < _phraseTexts.Length && !string.IsNullOrEmpty(_phraseTexts[_currentAudioIndex])) 
+        if (_phraseTexts != null && _currentAudioIndex < _phraseTexts.Length && !string.IsNullOrEmpty(_phraseTexts[_currentAudioIndex]))
             targetText = _phraseTexts[_currentAudioIndex];
         else if (_audioClips != null && _currentAudioIndex < _audioClips.Length && _audioClips[_currentAudioIndex] != null)
             targetText = _audioClips[_currentAudioIndex].name;
 
         float score = SimilarityPercent(targetText, text);
-        
+
         string percentageStr = $"<color=yellow>({Mathf.RoundToInt(score * 100)}%)</color>";
         _feedbackText.text = text + " " + percentageStr;
 
         if (_progressBar != null)
         {
             _progressBar.value = score;
-            _progressBar.fillRect.GetComponent<Image>().color = Color.HSVToRGB(Mathf.Lerp(0f, 0.33f, score), 0.9f, 0.6f);
+            _progressBar.fillRect.GetComponent<Image>().color =
+                Color.HSVToRGB(Mathf.Lerp(0f, 0.33f, score), 0.9f, 0.6f);
         }
 
         if (score >= passThreshold)
         {
             _isProcessingResult = true;
             _isListeningToggled = false;
-            _waitingForFinalEvaluation = false; // Block late OnMicEnd triggers
+            _waitingForFinalEvaluation = false;
             SetMicStateIdle();
-            CrossPlatformSpeechManager_S1A.Instance.StopListening();
+            CrossPlatformSpeechManager.Instance?.StopListening();
             StartCoroutine(AudioChecker(true));
         }
         else if (final)
@@ -357,9 +355,11 @@ public class SpeakingGameplay_S1A : MonoBehaviour
         {
             _audioSource.PlayOneShot(_correctClip);
             yield return new WaitForSeconds(1.2f);
-            
-            int maxLevel = (_phraseTexts != null && _phraseTexts.Length > 0) ? _phraseTexts.Length : (_audioClips != null ? _audioClips.Length : 0);
-            
+
+            int maxLevel = (_phraseTexts != null && _phraseTexts.Length > 0)
+                ? _phraseTexts.Length
+                : (_audioClips != null ? _audioClips.Length : 0);
+
             if (_currentAudioIndex < maxLevel - 1)
             {
                 _currentAudioIndex++;
@@ -375,11 +375,8 @@ public class SpeakingGameplay_S1A : MonoBehaviour
         {
             if (_wrongClip && _audioSource) _audioSource.PlayOneShot(_wrongClip);
             StartCoroutine(Shake(_currentLineShowBox.transform));
-
             _feedbackText.color = Color.red;
-
             yield return new WaitForSeconds(2f);
-
             _feedbackText.text = "";
             _feedbackText.color = Color.white;
             _isProcessingResult = false;
@@ -395,10 +392,8 @@ public class SpeakingGameplay_S1A : MonoBehaviour
         return 1f - (float)dist / Mathf.Max(a.Length, b.Length);
     }
 
-    string Normalize(string s)
-    {
-        return System.Text.RegularExpressions.Regex.Replace(s.Trim().ToLowerInvariant(), @"[^a-z0-9\s]", "");
-    }
+    string Normalize(string s) =>
+        System.Text.RegularExpressions.Regex.Replace(s.Trim().ToLowerInvariant(), @"[^a-z0-9\s]", "");
 
     int Levenshtein(string s, string t)
     {
@@ -407,19 +402,15 @@ public class SpeakingGameplay_S1A : MonoBehaviour
         for (int i = 0; i <= n; i++) d[i, 0] = i;
         for (int j = 0; j <= m; j++) d[0, j] = j;
         for (int i = 1; i <= n; i++)
-        {
             for (int j = 1; j <= m; j++)
             {
                 int cost = (s[i - 1] == t[j - 1]) ? 0 : 1;
                 d[i, j] = Math.Min(Math.Min(d[i - 1, j] + 1, d[i, j - 1] + 1), d[i - 1, j - 1] + cost);
             }
-        }
         return d[n, m];
     }
 
-    // -------------------------
-    // ANIMATIONS
-    // -------------------------
+    //  Animations (unchanged) 
 
     IEnumerator PopIn(Transform target)
     {
@@ -429,11 +420,9 @@ public class SpeakingGameplay_S1A : MonoBehaviour
         {
             t += Time.deltaTime * popSpeed;
             float clamped = Mathf.Clamp01(t);
-
             float overshoot = 1.70158f;
             float c1 = overshoot + 1f;
             float ease = 1f + c1 * Mathf.Pow(clamped - 1f, 3f) + overshoot * Mathf.Pow(clamped - 1f, 2f);
-
             target.localScale = Vector3.one * ease;
             yield return null;
         }
@@ -443,13 +432,11 @@ public class SpeakingGameplay_S1A : MonoBehaviour
     IEnumerator Shake(Transform target)
     {
         Vector3 original = target.localPosition;
-
         for (int i = 0; i < 10; i++)
         {
             target.localPosition = original + new Vector3(UnityEngine.Random.Range(-10f, 10f), 0, 0);
             yield return new WaitForSeconds(0.02f);
         }
-
         target.localPosition = original;
     }
 
@@ -463,7 +450,6 @@ public class SpeakingGameplay_S1A : MonoBehaviour
 
         yield return new WaitForEndOfFrame();
         yield return null;
-
         titleText.ForceMeshUpdate();
         yield return null;
         titleText.ForceMeshUpdate();
@@ -471,7 +457,6 @@ public class SpeakingGameplay_S1A : MonoBehaviour
         string originalText = titleText.text;
         TMP_TextInfo textInfo = titleText.textInfo;
         int charCount = textInfo.characterCount;
-
         if (charCount == 0) yield break;
 
         titleText.maxVisibleCharacters = charCount;
@@ -479,14 +464,12 @@ public class SpeakingGameplay_S1A : MonoBehaviour
 
         bool revealed = false;
         float elapsed = 0f;
-
         float expectedTime = (charCount * titlePopStagger) + Mathf.Max(0.5f, 1f / titlePopFrequency);
         float totalDuration = Mathf.Max(titlePopDuration, expectedTime);
 
         while (elapsed < totalDuration)
         {
             if (titleText.text != originalText) break;
-
             elapsed += Time.deltaTime;
             textInfo = titleText.textInfo;
 
@@ -494,32 +477,24 @@ public class SpeakingGameplay_S1A : MonoBehaviour
             {
                 TMP_CharacterInfo charInfo = textInfo.characterInfo[i];
                 if (!charInfo.isVisible) continue;
-
                 int matIndex = charInfo.materialReferenceIndex;
                 int vertIndex = charInfo.vertexIndex;
-
                 Vector3[] vertices = textInfo.meshInfo[matIndex].vertices;
                 Vector3 charMid = (vertices[vertIndex] + vertices[vertIndex + 2]) / 2f;
-
-                float letterDelay = i * titlePopStagger;
-                float localTime = elapsed - letterDelay;
-
+                float localTime = elapsed - i * titlePopStagger;
                 float scale = 0f;
                 if (localTime > 0f)
                 {
                     float letterDur = Mathf.Max(0.1f, 1f / titlePopFrequency);
                     float t = Mathf.Clamp01(localTime / letterDur);
-
                     float overshoot = 1.70158f * (1f + titlePopAmplitude);
                     float c3 = overshoot + 1f;
                     scale = 1f + c3 * Mathf.Pow(t - 1f, 3f) + overshoot * Mathf.Pow(t - 1f, 2f);
                 }
-
                 for (int v = 0; v < 4; v++)
                 {
                     Vector3 orig = cachedMeshInfo[matIndex].vertices[vertIndex + v];
-                    Vector3 offset = orig - charMid;
-                    vertices[vertIndex + v] = charMid + offset * scale;
+                    vertices[vertIndex + v] = charMid + (orig - charMid) * scale;
                 }
             }
 
@@ -531,11 +506,7 @@ public class SpeakingGameplay_S1A : MonoBehaviour
 
             yield return null;
 
-            if (!revealed && titleCG != null)
-            {
-                titleCG.alpha = 1f;
-                revealed = true;
-            }
+            if (!revealed && titleCG != null) { titleCG.alpha = 1f; revealed = true; }
         }
 
         if (titleText.text == originalText)
@@ -553,7 +524,6 @@ public class SpeakingGameplay_S1A : MonoBehaviour
     IEnumerator PopTextPerChar(TMP_Text tmp, float popDur = 1.2f, float charStagger = 0.04f, float popAmp = 0.6f, float popFreq = 4f)
     {
         if (tmp == null) yield break;
-
         tmp.ForceMeshUpdate();
         yield return null;
         tmp.ForceMeshUpdate();
@@ -561,7 +531,6 @@ public class SpeakingGameplay_S1A : MonoBehaviour
         string originalText = tmp.text;
         TMP_TextInfo textInfo = tmp.textInfo;
         int charCount = textInfo.characterCount;
-
         if (charCount == 0) yield break;
 
         tmp.maxVisibleCharacters = charCount;
@@ -571,15 +540,11 @@ public class SpeakingGameplay_S1A : MonoBehaviour
         {
             TMP_CharacterInfo charInfo = textInfo.characterInfo[i];
             if (!charInfo.isVisible) continue;
-
             int matIdx = charInfo.materialReferenceIndex;
             int vertIdx = charInfo.vertexIndex;
-
             Vector3[] vertices = textInfo.meshInfo[matIdx].vertices;
             Vector3 charMid = (vertices[vertIdx] + vertices[vertIdx + 2]) / 2f;
-
-            for (int v = 0; v < 4; v++)
-                vertices[vertIdx + v] = charMid;
+            for (int v = 0; v < 4; v++) vertices[vertIdx + v] = charMid;
         }
         for (int m = 0; m < textInfo.meshInfo.Length; m++)
         {
@@ -599,7 +564,6 @@ public class SpeakingGameplay_S1A : MonoBehaviour
         while (elapsed < totalDuration)
         {
             if (tmp.text != originalText) break;
-
             elapsed += Time.deltaTime;
             textInfo = tmp.textInfo;
 
@@ -607,32 +571,24 @@ public class SpeakingGameplay_S1A : MonoBehaviour
             {
                 TMP_CharacterInfo charInfo = textInfo.characterInfo[i];
                 if (!charInfo.isVisible) continue;
-
                 int matIdx = charInfo.materialReferenceIndex;
                 int vertIdx = charInfo.vertexIndex;
-
                 Vector3[] vertices = textInfo.meshInfo[matIdx].vertices;
                 Vector3 charMid = (vertices[vertIdx] + vertices[vertIdx + 2]) / 2f;
-
-                float delay = i * charStagger;
-                float localTime = elapsed - delay;
-
+                float localTime = elapsed - i * charStagger;
                 float scale = 0f;
                 if (localTime > 0f)
                 {
                     float letterDur = Mathf.Max(0.1f, 1f / popFreq);
                     float lt = Mathf.Clamp01(localTime / letterDur);
-
                     float overshoot = 1.70158f * (1f + popAmp);
                     float c3 = overshoot + 1f;
                     scale = 1f + c3 * Mathf.Pow(lt - 1f, 3f) + overshoot * Mathf.Pow(lt - 1f, 2f);
                 }
-
                 for (int v = 0; v < 4; v++)
                 {
                     Vector3 orig = cachedMeshInfo[matIdx].vertices[vertIdx + v];
-                    Vector3 offset = orig - charMid;
-                    vertices[vertIdx + v] = charMid + offset * scale;
+                    vertices[vertIdx + v] = charMid + (orig - charMid) * scale;
                 }
             }
 
@@ -641,7 +597,6 @@ public class SpeakingGameplay_S1A : MonoBehaviour
                 textInfo.meshInfo[m].mesh.vertices = textInfo.meshInfo[m].vertices;
                 tmp.UpdateGeometry(textInfo.meshInfo[m].mesh, m);
             }
-
             yield return null;
         }
 

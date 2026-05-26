@@ -68,6 +68,7 @@ public class Masters_MeetingAndGreeting_Writing_LessonTwo : Masters_Lesson {
             slateRectTransform.gameObject.SetActive(true);
             completedPanelRectTransform.localScale = Vector2.one;
             completedPanelRectTransform.gameObject.SetActive(false);
+            progressCountTMP.text = $"{arrangeWordsPuzzleIndex}/4";
             ClearAndSetPuzzle();
         });
     }

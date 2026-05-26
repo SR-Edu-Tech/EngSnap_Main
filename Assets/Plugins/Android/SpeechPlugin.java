@@ -21,11 +21,13 @@ public class SpeechPlugin implements RecognitionListener {
     private Activity activity;
     private String unityGameObjectName;
     private String unityCallbackMethod;
-    
+
     private AudioManager audioManager;
-    private int originalMusicVolume = -1;
+    private int originalMusicVolume  = -1;
     private int originalSystemVolume = -1;
     private Handler unMuteHandler = new Handler();
+
+    // ── Singleton ──────────────────────────────────────────────────────────────
 
     public static SpeechPlugin getInstance() {
         if (instance == null) {
@@ -34,11 +36,19 @@ public class SpeechPlugin implements RecognitionListener {
         return instance;
     }
 
+    // ── Availability check (called from Unity before init) ─────────────────────
+
+    public static boolean isRecognitionAvailable(Context context) {
+        return SpeechRecognizer.isRecognitionAvailable(context);
+    }
+
+    // ── Init ───────────────────────────────────────────────────────────────────
+
     public void init(final String gameObjectName, final String callbackMethod) {
         this.unityGameObjectName = gameObjectName;
         this.unityCallbackMethod = callbackMethod;
         this.activity = UnityPlayer.currentActivity;
-        
+
         if (this.activity != null) {
             this.audioManager = (AudioManager) activity.getSystemService(Context.AUDIO_SERVICE);
         }
@@ -55,64 +65,98 @@ public class SpeechPlugin implements RecognitionListener {
         });
     }
 
-    // Mutes system and media volumes to hide the Google Assistant beep
-    private void muteBeep() {
-        if (audioManager != null) {
-            unMuteHandler.removeCallbacksAndMessages(null);
+    // ── Volume muting ──────────────────────────────────────────────────────────
+    // Wrapped in try/catch because Lenovo and other tablets running Android 12+
+    // throw a SecurityException from setStreamVolume() when Do Not Disturb mode
+    // is active or ACCESS_NOTIFICATION_POLICY is not granted.
+    // Beep muting is cosmetic — skip it silently rather than crash.
 
+    private void muteBeep() {
+        if (audioManager == null) return;
+        unMuteHandler.removeCallbacksAndMessages(null);
+        try {
             int musicVol = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC);
             if (musicVol > 0) {
                 originalMusicVolume = musicVol;
                 audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, 0, 0);
             }
-            
+        } catch (Exception e) {
+            originalMusicVolume = -1; // DND restriction — skip
+        }
+        try {
             int sysVol = audioManager.getStreamVolume(AudioManager.STREAM_SYSTEM);
             if (sysVol > 0) {
                 originalSystemVolume = sysVol;
                 audioManager.setStreamVolume(AudioManager.STREAM_SYSTEM, 0, 0);
             }
+        } catch (Exception e) {
+            originalSystemVolume = -1; // DND restriction — skip
         }
     }
 
-    // Restores volumes after a short delay
     private void unmuteBeep() {
         unMuteHandler.postDelayed(new Runnable() {
             @Override
             public void run() {
-                if (audioManager != null) {
-                    if (originalMusicVolume != -1) {
+                if (audioManager == null) return;
+                if (originalMusicVolume != -1) {
+                    try {
                         audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, originalMusicVolume, 0);
-                        originalMusicVolume = -1;
-                    }
-                    if (originalSystemVolume != -1) {
+                    } catch (Exception e) { /* ignore */ }
+                    originalMusicVolume = -1;
+                }
+                if (originalSystemVolume != -1) {
+                    try {
                         audioManager.setStreamVolume(AudioManager.STREAM_SYSTEM, originalSystemVolume, 0);
-                        originalSystemVolume = -1;
-                    }
+                    } catch (Exception e) { /* ignore */ }
+                    originalSystemVolume = -1;
                 }
             }
         }, 500);
     }
 
+    // ── Public API ─────────────────────────────────────────────────────────────
+
     public void startListening() {
         muteBeep();
-        
+
         activity.runOnUiThread(new Runnable() {
             @Override
             public void run() {
+                if (speechRecognizer == null) {
+                    UnityPlayer.UnitySendMessage(unityGameObjectName, "OnSpeechError",
+                            "SpeechRecognizer not initialized");
+                    return;
+                }
+
                 Intent intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
                 intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL,
                         RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
-                intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.ENGLISH);
+
+                // Use device locale — fixes ERROR_LANGUAGE_NOT_SUPPORTED on tablets
+                intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.getDefault());
+                intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_PREFERENCE, "en-US");
+                intent.putExtra(RecognizerIntent.EXTRA_ONLY_RETURN_LANGUAGE_PREFERENCE, false);
+
                 intent.putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1);
                 intent.putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true);
-                speechRecognizer.startListening(intent);
+
+                // Prefer offline — important for Wi-Fi-only tablets
+                intent.putExtra(RecognizerIntent.EXTRA_PREFER_OFFLINE, true);
+
+                try {
+                    speechRecognizer.startListening(intent);
+                } catch (Exception e) {
+                    UnityPlayer.UnitySendMessage(unityGameObjectName, "OnSpeechError",
+                            "startListening exception: " + e.getMessage());
+                }
             }
         });
     }
 
     public void stopListening() {
         muteBeep();
-        
+
         activity.runOnUiThread(new Runnable() {
             @Override
             public void run() {
@@ -134,6 +178,8 @@ public class SpeechPlugin implements RecognitionListener {
             }
         });
     }
+
+    // ── RecognitionListener callbacks ──────────────────────────────────────────
 
     @Override
     public void onReadyForSpeech(Bundle params) {
@@ -174,18 +220,17 @@ public class SpeechPlugin implements RecognitionListener {
         unmuteBeep();
         String msg;
         switch (error) {
-            case SpeechRecognizer.ERROR_NO_MATCH:       msg = "No speech match found";      break;
-            case SpeechRecognizer.ERROR_SPEECH_TIMEOUT: msg = "Speech input timed out";     break;
-            case SpeechRecognizer.ERROR_AUDIO:          msg = "Audio recording error";      break;
-            case SpeechRecognizer.ERROR_NETWORK:        msg = "Network error";              break;
-            case SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS:
-                                                        msg = "Missing RECORD_AUDIO permission"; break;
-            default:                                    msg = "Error code: " + error;       break;
+            case SpeechRecognizer.ERROR_NO_MATCH:                 msg = "No speech match found";           break;
+            case SpeechRecognizer.ERROR_SPEECH_TIMEOUT:           msg = "Speech input timed out";          break;
+            case SpeechRecognizer.ERROR_AUDIO:                    msg = "Audio recording error";           break;
+            case SpeechRecognizer.ERROR_NETWORK:                  msg = "Network error";                   break;
+            case SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS: msg = "Missing RECORD_AUDIO permission"; break;
+            default:                                              msg = "Error code: " + error;            break;
         }
         UnityPlayer.UnitySendMessage(unityGameObjectName, "OnSpeechError", msg);
     }
 
-    @Override public void onRmsChanged(float rmsdB) { }
-    @Override public void onBufferReceived(byte[] buffer) { }
+    @Override public void onRmsChanged(float rmsdB)            { }
+    @Override public void onBufferReceived(byte[] buffer)      { }
     @Override public void onEvent(int eventType, Bundle params) { }
 }

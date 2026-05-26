@@ -2,6 +2,22 @@
 <manifest
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
+
+    <!-- Required for microphone / speech recognition -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-permission android:name="android.permission.INTERNET" />
+
+    <!-- Mic hardware declaration — not required so tablets without built-in mic still run -->
+    <uses-feature android:name="android.hardware.microphone" android:required="false" />
+
+    <!-- Required on Android 11+ to query the SpeechRecognizer service.
+         Must be a direct child of <manifest>, NOT inside <application>. -->
+    <queries>
+        <intent>
+            <action android:name="android.speech.RecognitionService" />
+        </intent>
+    </queries>
+
     <application>
         <activity android:name="com.unity3d.player.UnityPlayerActivity"
                   android:theme="@style/UnityThemeSelector">
@@ -12,4 +28,5 @@
             <meta-data android:name="unityplayer.UnityActivity" android:value="true" />
         </activity>
     </application>
+
 </manifest>

@@ -22,6 +22,7 @@ public class GameFlowManager_SeniorLev1A : MonoBehaviour
     [Header("Canvases")]
     [SerializeField] private Canvas unitSelectionCanvas;
     [SerializeField] private Canvas branchSelectionCanvas;
+    [SerializeField] private RectTransform branchSelectionScroll;
 
     [Header("Global Audio")]
     [SerializeField] private AudioSource globalAudioSource; // Main Camera AudioSource
@@ -35,6 +36,7 @@ public class GameFlowManager_SeniorLev1A : MonoBehaviour
     // -----------------------------
     void Awake()
     {
+        Application.targetFrameRate = 120;
         foreach (var panel in allPanelsList)
         {
             string key = GetKey(panel.unitID, panel.branchID);
@@ -169,6 +171,8 @@ public class GameFlowManager_SeniorLev1A : MonoBehaviour
     public void Back()
     {
         StopAudio(); //  key fix
+        branchSelectionScroll.offsetMin = new Vector2(0f, 0f);
+        branchSelectionScroll.offsetMax = new Vector2(3250f, 0f);
 
         if (branchIdStored != 0)
         {

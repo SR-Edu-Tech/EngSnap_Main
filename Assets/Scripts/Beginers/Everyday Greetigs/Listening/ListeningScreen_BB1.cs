@@ -49,6 +49,14 @@ public class ListeningScreen_BB1 : MonoBehaviour, IUnitCompletable
         public string text;
         public float  startTime;
         public float  endTime;
+
+        // ── Per-Line Background (optional) ───────────────────────────────
+        // Leave lineBackgroundSprite = null and lineBackgroundTint.a = 0
+        // to fall back to the poem-level background. Existing setups are
+        // unaffected because these fields default to null / alpha-0.
+        [Header("Per-Line Background (optional)")]
+        public Sprite lineBackgroundSprite;
+        public Color  lineBackgroundTint = new Color(1f, 1f, 1f, 0f);
     }
 
     [Header("Audio")]
@@ -70,13 +78,17 @@ public class ListeningScreen_BB1 : MonoBehaviour, IUnitCompletable
     public TMPro.TextMeshProUGUI      mainTitle;
 
     // ── Runtime ───────────────────────────────────────────────────────────
-    private List<UpdateLineItem_BB1> lineItems          = new List<UpdateLineItem_BB1>();
-    private bool                     audioCompleted     = false;
+    private List<UpdateLineItem_BB1> lineItems            = new List<UpdateLineItem_BB1>();
+    private bool                     audioCompleted       = false;
     private bool                     interactionCompleted = true;
-    private Coroutine                segmentCoroutine   = null;
-    private float                    playbackSpeed      = 1.0f;
-    private bool                     isSlowMode         = false;
+    private Coroutine                segmentCoroutine     = null;
+    private float                    playbackSpeed        = 1.0f;
+    private bool                     isSlowMode           = false;
     private AudioClip                activeAudio;
+
+    // Cached poem-level background so we can restore it when no line bg is set
+    private Sprite activePoemSprite;
+    private Color  activePoemTint;
 
     void OnEnable()  => Setup();
     void OnDisable() { StopAllCoroutines(); if (audioSource != null) audioSource.Stop(); }
@@ -119,8 +131,44 @@ public class ListeningScreen_BB1 : MonoBehaviour, IUnitCompletable
     void ApplyPoemBackground(PoemEntry poem)
     {
         if (backgroundImage == null) return;
+
+        // Cache the poem-level values so per-line logic can fall back to them
+        activePoemSprite = poem.backgroundSprite;
+        activePoemTint   = poem.backgroundTint;
+
         if (poem.backgroundSprite != null) backgroundImage.sprite = poem.backgroundSprite;
         if (poem.backgroundTint.a > 0f)   backgroundImage.color  = poem.backgroundTint;
+    }
+
+    // ── Per-Line Background ───────────────────────────────────────────────
+    // Called whenever the highlighted line changes (index == -1 means no line
+    // is active → restore the poem-level background).
+    void ApplyLineBackground(int lineIndex)
+    {
+        if (backgroundImage == null) return;
+
+        if (lineIndex >= 0 && lineIndex < lines.Count)
+        {
+            var entry = lines[lineIndex];
+
+            // Use the line's sprite if one is assigned; otherwise keep current
+            if (entry.lineBackgroundSprite != null)
+                backgroundImage.sprite = entry.lineBackgroundSprite;
+            else if (activePoemSprite != null)
+                backgroundImage.sprite = activePoemSprite;
+
+            // Use the line's tint if it has visible alpha; otherwise fall back
+            if (entry.lineBackgroundTint.a > 0f)
+                backgroundImage.color = entry.lineBackgroundTint;
+            else if (activePoemTint.a > 0f)
+                backgroundImage.color = activePoemTint;
+        }
+        else
+        {
+            // No active line — restore poem-level background
+            if (activePoemSprite != null) backgroundImage.sprite = activePoemSprite;
+            if (activePoemTint.a > 0f)   backgroundImage.color  = activePoemTint;
+        }
     }
 
     void CreateLines()
@@ -179,7 +227,7 @@ public class ListeningScreen_BB1 : MonoBehaviour, IUnitCompletable
     void UpdateSlowButtonVisual()
     {
         if (slowButton == null) return;
-        var colors       = slowButton.colors;
+        var colors         = slowButton.colors;
         colors.normalColor = isSlowMode ? new Color(0.6f, 0.8f, 1f) : Color.white;
         slowButton.colors  = colors;
     }
@@ -251,10 +299,10 @@ public class ListeningScreen_BB1 : MonoBehaviour, IUnitCompletable
         audioSource.time  = entry.startTime;
         audioSource.pitch = 1.0f;
         audioSource.Play();
-        ApplyHighlight(index);
+        ApplyHighlight(index);           // also swaps background for this line
         while (audioSource.isPlaying && audioSource.time < entry.endTime) yield return null;
         audioSource.Stop();
-        ResetHighlights();
+        ResetHighlights();               // restores poem-level background
         segmentCoroutine = null;
     }
 
@@ -263,10 +311,10 @@ public class ListeningScreen_BB1 : MonoBehaviour, IUnitCompletable
         if (lineItems.Count == 0 || audioSource.clip == null) yield break;
         yield return null;
 
-        List<Vector2> timingWindows  = BuildTimingWindows();
+        List<Vector2> timingWindows    = BuildTimingWindows();
         int           currentHighlight = -1;
-        bool          audioStarted   = false;
-        float         capturedSpeed  = playbackSpeed;
+        bool          audioStarted    = false;
+        float         capturedSpeed   = playbackSpeed;
 
         while (true)
         {
@@ -277,13 +325,17 @@ public class ListeningScreen_BB1 : MonoBehaviour, IUnitCompletable
             int nextHighlight = -1;
             for (int i = 0; i < timingWindows.Count; i++)
             {
-                Vector2 w = timingWindows[i];
-                bool isLast = i == timingWindows.Count - 1;
+                Vector2 w      = timingWindows[i];
+                bool    isLast = i == timingWindows.Count - 1;
                 if (elapsed >= w.x && (elapsed < w.y || (isLast && elapsed <= w.y + 0.1f)))
                     { nextHighlight = i; break; }
             }
 
-            if (nextHighlight != currentHighlight) { ApplyHighlight(nextHighlight); currentHighlight = nextHighlight; }
+            if (nextHighlight != currentHighlight)
+            {
+                ApplyHighlight(nextHighlight);   // text highlight + background swap
+                currentHighlight = nextHighlight;
+            }
             yield return null;
         }
         ResetHighlights();
@@ -310,7 +362,7 @@ public class ListeningScreen_BB1 : MonoBehaviour, IUnitCompletable
 
     List<Vector2> BuildTimingWindows()
     {
-        var timings = new List<Vector2>(lines.Count);
+        var  timings          = new List<Vector2>(lines.Count);
         bool hasCustomTimings = true;
         for (int i = 0; i < lines.Count; i++)
             if (lines[i].endTime <= lines[i].startTime) { hasCustomTimings = false; break; }
@@ -331,8 +383,8 @@ public class ListeningScreen_BB1 : MonoBehaviour, IUnitCompletable
         var weights = new List<float>(lines.Count);
         for (int i = 0; i < lines.Count; i++)
         {
-            string text      = lines[i].text ?? string.Empty;
-            float  wordCount = Mathf.Max(1, text.Split(' ').Length);
+            string text       = lines[i].text ?? string.Empty;
+            float  wordCount  = Mathf.Max(1, text.Split(' ').Length);
             float  punctBonus = CountOccurrences(text, '!') * 0.25f + CountOccurrences(text, ',') * 0.15f
                               + CountOccurrences(text, '.') * 0.20f + CountOccurrences(text, '?') * 0.25f;
             float w = wordCount + punctBonus;
@@ -350,9 +402,11 @@ public class ListeningScreen_BB1 : MonoBehaviour, IUnitCompletable
         return timings;
     }
 
+    // ApplyHighlight now also drives the background swap
     void ApplyHighlight(int activeIndex)
     {
         for (int i = 0; i < lineItems.Count; i++) lineItems[i].Highlight(i == activeIndex);
+        ApplyLineBackground(activeIndex);
     }
 
     void ResetHighlights() => ApplyHighlight(-1);
@@ -372,4 +426,4 @@ public class ListeningScreen_BB1 : MonoBehaviour, IUnitCompletable
         gameObject.SetActive(false);
         if (panel != null) panel.gameObject.SetActive(true);
     }
-}
+} 

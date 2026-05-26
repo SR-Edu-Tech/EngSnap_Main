@@ -1,4 +1,3 @@
-
 using System;
 using System.Text;
 using System.Collections;
@@ -8,7 +7,7 @@ using TMPro;
 
 public class Logic_BB1 : MonoBehaviour, IUnitCompletable
 {
-    // ── IUnitCompletable — auto-set at runtime, never assign in Inspector ──
+    // ── IUnitCompletable ──────────────────────────────────────────────────────
     [HideInInspector] public SharedUnitPanelController panel;
     [HideInInspector] public SharedUnitButton          unitButton;
 
@@ -109,9 +108,9 @@ public class Logic_BB1 : MonoBehaviour, IUnitCompletable
 
     void OnEnable()
     {
-        CrossPlatformSpeechManager_BB1.OnResultStatic         += HandleResult;
-        CrossPlatformSpeechManager_BB1.OnPartialStatic        += HandlePartial;
-        CrossPlatformSpeechManager_BB1.OnRecordingReadyStatic += HandleRecordingReady;
+        CrossPlatformSpeechManager.OnResultStatic         += HandleResult;
+        CrossPlatformSpeechManager.OnPartialStatic        += HandlePartial;
+        CrossPlatformSpeechManager.OnRecordingReadyStatic += HandleRecordingReady;
 
         if (_started)
             ResetToStart();
@@ -119,9 +118,9 @@ public class Logic_BB1 : MonoBehaviour, IUnitCompletable
 
     void OnDisable()
     {
-        CrossPlatformSpeechManager_BB1.OnResultStatic         -= HandleResult;
-        CrossPlatformSpeechManager_BB1.OnPartialStatic        -= HandlePartial;
-        CrossPlatformSpeechManager_BB1.OnRecordingReadyStatic -= HandleRecordingReady;
+        CrossPlatformSpeechManager.OnResultStatic         -= HandleResult;
+        CrossPlatformSpeechManager.OnPartialStatic        -= HandlePartial;
+        CrossPlatformSpeechManager.OnRecordingReadyStatic -= HandleRecordingReady;
     }
 
     // ── Reset ──────────────────────────────────────────────────────────────────
@@ -137,7 +136,7 @@ public class Logic_BB1 : MonoBehaviour, IUnitCompletable
             LoadQuestion(0);
     }
 
-    // ── Finish — return to unit panel and mark badge ───────────────────────────
+    // ── Finish ─────────────────────────────────────────────────────────────────
     void OnFinishClicked()
     {
         var cachedPanel  = panel;
@@ -148,8 +147,7 @@ public class Logic_BB1 : MonoBehaviour, IUnitCompletable
         if (cachedPanel != null && cachedButton != null)
             cachedPanel.UnitFinished(cachedButton);
         else
-            Debug.LogWarning("[Logic_BB1] panel or unitButton is null on finish. " +
-                             "Make sure IUnitCompletable is being called by SharedUnitPanelController.");
+            Debug.LogWarning("[Logic_BB1] panel or unitButton is null on finish.");
     }
 
     // ── Question Loading ───────────────────────────────────────────────────────
@@ -160,16 +158,16 @@ public class Logic_BB1 : MonoBehaviour, IUnitCompletable
 
         var q = questions[index];
 
-        if (questionText       != null) questionText.text       = q.targetText;
-        if (questionNumberText != null) questionNumberText.text = $"Question {index + 1} / {questions.Length}";
+        if (questionText        != null) questionText.text        = q.targetText;
+        if (questionNumberText  != null) questionNumberText.text  = $"Question {index + 1} / {questions.Length}";
         if (recognizedTextLabel != null) recognizedTextLabel.text = "";
 
         ResetAccuracyUI();
 
-        if (nextButton          != null) nextButton.interactable         = false;
+        if (nextButton          != null) nextButton.interactable          = false;
         if (playRecordingButton != null) playRecordingButton.interactable = false;
 
-        CrossPlatformSpeechManager_BB1.Instance?.ClearLastRecording();
+        CrossPlatformSpeechManager.Instance?.ClearLastRecording();
 
         if (replayQuestionButton != null)
             replayQuestionButton.interactable = q.questionAudio != null;
@@ -216,8 +214,8 @@ public class Logic_BB1 : MonoBehaviour, IUnitCompletable
             _lastSeenHypothesis = partial;
 
             if (playRecordingButton != null
-                && CrossPlatformSpeechManager_BB1.Instance != null
-                && CrossPlatformSpeechManager_BB1.Instance.HasRecording)
+                && CrossPlatformSpeechManager.Instance != null
+                && CrossPlatformSpeechManager.Instance.HasRecording)
                 playRecordingButton.interactable = true;
 
             EvaluateAccuracy(partial);
@@ -230,8 +228,8 @@ public class Logic_BB1 : MonoBehaviour, IUnitCompletable
         string reference = questions[_currentIndex].targetText;
         float  score     = SimilarityPercent(reference, hypothesis);
 
-        if (accuracySlider      != null) accuracySlider.value      = score;
-        if (accuracyPercentLabel != null) accuracyPercentLabel.text = Mathf.RoundToInt(score * 100f) + "%";
+        if (accuracySlider       != null) accuracySlider.value       = score;
+        if (accuracyPercentLabel != null) accuracyPercentLabel.text  = Mathf.RoundToInt(score * 100f) + "%";
 
         ShowAccuracyGroup();
 
@@ -241,7 +239,7 @@ public class Logic_BB1 : MonoBehaviour, IUnitCompletable
 
     void ResetAccuracyUI()
     {
-        if (accuracySlider      != null) accuracySlider.value      = 0f;
+        if (accuracySlider       != null) accuracySlider.value      = 0f;
         if (accuracyPercentLabel != null) accuracyPercentLabel.text = "";
         HideAccuracyGroup();
         if (nextButton != null) nextButton.interactable = false;
@@ -260,7 +258,7 @@ public class Logic_BB1 : MonoBehaviour, IUnitCompletable
     }
 
     // ── Button Handlers ────────────────────────────────────────────────────────
-    void OnPlayRecordingClicked() => CrossPlatformSpeechManager_BB1.Instance?.PlayLastRecording();
+    void OnPlayRecordingClicked()  => CrossPlatformSpeechManager.Instance?.PlayLastRecording();
 
     void OnReplayQuestionClicked()
     {
@@ -307,11 +305,11 @@ public class Logic_BB1 : MonoBehaviour, IUnitCompletable
         cg.alpha = 1f;
     }
 
-    // ── Legacy / Public API ────────────────────────────────────────────────────
+    // ── Public API ─────────────────────────────────────────────────────────────
     public void finish()    => OnFinishClicked();
     public void ResetGame() => ResetToStart();
 
-    // ── Levenshtein Similarity ─────────────────────────────────────────────────
+    // ── Levenshtein ────────────────────────────────────────────────────────────
     float SimilarityPercent(string reference, string hypothesis)
     {
         string a = Normalize(reference);

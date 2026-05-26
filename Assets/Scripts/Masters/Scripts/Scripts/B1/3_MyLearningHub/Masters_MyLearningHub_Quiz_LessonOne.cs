@@ -96,6 +96,7 @@ public class Masters_MyLearningHub_Quiz_LessonOne : Masters_Lesson {
             currentlyPressedQuizButton = null;
 
             canClickOptionButton = true;
+            canClickCheckButton = false;
         }
     }
 
@@ -108,6 +109,8 @@ public class Masters_MyLearningHub_Quiz_LessonOne : Masters_Lesson {
             //currentlyPressedQuizButton.GetButton().transition = Selectable.Transition.ColorTint;
             currentlyPressedQuizButton.GetButtonImage().color = defaultColor;
         }
+
+        canClickCheckButton = true;
 
         quizButton.SetButtonIndex(buttonIndex);
         currentlyPressedQuizButton = quizButton;

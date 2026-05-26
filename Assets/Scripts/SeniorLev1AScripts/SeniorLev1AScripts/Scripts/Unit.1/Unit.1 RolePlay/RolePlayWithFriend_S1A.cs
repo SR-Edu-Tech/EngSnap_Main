@@ -20,6 +20,11 @@ public class RolePlayWithFriend_S1A : MonoBehaviour
         public int correctOptionID;
         public AudioClip correctVoice;
         public OptionData[] options;
+
+        [Header("Step Behaviors")]
+        public bool isAutomatic;
+        public bool isEndStep;
+        public bool isGirlOnly; // Girl speaks and immediately transitions to next step
     }
 
     [System.Serializable]
@@ -151,13 +156,16 @@ public class RolePlayWithFriend_S1A : MonoBehaviour
 
         if (girlDialogueText != null) StartCoroutine(PopTextPerChar(girlDialogueText));
 
-        yield return StartCoroutine(AnimateOptions());
+        var firstStep = steps[currentStep];
+        if (!firstStep.isAutomatic && !firstStep.isEndStep)
+        {
+            yield return StartCoroutine(AnimateOptions());
+        }
 
         if (introClip)
             yield return new WaitForSeconds(Mathf.Max(0, introClip.length - delayAfterTitle));
 
         // Auto-play girl voice once when step first appears
-        var firstStep = steps[currentStep];
         if (firstStep.girlVoice != null && audioSource)
         {
             audioSource.clip = firstStep.girlVoice;
@@ -165,7 +173,7 @@ public class RolePlayWithFriend_S1A : MonoBehaviour
             yield return new WaitWhile(() => audioSource.isPlaying);
         }
 
-        canPlay = true;
+        yield return StartCoroutine(HandleStepBehaviors(firstStep));
     }
 
     void SetupStep()
@@ -191,6 +199,15 @@ public class RolePlayWithFriend_S1A : MonoBehaviour
                     }
                 });
             }
+        }
+
+        if (step.isAutomatic || step.isEndStep || step.isGirlOnly)
+        {
+            for (int i = 0; i < optionUIs.Length; i++)
+            {
+                optionUIs[i].root.SetActive(false);
+            }
+            return;
         }
 
         for (int i = 0; i < optionUIs.Length; i++)
@@ -259,46 +276,7 @@ public class RolePlayWithFriend_S1A : MonoBehaviour
 
             yield return new WaitForSeconds(delayAfterCorrect);
 
-            currentStep++;
-
-            if (currentStep >= steps.Length)
-            {
-                if (finishClip && audioSource) audioSource.PlayOneShot(finishClip);
-                nextButton.gameObject.SetActive(true);
-                StartCoroutine(PopButton(nextButton.transform));
-            }
-            else
-            {
-                boyDialogueText.text = "Select A Dialogue";
-                if (girlMessageRoot != null) girlMessageRoot.transform.localScale = Vector3.zero;
-                if (boyMessageRoot != null) boyMessageRoot.transform.localScale = Vector3.zero;
-
-                yield return StartCoroutine(FadeOutOptions());
-                SetupStep();
-
-                if (popClip && audioSource) audioSource.PlayOneShot(popClip);
-                Coroutine popGirl = null;
-                Coroutine popBoy = null;
-
-                if (girlMessageRoot != null) popGirl = StartCoroutine(PopIn(girlMessageRoot.transform));
-                if (boyMessageRoot != null) popBoy = StartCoroutine(PopIn(boyMessageRoot.transform));
-
-                if (popGirl != null) yield return popGirl;
-                if (popBoy != null) yield return popBoy;
-
-                if (girlDialogueText != null) yield return StartCoroutine(PopTextPerChar(girlDialogueText));
-
-                yield return StartCoroutine(AnimateOptions());
-
-                // Auto-play girl voice once for new step
-                var newStep = steps[currentStep];
-                if (newStep.girlVoice != null && audioSource)
-                {
-                    audioSource.clip = newStep.girlVoice;
-                    audioSource.Play();
-                    yield return new WaitWhile(() => audioSource.isPlaying);
-                }
-            }
+            yield return StartCoroutine(TransitionToNextStep());
         }
         else
         {
@@ -316,6 +294,102 @@ public class RolePlayWithFriend_S1A : MonoBehaviour
         }
 
         isProcessing = false;
+    }
+
+    IEnumerator TransitionToNextStep()
+    {
+        currentStep++;
+
+        if (currentStep >= steps.Length)
+        {
+            if (finishClip && audioSource) audioSource.PlayOneShot(finishClip);
+            nextButton.gameObject.SetActive(true);
+            StartCoroutine(PopButton(nextButton.transform));
+        }
+        else
+        {
+            boyDialogueText.text = "Select A Dialogue";
+            if (girlMessageRoot != null) girlMessageRoot.transform.localScale = Vector3.zero;
+            if (boyMessageRoot != null) boyMessageRoot.transform.localScale = Vector3.zero;
+
+            yield return StartCoroutine(FadeOutOptions());
+            SetupStep();
+
+            if (popClip && audioSource) audioSource.PlayOneShot(popClip);
+            Coroutine popGirl = null;
+            Coroutine popBoy = null;
+
+            if (girlMessageRoot != null) popGirl = StartCoroutine(PopIn(girlMessageRoot.transform));
+            if (boyMessageRoot != null) popBoy = StartCoroutine(PopIn(boyMessageRoot.transform));
+
+            if (popGirl != null) yield return popGirl;
+            if (popBoy != null) yield return popBoy;
+
+            if (girlDialogueText != null) yield return StartCoroutine(PopTextPerChar(girlDialogueText));
+
+            var newStep = steps[currentStep];
+            if (!newStep.isAutomatic && !newStep.isEndStep)
+            {
+                yield return StartCoroutine(AnimateOptions());
+            }
+
+            if (newStep.girlVoice != null && audioSource)
+            {
+                audioSource.clip = newStep.girlVoice;
+                audioSource.Play();
+                yield return new WaitWhile(() => audioSource.isPlaying);
+            }
+
+            yield return StartCoroutine(HandleStepBehaviors(newStep));
+        }
+    }
+
+    IEnumerator HandleStepBehaviors(DialogueStep step)
+    {
+        if (step.isEndStep)
+        {
+            if (finishClip && audioSource) audioSource.PlayOneShot(finishClip);
+            nextButton.gameObject.SetActive(true);
+            StartCoroutine(PopButton(nextButton.transform));
+        }
+        else if (step.isGirlOnly)
+        {
+            yield return new WaitForSeconds(1f); // Brief pause before next step
+            yield return StartCoroutine(TransitionToNextStep());
+        }
+        else if (step.isAutomatic)
+        {
+            yield return new WaitForSeconds(1f); // Wait a sec
+
+            // Find correct text
+            string boyText = "";
+            foreach (var opt in step.options)
+            {
+                if (opt.id == step.correctOptionID)
+                {
+                    boyText = opt.text;
+                    break;
+                }
+            }
+
+            boyDialogueText.text = boyText;
+            yield return StartCoroutine(PopTextPerChar(boyDialogueText));
+
+            if (step.correctVoice != null && audioSource)
+            {
+                audioSource.clip = step.correctVoice;
+                audioSource.Play();
+                yield return new WaitWhile(() => audioSource.isPlaying);
+            }
+
+            yield return new WaitForSeconds(delayAfterCorrect);
+
+            yield return StartCoroutine(TransitionToNextStep());
+        }
+        else
+        {
+            canPlay = true; // Wait for user interaction
+        }
     }
 
     // ANIMATIONS

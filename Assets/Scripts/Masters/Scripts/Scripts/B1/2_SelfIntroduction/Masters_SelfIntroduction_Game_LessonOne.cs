@@ -22,12 +22,12 @@ public class Masters_SelfIntroduction_Game_LessonOne : Masters_Lesson, IBeginDra
     private string currentCorrectMatch;
     private LineRenderer currentLineRenderer;
     private bool canDrawLine;
-    private Masters_LineDragToExpressionMatch startLineDragToExpressionMatch;
+    private Masters_LineDragToExpressionMatch_SelfIntroduction startLineDragToExpressionMatch;
     private int correctCount;
 
 
     public void OnBeginDrag(PointerEventData eventData) {
-        if(eventData.pointerPress.TryGetComponent(out Masters_LineDragToExpressionMatch lineDragToExpressionMatch) && 
+        if(eventData.pointerPress.TryGetComponent(out Masters_LineDragToExpressionMatch_SelfIntroduction lineDragToExpressionMatch) && 
             lineDragToExpressionMatch.GetLeftOrRightPhrase() == LeftOrRightPhrase.Left && !lineDragToExpressionMatch.GetIsSolved()) {
             // Pressed on a valid gameobject
 
@@ -89,7 +89,7 @@ public class Masters_SelfIntroduction_Game_LessonOne : Masters_Lesson, IBeginDra
             return;
         }
 
-        if(eventData.pointerCurrentRaycast.gameObject.TryGetComponent(out Masters_LineDragToExpressionMatch 
+        if(eventData.pointerCurrentRaycast.gameObject.TryGetComponent(out Masters_LineDragToExpressionMatch_SelfIntroduction 
             lineDragToExpressionMatch) && lineDragToExpressionMatch.GetLeftOrRightPhrase() == LeftOrRightPhrase.Right) {
             // Ended on a valid gameobject
 

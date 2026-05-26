@@ -66,7 +66,7 @@ public class Masters_LevelManager : Masters_Singleton<Masters_LevelManager> {
 
 
     private Masters_TopicButton[] topicButtonArray;
-    private Masters_CurrentScreen currentScreen;
+    private Masters_CurrentScreen currentScreen = Masters_CurrentScreen.UnitSelection;
     private Masters_Unit currentlySelectedUnit;
     private Masters_Topic currentlySelectedTopic;
     private GameObject currentLessonGameObject;
@@ -151,6 +151,46 @@ public class Masters_LevelManager : Masters_Singleton<Masters_LevelManager> {
             case Masters_Unit.YeahAndNah:
                 currentTopicGameObject = Instantiate(topicSelectionGameObject, topicCanvasGameObject.transform);
                 currentTopicGameObject.name = "YeahAndNah_TopicSelection";
+                break;
+            case Masters_Unit.WowCompliments:
+                currentTopicGameObject = Instantiate(topicSelectionGameObject, topicCanvasGameObject.transform);
+                currentTopicGameObject.name = "WowCompliments_TopicSelection";
+                break;
+            case Masters_Unit.IDoAndIMake:
+                currentTopicGameObject = Instantiate(topicSelectionGameObject, topicCanvasGameObject.transform);
+                currentTopicGameObject.name = "IDoAndIMake_TopicSelection";
+                break;
+            case Masters_Unit.AnnounceAndRespondToUnfortunateNews:
+                currentTopicGameObject = Instantiate(topicSelectionGameObject, topicCanvasGameObject.transform);
+                currentTopicGameObject.name = "AnnounceAndRespondToUnfortunateNews_TopicSelection";
+                break;
+            case Masters_Unit.GoalsAndPlans:
+                currentTopicGameObject = Instantiate(topicSelectionGameObject, topicCanvasGameObject.transform);
+                currentTopicGameObject.name = "GoalsAndPlans_TopicSelection";
+                break;
+            case Masters_Unit.AreYouConfused:
+                currentTopicGameObject = Instantiate(topicSelectionGameObject, topicCanvasGameObject.transform);
+                currentTopicGameObject.name = "AreYouConfused_TopicSelection";
+                break;
+            case Masters_Unit.TongueTwisters:
+                currentTopicGameObject = Instantiate(topicSelectionGameObject, topicCanvasGameObject.transform);
+                currentTopicGameObject.name = "TongueTwisters_TopicSelection";
+                break;
+            case Masters_Unit.LetMeQuestion:
+                currentTopicGameObject = Instantiate(topicSelectionGameObject, topicCanvasGameObject.transform);
+                currentTopicGameObject.name = "LetMeQuestion_TopicSelection";
+                break;
+            case Masters_Unit.SituationalDialogues:
+                currentTopicGameObject = Instantiate(topicSelectionGameObject, topicCanvasGameObject.transform);
+                currentTopicGameObject.name = "SituationalDialogues_TopicSelection";
+                break;
+            case Masters_Unit.CorrectPronunciation:
+                currentTopicGameObject = Instantiate(topicSelectionGameObject, topicCanvasGameObject.transform);
+                currentTopicGameObject.name = "CorrectPronunciation_TopicSelection";
+                break;
+            case Masters_Unit.JustAMinuteSession:
+                currentTopicGameObject = Instantiate(topicSelectionGameObject, topicCanvasGameObject.transform);
+                currentTopicGameObject.name = "JustAMinuteSession_TopicSelection";
                 break;
         }
 
