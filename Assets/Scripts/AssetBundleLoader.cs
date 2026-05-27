@@ -171,6 +171,25 @@ public class AssetBundleLoader : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Unloads ALL bundles in the internal cache and clears it.
+    /// Called by CachedBundleLoader before loading a new bundle from disk,
+    /// so AssetBundleLoader's managed references dont keep a file lock alive.
+    /// unloadAllObjects=false keeps active scene objects alive.
+    /// </summary>
+    public void UnloadAllBundles(bool unloadAllObjects = false)
+    {
+        foreach (var kvp in _cache)
+        {
+            if (kvp.Value != null)
+            {
+                Debug.Log($"[AssetBundleLoader] UnloadAllBundles: releasing '{kvp.Key}'");
+                kvp.Value.Unload(unloadAllObjects);
+            }
+        }
+        _cache.Clear();
+    }
+
     public void UnloadBundleScene(string sceneName, System.Action onComplete = null)
 {
     StartCoroutine(UnloadRoutine(sceneName, onComplete));

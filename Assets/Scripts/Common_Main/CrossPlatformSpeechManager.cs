@@ -21,24 +21,25 @@ public class CrossPlatformSpeechManager : MonoBehaviour
     [Header("Speech Events")]
     public UnityEvent<string> onResult;
     public UnityEvent<string> onPartial;
-    public UnityEvent         onReady;
-    public UnityEvent         onBegin;
-    public UnityEvent         onEnd;
+    public UnityEvent onReady;
+    public UnityEvent onBegin;
+    public UnityEvent onEnd;
     public UnityEvent<string> onError;
 
     // ── Static C# Events — subscribe from any gameplay script ────────────────
     public static event Action<string> OnResultStatic;
     public static event Action<string> OnPartialStatic;
-    public static event Action         OnReadyStatic;
-    public static event Action         OnEndStatic;
-    public static event Action         OnRecordingReadyStatic;
+    public static event Action OnReadyStatic;
+    public static event Action OnEndStatic;
+    public static event Action OnRecordingReadyStatic;
+    public static event Action<string> OnErrorStatic;
 
     // ── Singleton ─────────────────────────────────────────────────────────────
     public static CrossPlatformSpeechManager Instance { get; private set; }
 
     // ── State ─────────────────────────────────────────────────────────────────
-    private bool _isListening    = false;
-    public  bool IsListening     => _isListening;
+    private bool _isListening = false;
+    public bool IsListening => _isListening;
     private bool _resultReceived = false;
 
     // ── Android permission / plugin state ─────────────────────────────────────
@@ -54,16 +55,16 @@ public class CrossPlatformSpeechManager : MonoBehaviour
     public AudioSource playbackAudioSource;
 
     private AudioClip _lastRecordingClip = null;
-    public  bool HasRecording => _lastRecordingClip != null;
+    public bool HasRecording => _lastRecordingClip != null;
 
     // ── Unity Microphone (Windows / iOS only) ─────────────────────────────────
-    private string    _micDevice        = null;
-    private AudioClip _activeRecording  = null;
-    private int       _sampleRate       = 16000;
-    private int       _maxRecordSeconds = 10;
+    private string _micDevice = null;
+    private AudioClip _activeRecording = null;
+    private int _sampleRate = 16000;
+    private int _maxRecordSeconds = 10;
 
     private const int AndroidSampleRate = 16000;
-    private const int AndroidChannels   = 1;
+    private const int AndroidChannels = 1;
 
     // ── Windows ───────────────────────────────────────────────────────────────
 #if UNITY_STANDALONE_WIN || UNITY_EDITOR_WIN
@@ -232,10 +233,10 @@ public class CrossPlatformSpeechManager : MonoBehaviour
         try
         {
             _dictation = new DictationRecognizer();
-            _dictation.DictationResult     += (text, _) => OnSpeechResult(text);
-            _dictation.DictationHypothesis += (text)    => OnSpeechPartial(text);
-            _dictation.DictationComplete   += (_)        => { _isListening = false; onEnd?.Invoke(); OnEndStatic?.Invoke(); };
-            _dictation.DictationError      += (err, _)   => OnSpeechError(err);
+            _dictation.DictationResult += (text, _) => OnSpeechResult(text);
+            _dictation.DictationHypothesis += (text) => OnSpeechPartial(text);
+            _dictation.DictationComplete += (_) => { _isListening = false; onEnd?.Invoke(); OnEndStatic?.Invoke(); };
+            _dictation.DictationError += (err, _) => OnSpeechError(err);
             _windowsSTTAvailable = true;
             Debug.Log("[STT] Windows DictationRecognizer ready.");
         }
@@ -289,6 +290,11 @@ public class CrossPlatformSpeechManager : MonoBehaviour
         _androidPlugin?.Call("startListening");
 
 #elif UNITY_STANDALONE_WIN || UNITY_EDITOR_WIN
+        if (!_windowsSTTAvailable || _dictation == null)
+        {
+            Debug.Log("[STT] DictationRecognizer not ready/failed earlier — attempting to re-initialize.");
+            InitWindows();
+        }
         StartMicCapture();
         if (!_windowsSTTAvailable || _dictation == null)
         {
@@ -296,7 +302,7 @@ public class CrossPlatformSpeechManager : MonoBehaviour
             OnSpeechError("Windows Speech Recognition is disabled.\nEnable it in Settings → Privacy & Security → Speech.");
             return;
         }
-        _isListening    = true;
+        _isListening = true;
         _resultReceived = false;
         try
         {
@@ -341,7 +347,7 @@ public class CrossPlatformSpeechManager : MonoBehaviour
     public void ToggleListening()
     {
         if (_isListening) StopListening();
-        else              StartListening();
+        else StartListening();
     }
 
     // ── Recording Playback ────────────────────────────────────────────────────
@@ -367,7 +373,16 @@ public class CrossPlatformSpeechManager : MonoBehaviour
 
     private void StartMicCapture()
     {
-        if (_micDevice == null) return;
+        if (string.IsNullOrEmpty(_micDevice) && Microphone.devices.Length > 0)
+        {
+            _micDevice = Microphone.devices[0];
+            Debug.Log("[STT] Dynamically initialized microphone device: " + _micDevice);
+        }
+        if (string.IsNullOrEmpty(_micDevice))
+        {
+            Debug.LogWarning("[STT] No microphone device detected for capture.");
+            return;
+        }
         _activeRecording = Microphone.Start(_micDevice, false, _maxRecordSeconds, _sampleRate);
     }
 
@@ -396,9 +411,9 @@ public class CrossPlatformSpeechManager : MonoBehaviour
         if (string.IsNullOrEmpty(payload)) { Debug.LogWarning("[STT] No audio buffer from device."); return; }
         try
         {
-            byte[]  pcmBytes    = Convert.FromBase64String(payload);
-            int     sampleCount = pcmBytes.Length / 2;
-            float[] samples     = new float[sampleCount];
+            byte[] pcmBytes = Convert.FromBase64String(payload);
+            int sampleCount = pcmBytes.Length / 2;
+            float[] samples = new float[sampleCount];
             for (int i = 0; i < sampleCount; i++)
             {
                 short raw = (short)(pcmBytes[i * 2] | (pcmBytes[i * 2 + 1] << 8));
@@ -416,7 +431,7 @@ public class CrossPlatformSpeechManager : MonoBehaviour
     void OnSpeechResult(string result)
     {
         Debug.Log("[STT] Result: " + result);
-        _isListening    = false;
+        _isListening = false;
         _resultReceived = true;
         onResult?.Invoke(result);
         OnResultStatic?.Invoke(result);
@@ -454,6 +469,7 @@ public class CrossPlatformSpeechManager : MonoBehaviour
         _isListening = false;
         Debug.LogWarning("[STT] Error: " + error);
         onError?.Invoke(error);
+        OnErrorStatic?.Invoke(error);
     }
 
     [UnityEngine.Scripting.Preserve]

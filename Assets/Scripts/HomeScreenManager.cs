@@ -4,13 +4,22 @@ using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 
+/// <summary>
+/// Changes vs previous version
+/// ────────────────────────────
+/// 1. SetCategoryLockStates(bool[]) — call this from GameAuthManager after the
+///    backend returns the student's unlock flags.  Locked buttons are disabled
+///    (greyed out + non-interactable).  Unlocked buttons are fully enabled.
+///
+/// 2. The LockedButtonHandler component is NOT used for category buttons any
+///    more.  Lock state comes from the backend, not a static Inspector field.
+///
+/// 3. Everything else is unchanged.
+/// </summary>
 public class HomeScreenManager : MonoBehaviour
 {
     // ── Singleton ─────────────────────────────────────────────────────────────
     public static HomeScreenManager Instance { get; private set; }
-
-  
-    
 
     // ── Screens ───────────────────────────────────────────────────────────────
     [Header("Screens")]
@@ -23,19 +32,21 @@ public class HomeScreenManager : MonoBehaviour
     [SerializeField] private Button[]          categoryButtons;
     [SerializeField] private TextMeshProUGUI[] categoryLabels;
 
+    [Tooltip("(Optional) Sprites to swap on locked/unlocked state per category button. " +
+             "Leave empty to rely on the button's built-in disabled colour tint instead.")]
+    [SerializeField] private Sprite lockedSprite;
+    [SerializeField] private Sprite unlockedSprite;
+
     // ── Sub-Panel ─────────────────────────────────────────────────────────────
     [Header("Sub-Panel")]
     [SerializeField] private TextMeshProUGUI subPanelHeading;
     [SerializeField] private Transform       subButtonContainer;
     [SerializeField] private Button          subButtonPrefab;
     [SerializeField] private Button          backButton;
-
-    [SerializeField] private AudioSource splashscreenAudio;
+    [SerializeField] private AudioSource     splashscreenAudio;
 
     // ── Sub-Panel Background ──────────────────────────────────────────────────
     [Header("Sub-Panel Background")]
-    [Tooltip("The single shared Image used as the sub-panel background. " +
-             "Its sprite is swapped per sub-button selection.")]
     [SerializeField] private Image subPanelBackground;
 
     // ── Home Screen ───────────────────────────────────────────────────────────
@@ -43,12 +54,8 @@ public class HomeScreenManager : MonoBehaviour
     [SerializeField] private Button playButton;
 
     [Header("User Greeting")]
-    [Tooltip("Text field that shows 'Hi, <Name>!' or similar on the home screen.")]
     [SerializeField] private TextMeshProUGUI greetingLabel;
-
-    [Tooltip("Format string for the greeting. Use {0} as the name placeholder.\n" +
-             "Example: \"Hi, {0}!\" → \"Hi, Pramod!\"")]
-    [SerializeField] private string greetingFormat = "Hi, {0}!";
+    [SerializeField] private string          greetingFormat = "Hi, {0}!";
 
     // ── Loading UI ────────────────────────────────────────────────────────────
     [Header("Loading UI")]
@@ -62,26 +69,25 @@ public class HomeScreenManager : MonoBehaviour
     [SerializeField] private PanelConfig panelConfig;
 
     [Header("Main Camera")]
-[SerializeField] private Camera mainCamera; // drag your main scene camera here in Inspector
+    [SerializeField] private Camera mainCamera;
 
+    // ── Home Screen entries ───────────────────────────────────────────────────
     [System.Serializable]
     public class HomeScreenEntry
     {
-        public string id;
+        public string     id;
         public GameObject screen;
     }
 
     [SerializeField] private List<HomeScreenEntry> homeScreens;
-
     private Dictionary<string, GameObject> _homeScreenMap;
 
     // ── Runtime state ─────────────────────────────────────────────────────────
-    private readonly List<Button>     _spawnedButtons = new List<Button>();
-    private readonly List<GameObject> _allHomeScreens = new List<GameObject>();
+    private readonly List<Button>     _spawnedButtons   = new List<Button>();
+    private readonly List<GameObject> _allHomeScreens   = new List<GameObject>();
     private GameObject                _activeHomeScreen = null;
     private Button                    _activeLearnButton = null;
-
-    private static GameObject         _rememberedHomeScreen = null; // ← ADD THIS
+    private static GameObject         _rememberedHomeScreen = null;
 
     // ─────────────────────────────────────────────────────────────────────────
     private void Awake()
@@ -121,77 +127,136 @@ public class HomeScreenManager : MonoBehaviour
 
     private void Start()
     {
-        // Subscribe to AssetBundleLoader events (with retry in case it's not ready yet)
-        if (AssetBundleLoader.Instance != null)
+        if (CachedBundleLoader.Instance != null)
             SubscribeToLoader();
         else
             StartCoroutine(WaitForLoader());
 
-        // Show the username from AppSession (set by GameAuthManager after login)
         RefreshGreeting();
     }
 
     private IEnumerator WaitForLoader()
     {
         float timeout = 5f;
-        while (AssetBundleLoader.Instance == null && timeout > 0f)
+        while (CachedBundleLoader.Instance == null && timeout > 0f)
         {
-            timeout -= UnityEngine.Time.deltaTime;
+            timeout -= Time.deltaTime;
             yield return null;
         }
-
-        if (AssetBundleLoader.Instance != null)
+        if (CachedBundleLoader.Instance != null)
             SubscribeToLoader();
         else
-            Debug.LogError("[HomeScreenManager] AssetBundleLoader not found after waiting 5 s.");
+            Debug.LogError("[HomeScreenManager] CachedBundleLoader not found after 5 s.");
     }
 
     private void SubscribeToLoader()
     {
-        AssetBundleLoader.Instance.OnDownloadProgress += HandleProgress;
-        AssetBundleLoader.Instance.OnDownloadComplete += HandleComplete;
-        AssetBundleLoader.Instance.OnError            += HandleError;
+        CachedBundleLoader.Instance.OnLoadProgress += HandleProgress;
+        CachedBundleLoader.Instance.OnLoadComplete += HandleComplete;
+        CachedBundleLoader.Instance.OnError        += HandleError;
     }
 
     private void OnDestroy()
     {
-        if (AssetBundleLoader.Instance != null)
+        if (CachedBundleLoader.Instance != null)
         {
-            AssetBundleLoader.Instance.OnDownloadProgress -= HandleProgress;
-            AssetBundleLoader.Instance.OnDownloadComplete -= HandleComplete;
-            AssetBundleLoader.Instance.OnError            -= HandleError;
+            CachedBundleLoader.Instance.OnLoadProgress -= HandleProgress;
+            CachedBundleLoader.Instance.OnLoadComplete -= HandleComplete;
+            CachedBundleLoader.Instance.OnError        -= HandleError;
         }
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    //  Lock / Unlock API
+    //  Call from GameAuthManager after the backend returns the student's data.
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Sets the locked/unlocked state of each category button from backend data.
+    ///
+    /// USAGE — call this from GameAuthManager once you have the student's
+    /// accessible categories, e.g.:
+    ///
+    ///   bool[] unlocked = { true, false, false, false }; // only Beginners open
+    ///   HomeScreenManager.Instance.SetCategoryLockStates(unlocked);
+    ///
+    /// The array must be the same length as the number of category buttons.
+    /// Index 0 = Beginners, 1 = Juniors, 2 = Seniors, 3 = Masters (or whatever
+    /// order your PanelConfig defines).
+    /// </summary>
+    public void SetCategoryLockStates(bool[] unlockedFlags)
+    {
+        if (unlockedFlags == null)
+        {
+            Debug.LogWarning("[HomeScreenManager] SetCategoryLockStates: null array passed.");
+            return;
+        }
+
+        for (int i = 0; i < categoryButtons.Length; i++)
+        {
+            bool unlocked = (i < unlockedFlags.Length) && unlockedFlags[i];
+            ApplyLockState(categoryButtons[i], unlocked);
+        }
+    }
+
+    /// <summary>
+    /// Convenience overload that accepts a HashSet of unlocked category indices.
+    /// </summary>
+    public void SetCategoryLockStates(HashSet<int> unlockedIndices)
+    {
+        for (int i = 0; i < categoryButtons.Length; i++)
+            ApplyLockState(categoryButtons[i], unlockedIndices.Contains(i));
+    }
+
+    private void ApplyLockState(Button btn, bool unlocked)
+    {
+        btn.interactable = unlocked;
+
+        // Optional: swap sprites if provided
+        if (lockedSprite != null && unlockedSprite != null)
+        {
+            Image img = btn.GetComponent<Image>();
+            if (img != null)
+                img.sprite = unlocked ? unlockedSprite : lockedSprite;
+        }
+
+        // Dim the label text to reinforce locked state
+        TextMeshProUGUI label = btn.GetComponentInChildren<TextMeshProUGUI>();
+        if (label != null)
+            label.alpha = unlocked ? 1f : 0.4f;
     }
 
     // ─────────────────────────────────────────────────────────────────────────
     //  Greeting
     // ─────────────────────────────────────────────────────────────────────────
-
-    /// <summary>
-    /// Updates the greeting label from AppSession.UserName.
-    /// Call this from GameAuthManager right after login, or let Start() call it.
-    /// </summary>
     public void RefreshGreeting()
     {
         if (greetingLabel == null) return;
-
         string name = AppSession.UserName;
-        if (!string.IsNullOrEmpty(name))
-            greetingLabel.text = string.Format(greetingFormat, name);
-        else
-            greetingLabel.text = string.Empty;   // hide until name is known
+        greetingLabel.text = !string.IsNullOrEmpty(name)
+            ? string.Format(greetingFormat, name)
+            : string.Empty;
     }
 
     // ─────────────────────────────────────────────────────────────────────────
     //  Screen navigation
     // ─────────────────────────────────────────────────────────────────────────
+    private void OnPlay()
+    {
+        if (FirstRunDownloader.Instance != null)
+            FirstRunDownloader.Instance.StartFlow();
+        else
+        {
+            Debug.LogWarning("[HomeScreenManager] FirstRunDownloader not found — opening selection directly.");
+            ShowScreen(selectionPanel);
+        }
+    }
 
-    private void OnPlay()   => ShowScreen(selectionPanel);
+    public void ShowSelectionPanel() => ShowScreen(selectionPanel);
 
     private void OnCategoryClicked(int index)
     {
-        CategoryData data = panelConfig.categories[index];
-        BuildSubPanel(data);
+        BuildSubPanel(panelConfig.categories[index]);
         ShowScreen(subPanel);
     }
 
@@ -205,7 +270,6 @@ public class HomeScreenManager : MonoBehaviour
     // ─────────────────────────────────────────────────────────────────────────
     //  Sub-panel construction
     // ─────────────────────────────────────────────────────────────────────────
-
     private void BuildSubPanel(CategoryData data)
     {
         subPanelHeading.text = data.panelHeading;
@@ -226,15 +290,11 @@ public class HomeScreenManager : MonoBehaviour
             if (subData.buttonSprite != null)
             {
                 Image btnImage = btn.GetComponent<Image>();
-                if (btnImage != null)
-                    btnImage.sprite = subData.buttonSprite;
-                else
-                    Debug.LogWarning($"[HomeScreenManager] Sub-button prefab has no Image on root for '{subData.buttonLabel}'.");
+                if (btnImage != null) btnImage.sprite = subData.buttonSprite;
             }
 
             SubButtonData captured = subData;
             btn.onClick.AddListener(() => OnSubButtonClicked(captured));
-
             _spawnedButtons.Add(btn);
         }
 
@@ -244,7 +304,6 @@ public class HomeScreenManager : MonoBehaviour
     // ─────────────────────────────────────────────────────────────────────────
     //  Sub-button click
     // ─────────────────────────────────────────────────────────────────────────
-
     private void OnSubButtonClicked(SubButtonData data)
     {
         SetSubPanelBackground(data.backgroundSprite);
@@ -257,94 +316,83 @@ public class HomeScreenManager : MonoBehaviour
         HideActiveHomeScreen();
         homeScreen.SetActive(false);
 
-        splashscreenAudio.gameObject.SetActive(false);
+        if (splashscreenAudio != null)
+            splashscreenAudio.gameObject.SetActive(false);
 
-    if (_homeScreenMap.TryGetValue(data.homeScreenId, out GameObject screen))
-{
-    screen.SetActive(true);
-    _activeHomeScreen = screen;
-    Debug.Log($"[HomeScreen] _activeHomeScreen set to: {screen.name}");
-}
-else
-{
-    Debug.LogError($"[HomeScreen] homeScreenId '{data.homeScreenId}' not found in map. " +
-                   $"Available IDs: {string.Join(", ", _homeScreenMap.Keys)}");
-}
+        if (_homeScreenMap.TryGetValue(data.homeScreenId, out GameObject screen))
+        {
+            screen.SetActive(true);
+            _activeHomeScreen = screen;
+            Debug.Log($"[HomeScreen] _activeHomeScreen set to: {screen.name}");
+        }
+        else
+        {
+            Debug.LogError($"[HomeScreen] homeScreenId '{data.homeScreenId}' not found in map. " +
+                           $"Available IDs: {string.Join(", ", _homeScreenMap.Keys)}");
+        }
 
         ShowScreen(null);
     }
 
     // ─────────────────────────────────────────────────────────────────────────
-    //  Helpers
+    //  Learn click
     // ─────────────────────────────────────────────────────────────────────────
-
-    private void SetSubPanelBackground(Sprite sprite)
+    public void OnLearnClicked(Button sourceButton = null)
     {
-        if (subPanelBackground == null)
+        string url   = AppSession.PendingBundleUrl;
+        string scene = AppSession.PendingSceneName;
+
+        if (string.IsNullOrEmpty(url) || string.IsNullOrEmpty(scene))
         {
-            Debug.LogWarning("[HomeScreenManager] subPanelBackground is not assigned.");
+            Debug.LogError("[HomeScreen] Learn clicked but no URL/Scene in AppSession.");
             return;
         }
-        if (sprite == null)
+        if (FirstRunDownloader.Instance == null && CachedBundleLoader.Instance == null)
         {
-            Debug.LogWarning("[HomeScreenManager] No backgroundSprite assigned for this sub-button.");
+            Debug.LogError("[HomeScreen] No lesson loader is available.");
             return;
         }
-        subPanelBackground.sprite = sprite;
+
+        _activeLearnButton = sourceButton;
+        if (_activeLearnButton != null) _activeLearnButton.interactable = false;
+
+        _rememberedHomeScreen = _activeHomeScreen;
+
+        ShowLoadingOverlay(true);
+        if (FirstRunDownloader.Instance != null)
+            FirstRunDownloader.Instance.DownloadBundleAndLoadScene(url, scene);
+        else
+            CachedBundleLoader.Instance.LoadSceneFromDisk(url, scene);
     }
 
-// In OnLearnClicked — remove the camera disable from here
-public void OnLearnClicked(Button sourceButton = null)
-{
-    string url   = AppSession.PendingBundleUrl;
-    string scene = AppSession.PendingSceneName;
-
-    if (string.IsNullOrEmpty(url) || string.IsNullOrEmpty(scene))
+    // ─────────────────────────────────────────────────────────────────────────
+    //  Restore after bundle scene exits
+    // ─────────────────────────────────────────────────────────────────────────
+    public void RestoreAfterBundle()
     {
-        Debug.LogError("[HomeScreen] Learn clicked but no URL/Scene in AppSession.");
-        return;
-    }
-    if (AssetBundleLoader.Instance == null)
-    {
-        Debug.LogError("[HomeScreen] AssetBundleLoader singleton not found.");
-        return;
-    }
+        Debug.Log($"[HomeScreenManager] RestoreAfterBundle called. " +
+                  $"Remembered: {(_rememberedHomeScreen != null ? _rememberedHomeScreen.name : "NULL")}");
 
-    _activeLearnButton = sourceButton;
-    if (_activeLearnButton != null) _activeLearnButton.interactable = false;
+        if (mainCamera != null) mainCamera.gameObject.SetActive(true);
 
-    _rememberedHomeScreen = _activeHomeScreen;
+        if (_rememberedHomeScreen != null)
+        {
+            _rememberedHomeScreen.SetActive(true);
+            _activeHomeScreen     = _rememberedHomeScreen;
+            _rememberedHomeScreen = null;
+        }
+        else
+        {
+            homeScreen.SetActive(true);
+        }
 
-    // ❌ REMOVE: if (mainCamera != null) mainCamera.gameObject.SetActive(false);
-    // Camera stays ON during loading so the overlay is visible
-
-    ShowLoadingOverlay(true);
-    AssetBundleLoader.Instance.LoadSceneFromBundle(url, scene);
-}
-// ── Called by MainSceneReceiver when back button is pressed in bundle scene ──
-public void RestoreAfterBundle()
-{
-    Debug.Log($"[HomeScreenManager] RestoreAfterBundle called. " +
-              $"Remembered: {(_rememberedHomeScreen != null ? _rememberedHomeScreen.name : "NULL")}");
-
-    if (mainCamera != null) mainCamera.gameObject.SetActive(true); // ← ADD THIS
-
-    if (_rememberedHomeScreen != null)
-    {
-        _rememberedHomeScreen.SetActive(true);
-        _activeHomeScreen     = _rememberedHomeScreen;
-        _rememberedHomeScreen = null;
-        Debug.Log("[HomeScreenManager] Home screen restored successfully.");
-    }
-    else
-    {
-        Debug.LogWarning("[HomeScreenManager] _rememberedHomeScreen was null, showing default.");
-        homeScreen.SetActive(true);
+        ShowLoadingOverlay(false);
+        ReEnableLearnButton();
     }
 
-    ShowLoadingOverlay(false);
-    ReEnableLearnButton();
-}
+    // ─────────────────────────────────────────────────────────────────────────
+    //  Progress / error handlers
+    // ─────────────────────────────────────────────────────────────────────────
     private void HandleProgress(float t)
     {
         if (progressBar)   progressBar.value  = t;
@@ -355,8 +403,7 @@ public void RestoreAfterBundle()
     {
         ShowLoadingOverlay(false);
         ReEnableLearnButton();
-
-         if (mainCamera != null) mainCamera.gameObject.SetActive(false);
+        if (mainCamera != null) mainCamera.gameObject.SetActive(false);
     }
 
     private void HandleError(string msg)
@@ -368,6 +415,11 @@ public void RestoreAfterBundle()
             errorLabel.gameObject.SetActive(true);
             errorLabel.text = $"Error: {msg}";
         }
+    }
+
+    public void ShowLoadError(string msg)
+    {
+        HandleError(msg);
     }
 
     private void ReEnableLearnButton()
@@ -398,7 +450,18 @@ public void RestoreAfterBundle()
     private void ShowLoadingOverlay(bool show)
     {
         if (loadingOverlay) loadingOverlay.SetActive(show);
-        if (!show && errorLabel) errorLabel.gameObject.SetActive(false);
+        if (errorLabel) errorLabel.gameObject.SetActive(false);
+        if (show)
+        {
+            if (progressBar) progressBar.value = 0f;
+            if (progressLabel) progressLabel.text = "0%";
+        }
+    }
+
+    private void SetSubPanelBackground(Sprite sprite)
+    {
+        if (subPanelBackground == null || sprite == null) return;
+        subPanelBackground.sprite = sprite;
     }
 
     private void ValidateConfig()

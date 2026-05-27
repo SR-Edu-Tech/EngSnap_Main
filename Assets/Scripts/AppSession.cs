@@ -43,5 +43,6 @@ public static class AppSession
         PendingBundleUrl = null;
         PendingSceneName = null;
         UserName         = null;
+        StudentId        = null;
     }
 }

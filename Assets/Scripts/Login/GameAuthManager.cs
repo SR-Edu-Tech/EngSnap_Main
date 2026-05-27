@@ -8,11 +8,14 @@ using UnityEngine.UI;
 
 public class GameAuthManager : MonoBehaviour
 {
+    // ── Singleton ─────────────────────────────────────────────────────────────
+    public static GameAuthManager Instance { get; private set; }
+
     [Header("Login UI")]
-    public GameObject loginPanel;
+    public GameObject     loginPanel;
     public TMP_InputField LoginInput;
     public TMP_InputField passwordInput;
-    public TMP_Text statusText;
+    public TMP_Text       statusText;
 
     [Header("Class Selection")]
     public GameObject classSelectionPanel;
@@ -20,53 +23,91 @@ public class GameAuthManager : MonoBehaviour
     public GameObject juniorsLock;
     public GameObject seniorsLock;
     public GameObject mastersLock;
-    public Button beginnersButton;
-    public Button juniorsButton;
-    public Button seniorsButton;
-    public Button mastersButton;
 
     [Header("Level Select Carousel")]
-    [Tooltip("Drag the LevelSelectCarousel component here so the carousel " +
-             "auto-scrolls to the first unlocked button after the API response.")]
     public LevelSelectCarousel levelSelectCarousel;
 
     [Header("User Greeting")]
-    [Tooltip("Drag ALL GreetingText TMP objects from every home screen here. " +
-             "All of them will be updated at the same time.")]
+    [Tooltip("Drag ALL GreetingText TMP objects from every home screen here.")]
     public TextMeshProUGUI[] greetingTexts;
-
-    [Tooltip("Format string — {0} is replaced with the player's name.")]
     public string greetingFormat = "Hi, {0}!";
+
+    // ── Course ID → carousel index ────────────────────────────────────────────
+    private const int COURSE_BEGINNERS = 12;
+    private const int COURSE_JUNIORS   = 14;
+    private const int COURSE_SENIORS   = 16;
+    private const int COURSE_MASTERS   = 19;
 
     private string baseUrl = "https://gamedevpanel.com/api";
 
     // ─────────────────────────────────────────────────────────────────────────
+    void Awake()
+    {
+        if (Instance != null && Instance != this) { Destroy(gameObject); return; }
+        Instance = this;
+    }
 
     void Start()
     {
         loginPanel.SetActive(false);
         classSelectionPanel.SetActive(false);
 
-        // Restore username from saved token on every Play mode start.
-        // AppSession is static and resets to null when Play mode restarts,
-        // but the token is persisted in PlayerPrefs — decode it immediately.
+        // Restore session from saved token. AppSession is static and resets
+        // on every Play-mode start, but PlayerPrefs persist.
         if (PlayerPrefs.HasKey("ACCESS_TOKEN") &&
             string.IsNullOrEmpty(AppSession.UserName))
         {
-            string savedToken = PlayerPrefs.GetString("ACCESS_TOKEN");
+            string saved = PlayerPrefs.GetString("ACCESS_TOKEN");
+            AppSession.UserName  = DecodeUserNameFromJwt(saved);
+            AppSession.StudentId = DecodeStudentIdFromJwt(saved);
+            Debug.Log("RESTORED STUDENT ID = " + AppSession.StudentId);
+        }
 
-string userName = DecodeUserNameFromJwt(savedToken);
-AppSession.UserName = userName;
+        // FIX: Push the greeting into HomeScreenManager as soon as we have the
+        // name. HomeScreenManager.Start() also calls RefreshGreeting(), but if
+        // GameAuthManager.Start() runs AFTER it the name would be missed.
+        // Calling it here guarantees it runs whenever the name is available.
+        // We also wait one frame so all MonoBehaviours have finished their own
+        // Start() before we touch HomeScreenManager.
+        StartCoroutine(RefreshUINextFrame());
+    }
 
-string studentId = DecodeStudentIdFromJwt(savedToken);
-AppSession.StudentId = studentId;
+    // Wait one frame so HomeScreenManager.Awake/Start has definitely run,
+    // then push the restored name into its greeting label.
+    private IEnumerator RefreshUINextFrame()
+    {
+        yield return null; // one frame
 
-Debug.Log("RESTORED STUDENT ID = " + studentId);
+        if (!string.IsNullOrEmpty(AppSession.UserName))
+        {
+            ShowGreeting(AppSession.UserName);
+            Debug.Log("[GameAuthManager] Greeting refreshed on startup: " +
+                      AppSession.UserName);
         }
     }
 
-    // ── Play button ───────────────────────────────────────────────────────────
+    // ─────────────────────────────────────────────────────────────────────────
+    //  Called by HomeScreenManager via FirstRunDownloader AFTER the selection
+    //  panel is visible.  This is the correct time to apply lock states.
+    //
+    //  HOW TO WIRE:
+    //  In FirstRunDownloader.OpenNextPanel(), after ShowSelectionPanel(),
+    //  call GameAuthManager.Instance.ApplySessionState().
+    //  (See FirstRunDownloader.cs — the call is already added there.)
+    // ─────────────────────────────────────────────────────────────────────────
+    public void ApplySessionState()
+    {
+        if (string.IsNullOrEmpty(AppSession.StudentId))
+        {
+            Debug.LogWarning("[GameAuthManager] ApplySessionState: no student ID.");
+            return;
+        }
 
+        ShowGreeting(AppSession.UserName);
+        StartCoroutine(GetStudentCourses(AppSession.StudentId));
+    }
+
+    // ── Play button (kept for scenes that wire it directly) ───────────────────
     public void OnPlayButton()
     {
         classSelectionPanel.SetActive(false);
@@ -80,57 +121,49 @@ Debug.Log("RESTORED STUDENT ID = " + studentId);
         else
         {
             loginPanel.SetActive(true);
-            classSelectionPanel.SetActive(false);
         }
     }
 
     // ── Login button ──────────────────────────────────────────────────────────
-
-    public void OnLoginButton()
-    {
-        StartCoroutine(LoginCoroutine());
-    }
+    public void OnLoginButton() => StartCoroutine(LoginCoroutine());
 
     IEnumerator LoginCoroutine()
     {
-
         if (Application.internetReachability == NetworkReachability.NotReachable)
-{
-        statusText.text = "No Internet Connection";
-        yield break;
-}
+        {
+            statusText.text = "No Internet Connection";
+            yield break;
+        }
+
         statusText.text = "Logging in...";
 
         WWWForm form = new WWWForm();
-        form.AddField("login", LoginInput.text.Trim());
+        form.AddField("login",    LoginInput.text.Trim());
         form.AddField("password", passwordInput.text.Trim());
 
-        UnityWebRequest request = UnityWebRequest.Post(baseUrl + "/auth/login", form);
-        request.SetRequestHeader("Accept", "application/json");
+        UnityWebRequest req = UnityWebRequest.Post(baseUrl + "/auth/login", form);
+        req.SetRequestHeader("Accept", "application/json");
+        yield return req.SendWebRequest();
 
-        yield return request.SendWebRequest();
+        Debug.Log("Login Response: " + req.downloadHandler.text);
 
-        Debug.Log("Login Response : " + request.downloadHandler.text);
-
-        if (request.result == UnityWebRequest.Result.Success)
+        if (req.result == UnityWebRequest.Result.Success)
         {
             LoginResponse response =
-                JsonUtility.FromJson<LoginResponse>(request.downloadHandler.text);
+                JsonUtility.FromJson<LoginResponse>(req.downloadHandler.text);
 
             if (!string.IsNullOrEmpty(response.access_token))
             {
                 PlayerPrefs.SetString("ACCESS_TOKEN", response.access_token);
                 PlayerPrefs.Save();
 
-                string userName     = DecodeUserNameFromJwt(response.access_token);
-                AppSession.UserName = userName;
-                ShowGreeting(userName);
+                AppSession.UserName  = DecodeUserNameFromJwt(response.access_token);
+                AppSession.StudentId = DecodeStudentIdFromJwt(response.access_token);
 
-                string studentId  = DecodeStudentIdFromJwt(response.access_token);
-                AppSession.StudentId = studentId;
+                ShowGreeting(AppSession.UserName);
 
-
-                Debug.Log($"Token Saved | User from JWT: {userName}");
+                Debug.Log($"Token Saved | User: {AppSession.UserName} | " +
+                          $"Student: {AppSession.StudentId}");
 
                 statusText.text = "Login Successful";
                 loginPanel.SetActive(false);
@@ -144,14 +177,19 @@ Debug.Log("RESTORED STUDENT ID = " + studentId);
         }
         else
         {
-            Debug.LogError(request.error);
+            Debug.LogError(req.error);
             statusText.text = "Email or password is incorrect";
         }
     }
 
-    // ── JWT decoder ───────────────────────────────────────────────────────────
+    // ── JWT decoders ──────────────────────────────────────────────────────────
+    private string DecodeUserNameFromJwt(string jwt) =>
+        DecodeJwtPayload(jwt)?.user_name ?? string.Empty;
 
-    private string DecodeUserNameFromJwt(string jwt)
+    private string DecodeStudentIdFromJwt(string jwt) =>
+        DecodeJwtPayload(jwt)?.student_id ?? string.Empty;
+
+    private JwtPayload DecodeJwtPayload(string jwt)
     {
         try
         {
@@ -159,13 +197,10 @@ Debug.Log("RESTORED STUDENT ID = " + studentId);
             if (parts.Length != 3)
             {
                 Debug.LogError("[JWT] Invalid token format.");
-                return string.Empty;
+                return null;
             }
 
-            string payload = parts[1]
-                .Replace('-', '+')
-                .Replace('_', '/');
-
+            string payload = parts[1].Replace('-', '+').Replace('_', '/');
             switch (payload.Length % 4)
             {
                 case 2: payload += "=="; break;
@@ -174,224 +209,164 @@ Debug.Log("RESTORED STUDENT ID = " + studentId);
 
             string json = Encoding.UTF8.GetString(Convert.FromBase64String(payload));
             Debug.Log($"[JWT] Payload: {json}");
-
-            JwtPayload jwtPayload = JsonUtility.FromJson<JwtPayload>(json);
-            return jwtPayload?.user_name ?? string.Empty;
+            return JsonUtility.FromJson<JwtPayload>(json);
         }
         catch (Exception ex)
         {
-            Debug.LogError($"[JWT] Failed to decode token: {ex.Message}");
-            return string.Empty;
+            Debug.LogError($"[JWT] Decode failed: {ex.Message}");
+            return null;
         }
     }
 
-    private string DecodeStudentIdFromJwt(string jwt)
-{
-    try
-    {
-        string[] parts = jwt.Split('.');
-
-        if (parts.Length != 3)
-        {
-            Debug.LogError("[JWT] Invalid token format.");
-            return string.Empty;
-        }
-
-        string payload = parts[1]
-            .Replace('-', '+')
-            .Replace('_', '/');
-
-        switch (payload.Length % 4)
-        {
-            case 2: payload += "=="; break;
-            case 3: payload += "="; break;
-        }
-
-        string json = Encoding.UTF8.GetString(Convert.FromBase64String(payload));
-
-        JwtPayload jwtPayload = JsonUtility.FromJson<JwtPayload>(json);
-
-        return jwtPayload?.student_id ?? string.Empty;
-    }
-    catch (Exception ex)
-    {
-        Debug.LogError($"[JWT] Failed to decode student ID: {ex.Message}");
-        return string.Empty;
-    }
-}
-
-    // ── Greeting helper — updates ALL assigned TMP fields ─────────────────────
-
+    // ── Greeting ──────────────────────────────────────────────────────────────
     private void ShowGreeting(string userName)
     {
-        if (greetingTexts == null || greetingTexts.Length == 0)
-        {
-            Debug.LogWarning("[GameAuthManager] No greetingTexts assigned in Inspector.");
-            return;
-        }
-
         string text = !string.IsNullOrEmpty(userName)
             ? string.Format(greetingFormat, userName)
             : string.Empty;
 
-        foreach (TextMeshProUGUI tmp in greetingTexts)
-        {
-            if (tmp != null)
-                tmp.text = text;
-        }
+        if (greetingTexts != null)
+            foreach (var tmp in greetingTexts)
+                if (tmp != null) tmp.text = text;
+
+        // Keep HomeScreenManager's own label in sync too
+        if (HomeScreenManager.Instance != null)
+            HomeScreenManager.Instance.RefreshGreeting();
     }
 
-    // ── Courses ───────────────────────────────────────────────────────────────
-
-    IEnumerator GetStudentCourses(string student_id)
+    // ── Courses API ───────────────────────────────────────────────────────────
+    IEnumerator GetStudentCourses(string studentId)
     {
         statusText.text = "Getting Courses...";
 
-        string studentUUID = student_id;
-        string url = baseUrl + "/student-courses-with-lock/" + studentUUID;
-
-        UnityWebRequest request = UnityWebRequest.Get(url);
         string token = PlayerPrefs.GetString("ACCESS_TOKEN");
-        request.SetRequestHeader("Authorization", "Bearer " + token);
-        request.SetRequestHeader("Accept", "application/json");
+        UnityWebRequest req = UnityWebRequest.Get(
+            baseUrl + "/student-courses-with-lock/" + studentId);
+        req.SetRequestHeader("Authorization", "Bearer " + token);
+        req.SetRequestHeader("Accept", "application/json");
 
-        yield return request.SendWebRequest();
+        yield return req.SendWebRequest();
 
-        Debug.Log("Courses Response : " + request.downloadHandler.text);
+        Debug.Log("Courses Response: " + req.downloadHandler.text);
 
-        if (request.result == UnityWebRequest.Result.Success)
+        if (req.result == UnityWebRequest.Result.Success)
         {
             statusText.text = "Courses Loaded";
 
             CoursesResponse response =
-                JsonUtility.FromJson<CoursesResponse>(request.downloadHandler.text);
+                JsonUtility.FromJson<CoursesResponse>(req.downloadHandler.text);
 
-            if (response.data.assigned_courses.Length > 0)
+            if (response?.data?.assigned_courses != null &&
+                response.data.assigned_courses.Length > 0)
             {
                 OpenClassSelection(response.data.assigned_courses);
                 LoginInput.text    = "";
                 passwordInput.text = "";
                 statusText.text    = "";
             }
+            else
+            {
+                statusText.text = "No courses assigned.";
+                Debug.LogWarning("[GameAuthManager] assigned_courses is empty or null.");
+            }
         }
         else
         {
             statusText.text = "Failed To Load Courses";
-            Debug.LogError(request.error);
-            Debug.LogError(request.downloadHandler.text);
+            Debug.LogError(req.error + "\n" + req.downloadHandler.text);
         }
     }
 
     // ── Logout ────────────────────────────────────────────────────────────────
-
     public void Logout()
     {
         PlayerPrefs.DeleteKey("ACCESS_TOKEN");
         AppSession.ClearAll();
         ShowGreeting(null);
+
+        if (HomeScreenManager.Instance != null)
+            HomeScreenManager.Instance.SetCategoryLockStates(new bool[4]);
     }
 
     // ── Class selection ───────────────────────────────────────────────────────
-
-    void OpenClassSelection(AssignedCourse[] assignedCourses)
+    private void OpenClassSelection(AssignedCourse[] courses)
     {
         classSelectionPanel.SetActive(true);
 
-        // Default: all locked
-        beginnersButton.interactable = false;
-        juniorsButton.interactable   = false;
-        seniorsButton.interactable   = false;
-        mastersButton.interactable   = false;
+        bool[] unlocked = new bool[4];
 
-        beginnersLock.SetActive(true);
-        juniorsLock.SetActive(true);
-        seniorsLock.SetActive(true);
-        mastersLock.SetActive(true);
+        SetLockOverlay(beginnersLock, true);
+        SetLockOverlay(juniorsLock,   true);
+        SetLockOverlay(seniorsLock,   true);
+        SetLockOverlay(mastersLock,   true);
 
-        // Track which button indices are unlocked by the API response.
-        // Carousel button order: 0=Beginners 1=Juniors 2=Seniors 3=Masters
-        // Matches ContentXForIndex in LevelSelectCarousel.
-        bool[] unlocked = new bool[4]; // all false by default
-
-        foreach (AssignedCourse course in assignedCourses)
+        foreach (AssignedCourse c in courses)
         {
-            Debug.Log("Assigned Course : " + course.name);
-            switch (course.id)
+            Debug.Log($"[GameAuthManager] Assigned: {c.name} (id={c.id})");
+            switch (c.id)
             {
-                case 12:
-                    beginnersButton.interactable = true;
-                    beginnersLock.SetActive(false);
-                    unlocked[0] = true;
-                    break;
-                case 14:
-                    juniorsButton.interactable = true;
-                    juniorsLock.SetActive(false);
-                    unlocked[1] = true;
-                    break;
-                case 16:
-                    seniorsButton.interactable = true;
-                    seniorsLock.SetActive(false);
-                    unlocked[2] = true;
-                    break;
-                case 19:
-                    mastersButton.interactable = true;
-                    mastersLock.SetActive(false);
-                    unlocked[3] = true;
-                    break;
+                case COURSE_BEGINNERS: unlocked[0] = true; SetLockOverlay(beginnersLock, false); break;
+                case COURSE_JUNIORS:   unlocked[1] = true; SetLockOverlay(juniorsLock,   false); break;
+                case COURSE_SENIORS:   unlocked[2] = true; SetLockOverlay(seniorsLock,   false); break;
+                case COURSE_MASTERS:   unlocked[3] = true; SetLockOverlay(mastersLock,   false); break;
             }
         }
 
-        // Find the first unlocked index and pass it directly to the carousel.
-        // This avoids any timing issue with reading GameObject.activeSelf.
-        int firstUnlocked = 0;
-        for (int i = 0; i < unlocked.Length; i++)
-        {
-            if (unlocked[i]) { firstUnlocked = i; break; }
-        }
+        // Apply to HomeScreenManager's category buttons
+        if (HomeScreenManager.Instance != null)
+            HomeScreenManager.Instance.SetCategoryLockStates(unlocked);
+        else
+            Debug.LogWarning("[GameAuthManager] HomeScreenManager.Instance is null — " +
+                             "lock states not applied.");
 
-        Debug.Log($"[GameAuthManager] First unlocked index: {firstUnlocked}");
+        // Scroll carousel to first unlocked index
+        int first = Array.FindIndex(unlocked, u => u);
+        if (first < 0) first = 0;
+
+        Debug.Log($"[GameAuthManager] First unlocked index: {first}");
 
         if (levelSelectCarousel != null)
-            levelSelectCarousel.ScrollToIndex(firstUnlocked);
+            levelSelectCarousel.ScrollToIndex(first);
         else
             Debug.LogWarning("[GameAuthManager] levelSelectCarousel not assigned.");
+    }
+
+    private static void SetLockOverlay(GameObject go, bool show)
+    {
+        if (go != null) go.SetActive(show);
     }
 }
 
 // ── Data models ───────────────────────────────────────────────────────────────
 
-[System.Serializable]
-public class LoginResponse
+[System.Serializable] public class LoginResponse
 {
     public int    status;
     public string message;
     public string access_token;
 }
 
-[System.Serializable]
-public class JwtPayload
+[System.Serializable] public class JwtPayload
 {
     public string user_name;
     public string user_email;
     public string role_name;
     public string student_id;
 }
-[System.Serializable]
-public class CoursesResponse
+
+[System.Serializable] public class CoursesResponse
 {
     public bool        success;
     public CoursesData data;
     public int         status;
 }
 
-[System.Serializable]
-public class CoursesData
+[System.Serializable] public class CoursesData
 {
     public AssignedCourse[] assigned_courses;
 }
 
-[System.Serializable]
-public class AssignedCourse
+[System.Serializable] public class AssignedCourse
 {
     public int    id;
     public string name;
