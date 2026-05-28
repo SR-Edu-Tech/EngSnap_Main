@@ -389,11 +389,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 63c567891672eb14d9f8855a9b89ef33, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  BundleUrls:
-  - https://drive.google.com/uc?export=download&id=1gkGTPF5p7WUYLzPXVb6ZtFQGdbk6dBzS
-  - https://drive.usercontent.google.com/u/0/uc?id=1HrvxVX4VNYzzW0AAart-asfR912PHNds&export=download
-  - https://drive.usercontent.google.com/u/0/uc?id=132pGuEftBGaOwlykYEwWHgD6DHfGoxel&export=download
-  - https://drive.usercontent.google.com/u/0/uc?id=1q8n7x5PLc52fRAledA-MIW4qv_wwKIQL&export=download
+  panelConfig: {fileID: 11400000, guid: 3138dcb9a0e936646bccfe7124daf5e9, type: 2}
   downloadPanel: {fileID: 1936307515}
   downloadingText: {fileID: 407636094}
   progressBar: {fileID: 1235151423}
@@ -3456,7 +3452,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0.5}
   m_AnchorMax: {x: 1, y: 0.5}
-  m_AnchoredPosition: {x: 0.005493164, y: -303.9964}
+  m_AnchoredPosition: {x: 0.0053710938, y: -303.9964}
   m_SizeDelta: {x: 0.0009765625, y: 100}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &355409098
@@ -17355,7 +17351,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0.5}
   m_AnchorMax: {x: 1, y: 0.5}
-  m_AnchoredPosition: {x: 0.0030517578, y: -304}
+  m_AnchoredPosition: {x: 0.0029296875, y: -304}
   m_SizeDelta: {x: 0.0010986, y: 100}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1564836692
@@ -20798,6 +20794,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 378e8b7e570827c4b82beda9f1c25337, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  minLoadDuration: 4
 --- !u!4 &1820736963
 Transform:
   m_ObjectHideFlags: 0

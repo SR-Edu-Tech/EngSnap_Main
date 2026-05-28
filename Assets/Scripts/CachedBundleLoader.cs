@@ -34,6 +34,10 @@ public class CachedBundleLoader : MonoBehaviour
     public bool  IsLoading { get; private set; }
     public float Progress  { get; private set; }
 
+    [Header("Settings")]
+    [Tooltip("Minimum time (in seconds) the loading screen should remain active to avoid flickering/jerkiness on fast cache hits.")]
+    public float minLoadDuration = 40f;
+
     // ── Multi-bundle in-memory cache: url → AssetBundle ───────────────────────
     private readonly Dictionary<string, AssetBundle> _cache
         = new Dictionary<string, AssetBundle>();
@@ -143,6 +147,7 @@ public class CachedBundleLoader : MonoBehaviour
     // ─────────────────────────────────────────────────────────────────────────
     private IEnumerator LoadRoutine(string bundleUrl, string sceneName, LoadSceneMode mode)
     {
+        float startTime = Time.time;
         IsLoading = true;
         Progress  = 0f;
         OnLoadProgress?.Invoke(0f);
@@ -164,7 +169,8 @@ public class CachedBundleLoader : MonoBehaviour
             Debug.Log($"[CachedBundleLoader] Waiting for prewarm to finish: {bundleUrl}");
             while (_prewarming.Contains(bundleUrl))
             {
-                Progress = GetPrewarmProgress(bundleUrl) * 0.5f;
+                float actualProgress = GetPrewarmProgress(bundleUrl) * 0.5f;
+                Progress = Mathf.Min(actualProgress, (Time.time - startTime) / minLoadDuration);
                 OnLoadProgress?.Invoke(Progress);
                 yield return null;
             }
@@ -175,8 +181,8 @@ public class CachedBundleLoader : MonoBehaviour
             // ── Fast path: already in memory ──────────────────────────────────
             Debug.Log($"[CachedBundleLoader] Cache hit → instant load for: {bundleUrl}");
             bundle   = cached;
-            Progress = 0.5f;
-            OnLoadProgress?.Invoke(0.5f);
+            Progress = Mathf.Min(0.5f, (Time.time - startTime) / minLoadDuration);
+            OnLoadProgress?.Invoke(Progress);
         }
         else
         {
@@ -192,7 +198,8 @@ public class CachedBundleLoader : MonoBehaviour
 
             while (!req.isDone)
             {
-                Progress = req.progress * 0.5f;
+                float actualProgress = req.progress * 0.5f;
+                Progress = Mathf.Min(actualProgress, (Time.time - startTime) / minLoadDuration);
                 OnLoadProgress?.Invoke(Progress);
                 yield return null;
             }
@@ -248,11 +255,32 @@ public class CachedBundleLoader : MonoBehaviour
         while (!sceneOp.isDone)
         {
             float sceneProgress = Mathf.Clamp01(sceneOp.progress / 0.9f);
-            Progress = 0.5f + sceneProgress * 0.5f;
+            float actualProgress = 0.5f + sceneProgress * 0.5f;
+            Progress = Mathf.Min(actualProgress, (Time.time - startTime) / minLoadDuration);
             OnLoadProgress?.Invoke(Progress);
             yield return null;
         }
 
+        // Enforce minimum load duration to prevent visual flicker/jerkiness on fast loads
+        float elapsed = Time.time - startTime;
+        if (elapsed < minLoadDuration)
+        {
+            float remaining = minLoadDuration - elapsed;
+            float holdStartTime = Time.time;
+            float startProgress = Progress;
+            while (Time.time - holdStartTime < remaining)
+            {
+                float t = (Time.time - holdStartTime) / remaining;
+                Progress = Mathf.Lerp(startProgress, 1f, t);
+                OnLoadProgress?.Invoke(Progress);
+                yield return null;
+            }
+        }
+
+        Progress = 1f;
+        OnLoadProgress?.Invoke(1f);
+
+        Debug.Log($"[CachedBundleLoader] Load completed. Actual Load Time: {elapsed:F2}s, Enforced Min Time: {minLoadDuration:F2}s, Total Time Spent: {(Time.time - startTime):F2}s");
         Debug.Log($"[CachedBundleLoader] Scene '{sceneName}' loaded successfully.");
         OnLoadComplete?.Invoke();
         IsLoading = false;

@@ -22,9 +22,38 @@ public class FirstRunDownloader : MonoBehaviour
     private bool _isFlowRunning;
     private Coroutine _lessonLoadRoutine;
 
-    [Header("Bundles (Optional Reference)")]
-    [Tooltip("Optional reference list of lesson bundle URLs used by the app.")]
-    public List<string> BundleUrls = new List<string>();
+    [Header("Config Reference")]
+    [Tooltip("Reference to the PanelConfig ScriptableObject containing categories and bundle URLs.")]
+    [SerializeField] private PanelConfig panelConfig;
+
+    /// <summary>
+    /// Dynamically retrieves all unique asset bundle URLs configured in PanelConfig.
+    /// This removes the need to manually maintain a duplicate list in the Inspector.
+    /// </summary>
+    public List<string> BundleUrls
+    {
+        get
+        {
+            List<string> urls = new List<string>();
+            if (panelConfig != null && panelConfig.categories != null)
+            {
+                foreach (var cat in panelConfig.categories)
+                {
+                    if (cat.subButtons != null)
+                    {
+                        foreach (var sub in cat.subButtons)
+                        {
+                            if (!string.IsNullOrEmpty(sub.assetBundleUrl) && !urls.Contains(sub.assetBundleUrl))
+                            {
+                                urls.Add(sub.assetBundleUrl);
+                            }
+                        }
+                    }
+                }
+            }
+            return urls;
+        }
+    }
 
     [Header("Download Panel")]
     public GameObject downloadPanel;
