@@ -33,8 +33,7 @@ public enum Masters_Topic {
     Game,
     Roleplay,
     Quiz,
-    Rewards,
-    FindWords
+    Rewards
 }
 
 public enum Masters_CurrentScreen {

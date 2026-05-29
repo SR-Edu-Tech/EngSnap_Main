@@ -65,7 +65,7 @@ public class Masters_SelfIntroduction_Roleplay_LessonTwo : Masters_Lesson {
     }
 
     private void OnSkipButtonClicked() {
-        progressCountTMP.text = $"{++dialogueIndex}/3";
+        progressCountTMP.text = $"{++dialogueIndex}/2";
         LoadNextRoleplay();
         Masters_AudioManager.Instance.PlaySoundEffect(Masters_SFX.SelectPositive);
     }
@@ -137,7 +137,7 @@ public class Masters_SelfIntroduction_Roleplay_LessonTwo : Masters_Lesson {
 
     private IEnumerator CorrectAnswerCoroutine() {
         Masters_AudioManager.Instance.PlaySoundEffect(Masters_SFX.Correct);
-        progressCountTMP.text = $"{++dialogueIndex}/3";
+        progressCountTMP.text = $"{++dialogueIndex}/2";
         studentDialogueTMP.text = currentStudentRoleplayDialogue.dialogueButtonText;
         studentCloud.SetActive(true);
 

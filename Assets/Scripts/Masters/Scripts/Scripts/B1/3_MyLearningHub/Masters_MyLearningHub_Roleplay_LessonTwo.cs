@@ -63,7 +63,7 @@ public class Masters_MyLearningHub_Roleplay_LessonTwo : Masters_Lesson {
     }
 
     private void OnSkipButtonClicked() {
-        progressCountTMP.text = $"{++dialogueIndex}/5";
+        progressCountTMP.text = $"{++dialogueIndex}/4";
         micPromptTMP.gameObject.SetActive(false);
         LoadNextRoleplay();
         micPromptTMP.gameObject.SetActive(true);
@@ -137,7 +137,7 @@ public class Masters_MyLearningHub_Roleplay_LessonTwo : Masters_Lesson {
 
     private IEnumerator CorrectAnswerCoroutine() {
         Masters_AudioManager.Instance.PlaySoundEffect(Masters_SFX.Correct);
-        progressCountTMP.text = $"{++dialogueIndex}/5";
+        progressCountTMP.text = $"{++dialogueIndex}/4";
         studentDialogueTMP.text = currentStudentRoleplayDialogue.dialogueButtonText;
         studentCloud.SetActive(true);
 

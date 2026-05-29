@@ -13,6 +13,7 @@ public class PanelsData_SeniorLev1A
     public GameObject panelToActivate;
     public GameObject unitParent;
     public Image completedTickImage;
+    public GameObject unitCompleteScreen;
 }
 
 public class GameFlowManager_SeniorLev1A : MonoBehaviour
@@ -155,16 +156,68 @@ public class GameFlowManager_SeniorLev1A : MonoBehaviour
         {
             StopAudio(); //  stop when finishing branch
 
+            bool wasUnitComplete = IsUnitComplete(unitIdStored);
+
             CompleteBranch();
+
+            bool isUnitComplete = IsUnitComplete(unitIdStored);
 
             PlayerPrefs.SetInt(GetProgressKey(unitIdStored, branchIdStored), 0);
 
             currentActivePanel.SetActive(false);
             DeactivateAllUnits();
 
-            branchSelectionCanvas.gameObject.SetActive(true);
+            GameObject specificScreen = GetUnitCompleteScreen(unitIdStored);
+
+            if (!wasUnitComplete && isUnitComplete && specificScreen != null)
+            {
+                specificScreen.SetActive(true);
+            }
+            else
+            {
+                branchSelectionCanvas.gameObject.SetActive(true);
+            }
+            
             branchIdStored = 0;
         }
+    }
+
+    // -----------------------------
+    GameObject GetUnitCompleteScreen(string unitId)
+    {
+        foreach (var data in allPanelsList)
+        {
+            if (data.unitID == unitId && data.unitCompleteScreen != null)
+            {
+                return data.unitCompleteScreen;
+            }
+        }
+        return null;
+    }
+
+    // -----------------------------
+    public void ReturnToUnitSelection()
+    {
+        StopAudio();
+        
+        // Ensure any active completion screen is hidden
+        foreach (var data in allPanelsList)
+        {
+            if (data.unitCompleteScreen != null)
+            {
+                data.unitCompleteScreen.SetActive(false);
+            }
+        }
+
+        if (currentActivePanel != null)
+            currentActivePanel.SetActive(false);
+
+        DeactivateAllUnits();
+
+        branchSelectionCanvas.gameObject.SetActive(false);
+        unitSelectionCanvas.gameObject.SetActive(true);
+        
+        branchIdStored = 0;
     }
 
     // -----------------------------
@@ -215,6 +268,22 @@ public class GameFlowManager_SeniorLev1A : MonoBehaviour
             if (data.unitParent != null)
                 data.unitParent.SetActive(false);
         }
+    }
+
+    // -----------------------------
+    bool IsUnitComplete(string unitId)
+    {
+        foreach (var data in allPanelsList)
+        {
+            if (data.unitID == unitId)
+            {
+                if (PlayerPrefs.GetInt(GetCompleteKey(unitId, data.branchID), 0) == 0)
+                {
+                    return false; // Found an incomplete branch in this unit
+                }
+            }
+        }
+        return true; // All branches in this unit are complete
     }
 
     // -----------------------------
