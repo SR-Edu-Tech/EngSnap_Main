@@ -18,7 +18,7 @@ MonoBehaviour:
     questionAudio: {fileID: 8300000, guid: 93258cfb6da429947b490f1df0d59671, type: 3}
     optionA: 'Sorry '
     optionB: Please
-    optionC: ExcuseMe
+    optionC: EXcuseMe
     correctIndex: 1
     correctAudio: {fileID: 8300000, guid: 6feabe92f2f103b45af97409310a43b2, type: 3}
     wrongAudio: {fileID: 8300000, guid: 01eb8213e3efd934a976460d74bcdda8, type: 3}
@@ -44,7 +44,7 @@ MonoBehaviour:
     situationText: You need to walk past some people
     questionAudio: {fileID: 8300000, guid: 9fe20aaa65f9e244792d3dc0b870d3af, type: 3}
     optionA: Sorry
-    optionB: ExcuseMe
+    optionB: EXcuseMe
     optionC: Welcome
     correctIndex: 1
     correctAudio: {fileID: 8300000, guid: 6feabe92f2f103b45af97409310a43b2, type: 3}

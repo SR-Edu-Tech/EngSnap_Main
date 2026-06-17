@@ -13,5 +13,5 @@ MonoBehaviour:
   m_Name: VocabularyCard7
   m_EditorClassIdentifier: 
   wordLabel: Notebook
-  illustration: {fileID: 21300000, guid: 4f1d2b38c75585646af9c0c8b056b016, type: 3}
+  illustration: {fileID: -1943233378, guid: 73bd4259e87af814ba5458d63a37775c, type: 3}
   wordAudio: {fileID: 8300000, guid: 1e6bebd19df46a2459b467861cd195e2, type: 3}

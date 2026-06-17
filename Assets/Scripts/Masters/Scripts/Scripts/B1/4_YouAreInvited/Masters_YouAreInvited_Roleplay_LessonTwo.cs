@@ -124,14 +124,15 @@ public class Masters_YouAreInvited_Roleplay_LessonTwo : Masters_Lesson {
         progressBar.value = SimilarityPercent(currentStudentRoleplayDialogue.dialogueDetectionText, spokenText);
         sliderImage.color = Color.Lerp(wrongColor, correctColor, progressBar.value);
 
-        if (progressBar.value > 0.75) {
-            // Similarity greater than 75%
+        if (progressBar.value > 0.5f) {
+            // Similarity greater than 50%
             StartCoroutine(CorrectAnswerCoroutine());
             micPromptTMP.gameObject.SetActive(false);
             return;
         }
 
         // Wrong
+        FindObjectOfType<Masters_ToggleToTalkButton>()?.ResetButton();
         Masters_AudioManager.Instance.PlaySoundEffect(Masters_SFX.Incorrect);
     }
 
@@ -143,9 +144,7 @@ public class Masters_YouAreInvited_Roleplay_LessonTwo : Masters_Lesson {
 
         yield return new WaitForSeconds(timeBetweenRoleplay);
 
-        npcCloud.SetActive(true);
-        Masters_AudioManager.Instance.PlayVoiceOver(currentNpcRoleplayDialogue.dialogueAudioClip);
-        StartCoroutine(Masters_AudioManager.Instance.WaitForVoiceOverEnd(LoadNextRoleplay));
+        LoadNextRoleplay();
     }
 
     private float SimilarityPercent(string reference, string hypothesis) {
@@ -175,6 +174,9 @@ public class Masters_YouAreInvited_Roleplay_LessonTwo : Masters_Lesson {
     }
 
     private void LoadNextRoleplay() {
+        FindObjectOfType<Masters_ToggleToTalkButton>()?.ResetButton();
+        debugTMP.text = "";
+
         if (dialogueIndex >= studentRoleplayDialogueArray.Length) {
             if (dialogueIndex == npcRoleplayDialogueArray.Length - 1) {
                 currentNpcRoleplayDialogue = npcRoleplayDialogueArray[dialogueIndex++];
@@ -229,3 +231,5 @@ public class Masters_YouAreInvited_Roleplay_LessonTwo : Masters_Lesson {
 
 
 }
+
+

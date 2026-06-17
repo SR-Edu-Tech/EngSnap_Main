@@ -55,14 +55,13 @@ public class Masters_JustAMinuteSession_Rewards_LessonOne : Masters_Lesson {
     }
 
     protected override void OnNextButtonClicked() {
-        if (topic == Masters_Topic.None) {
-            Debug.Log($"Topic not set for {this.name}!");
-            return;
-        }
-        Masters_TopicSelectionManager.Instance.UnlockButton((Masters_Topic)((int)topic + 1));
+        topic = Masters_Topic.Rewards;
+        Masters_TopicSelectionManager.Instance?.UnlockButton((Masters_Topic)((int)topic + 1));
         Masters_AudioManager.Instance.StopVoiceOver();
         Masters_LevelManager.Instance.OnLessonComplete(topic);
     }
 
 
 }
+
+

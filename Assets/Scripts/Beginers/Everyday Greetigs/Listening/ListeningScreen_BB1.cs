@@ -90,7 +90,17 @@ public class ListeningScreen_BB1 : MonoBehaviour, IUnitCompletable
     private Sprite activePoemSprite;
     private Color  activePoemTint;
 
-    void OnEnable()  => Setup();
+    void OnEnable()
+    {
+        // Build the save key and load the persisted poem index ONCE,
+        // only when the screen is first enabled (not on every internal Setup call).
+        if (unitButton != null)
+        {
+            saveKey          = $"{unitButton.unitType}_poemIndex";
+            currentPoemIndex = PlayerPrefs.GetInt(saveKey, 0);
+        }
+        Setup();
+    }
     void OnDisable() { StopAllCoroutines(); if (audioSource != null) audioSource.Stop(); }
 
     void Setup()
@@ -101,13 +111,6 @@ public class ListeningScreen_BB1 : MonoBehaviour, IUnitCompletable
         playbackSpeed        = 1.0f;
 
         if (nextButton != null) nextButton.gameObject.SetActive(false);
-
-        // Build save key from unitButton if available
-        if (unitButton != null)
-        {
-            saveKey = $"{unitButton.unitType}_poemIndex";
-            currentPoemIndex = PlayerPrefs.GetInt(saveKey, 0);
-        }
 
         if (poems != null && poems.Count > 0)
         {

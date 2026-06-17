@@ -13,5 +13,5 @@ MonoBehaviour:
   m_Name: VocabularyCard8
   m_EditorClassIdentifier: 
   wordLabel: Textbook
-  illustration: {fileID: 21300000, guid: c2f9dd84d4a0ce7468b0e32c50876942, type: 3}
+  illustration: {fileID: 21300000, guid: c0f3ecf83a79ecc4ca9a2d3313d058fc, type: 3}
   wordAudio: {fileID: 8300000, guid: 45696ed1da69b9545a19aca0f8c09ba9, type: 3}

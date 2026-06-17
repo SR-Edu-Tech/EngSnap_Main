@@ -159,6 +159,7 @@ public class Masters_AnnounceAndRespondToUnfortunateNews_Writing_LessonOne : Mas
                 // Incorrect word
                 Masters_AudioManager.Instance.PlaySoundEffect(Masters_SFX.Incorrect);
                 currentSelectedBlank.SetWordAndColorToBlank(wordText, wrongColor);
+                button.interactable = true;
             }
         } else {
             Debug.Log($"{button} does not have FillInTheBlank_Word component!");

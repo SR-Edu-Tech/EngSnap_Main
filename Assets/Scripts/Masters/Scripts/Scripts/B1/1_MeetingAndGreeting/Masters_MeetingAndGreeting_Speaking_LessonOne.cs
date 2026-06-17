@@ -48,6 +48,8 @@ public class Masters_MeetingAndGreeting_Speaking_LessonOne : Masters_Lesson {
     private float animationSpeed, timeBetweenEachAnimation;
     [SerializeField]
     private Button skipButton;
+    [SerializeField]
+    private Button continueButton;
 
 
     private SpeechToText currentSpeechToText;
@@ -68,6 +70,19 @@ public class Masters_MeetingAndGreeting_Speaking_LessonOne : Masters_Lesson {
 
         SetPhraseCardAndSpeechToText();
         skipButton.onClick.AddListener(OnSkipButtonClicked);
+        
+        if (continueButton != null) {
+            continueButton.onClick.AddListener(OnContinueButtonClicked);
+            continueButton.gameObject.SetActive(false);
+        }
+    }
+
+    private void OnContinueButtonClicked() {
+        if (continueButton != null) {
+            continueButton.gameObject.SetActive(false);
+        }
+        SetPhraseCardAndSpeechToText();
+        Masters_AudioManager.Instance.PlaySoundEffect(Masters_SFX.SelectPositive);
     }
 
     protected override void Start() {
@@ -77,7 +92,7 @@ public class Masters_MeetingAndGreeting_Speaking_LessonOne : Masters_Lesson {
     }
 
     private void OnSkipButtonClicked() {
-        progressCountTMP.text = $"{++currentSpeechToTextIndex}/8";
+        progressCountTMP.text = $"{++currentSpeechToTextIndex}/{speechToTextArray.Length}";
         SetPhraseCardAndSpeechToText();
         Masters_AudioManager.Instance.PlaySoundEffect(Masters_SFX.SelectPositive);
     }
@@ -139,17 +154,36 @@ public class Masters_MeetingAndGreeting_Speaking_LessonOne : Masters_Lesson {
     }
 
     private void OnSpeechResult(string spokenText) {
+        if (IsInvoking(SET_PHRASE_CARD_AND_SPEECH_TO_TEXT) || (continueButton != null && continueButton.gameObject.activeSelf)) return;
+
         string spoken = spokenText.ToLower().Trim();
         debugTMP.text = $"\"{spoken}\"";
 
-        progressBar.value = SimilarityPercent(currentSpeechToText.speechDetectionText[0], spokenText);
+        float maxSimilarity = 0f;
+        if (currentSpeechToText.speechDetectionText != null) {
+            foreach (var text in currentSpeechToText.speechDetectionText) {
+                float similarity = SimilarityPercent(text, spokenText);
+                if (similarity > maxSimilarity) {
+                    maxSimilarity = similarity;
+                }
+            }
+        }
+
+        progressBar.value = maxSimilarity;
         sliderImage.color = Color.Lerp(wrongColor, correctColor, progressBar.value);
 
         if (progressBar.value > 0.75) {
             // Similarity greater than 75%
             Masters_AudioManager.Instance.PlaySoundEffect(Masters_SFX.Correct);
-            progressCountTMP.text = $"{++currentSpeechToTextIndex}/8";
-            Invoke(SET_PHRASE_CARD_AND_SPEECH_TO_TEXT, timeToLoadNextSpeechToText);
+            progressCountTMP.text = $"{++currentSpeechToTextIndex}/{speechToTextArray.Length}";
+            
+            FindObjectOfType<Masters_ToggleToTalkButton>()?.ResetButton();
+
+            if (continueButton != null) {
+                continueButton.gameObject.SetActive(true);
+            } else {
+                Invoke(SET_PHRASE_CARD_AND_SPEECH_TO_TEXT, timeToLoadNextSpeechToText);
+            }
             return;
 
         }
@@ -167,10 +201,13 @@ public class Masters_MeetingAndGreeting_Speaking_LessonOne : Masters_Lesson {
         //}
 
         // Wrong
+        FindObjectOfType<Masters_ToggleToTalkButton>()?.ResetButton();
         Masters_AudioManager.Instance.PlaySoundEffect(Masters_SFX.Incorrect);
     }
 
     private void SetPhraseCardAndSpeechToText() {
+        FindObjectOfType<Masters_ToggleToTalkButton>()?.ResetButton();
+
         progressBar.value = 0f;
         sliderImage.color = defaultColor;
 
@@ -246,3 +283,4 @@ public class Masters_MeetingAndGreeting_Speaking_LessonOne : Masters_Lesson {
 
 
 }
+

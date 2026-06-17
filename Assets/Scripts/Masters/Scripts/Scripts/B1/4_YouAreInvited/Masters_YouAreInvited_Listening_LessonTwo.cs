@@ -150,7 +150,7 @@ public class Masters_YouAreInvited_Listening_LessonTwo : Masters_Lesson {
 
         // Play in repeat
         if (isRepeatOn) {
-            audioCoroutine = StartCoroutine(PlayInRepeatCoroutine(audioClip));
+            audioCoroutine = StartCoroutine(PlayInRepeatCoroutine(phraseCard));
             return;
         }
 
@@ -162,10 +162,11 @@ public class Masters_YouAreInvited_Listening_LessonTwo : Masters_Lesson {
         }));
     }
 
-    private IEnumerator PlayInRepeatCoroutine(AudioClip audioClip) {
+    private IEnumerator PlayInRepeatCoroutine(PhraseCard phraseCard) {
         while (true) {
-            Masters_AudioManager.Instance.PlayVoiceOver(audioClip);
-            yield return new WaitForSeconds(audioClip.length + timeBetweenAudioInPlayAll);
+            AudioClip clipToPlay = isSlowed ? phraseCard.slowedAudioClip : phraseCard.normalAudioClip;
+            Masters_AudioManager.Instance.PlayVoiceOver(clipToPlay);
+            yield return new WaitForSeconds(clipToPlay.length + timeBetweenAudioInPlayAll);
         }
     }
 

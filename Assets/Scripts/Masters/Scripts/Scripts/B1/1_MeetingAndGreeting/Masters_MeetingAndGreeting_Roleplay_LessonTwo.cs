@@ -82,8 +82,9 @@ public class Masters_MeetingAndGreeting_Roleplay_LessonTwo : Masters_Lesson {
         progressBar.value = SimilarityPercent(currentRoleplayPhrase.detectionText[0], spokenText);
         sliderImage.color = Color.Lerp(wrongColor, correctColor, progressBar.value);
 
-        if (progressBar.value > 0.75) {
-            // Similarity greater than 75%
+        if (progressBar.value > 0.5f) {
+            // Similarity greater than 50%
+            FindObjectOfType<Masters_ToggleToTalkButton>()?.ResetButton();
             Masters_AudioManager.Instance.PlaySoundEffect(Masters_SFX.Correct);
             Masters_AudioManager.Instance.PlayVoiceOver(currentRoleplayPhrase.phraseAudioClip);
             StartCoroutine(Masters_AudioManager.Instance.WaitForVoiceOverEnd(LoadNextRoleplayPhrase));
@@ -118,6 +119,7 @@ public class Masters_MeetingAndGreeting_Roleplay_LessonTwo : Masters_Lesson {
         //}
 
         // Wrong
+        FindObjectOfType<Masters_ToggleToTalkButton>()?.ResetButton();
         Masters_AudioManager.Instance.PlaySoundEffect(Masters_SFX.Incorrect);
     }
 
@@ -243,3 +245,5 @@ public class Masters_MeetingAndGreeting_Roleplay_LessonTwo : Masters_Lesson {
 //    Masters_AudioManager.Instance.StopVoiceOver();
 //    Masters_LevelManager.Instance.OnLessonComplete(topic);
 //}
+
+

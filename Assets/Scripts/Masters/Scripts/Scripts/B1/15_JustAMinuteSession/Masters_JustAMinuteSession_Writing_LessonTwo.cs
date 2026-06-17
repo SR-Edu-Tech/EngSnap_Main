@@ -67,7 +67,7 @@ public class Masters_JustAMinuteSession_Writing_LessonTwo : Masters_Lesson {
             slateRectTransform.gameObject.SetActive(true);
             completedPanelRectTransform.localScale = Vector2.one;
             completedPanelRectTransform.gameObject.SetActive(false);
-            progressCountTMP.text = $"{arrangeWordsPuzzleIndex}/4";
+            progressCountTMP.text = $"{arrangeWordsPuzzleIndex}/2";
             ClearAndSetPuzzle();
         });
     }
@@ -88,7 +88,7 @@ public class Masters_JustAMinuteSession_Writing_LessonTwo : Masters_Lesson {
                 // Correct
                 currentCorrectAmount++;
                 arrangeWordButtonArray[i].SetButtonTextColor(correctColor);
-                progressCountTMP.text = $"{arrangeWordsPuzzleIndex}/4";
+                progressCountTMP.text = $"{arrangeWordsPuzzleIndex}/2";
             } else {
                 // Incorrect
                 arrangeWordButtonArray[i].SetButtonTextColor(incorrectColor);

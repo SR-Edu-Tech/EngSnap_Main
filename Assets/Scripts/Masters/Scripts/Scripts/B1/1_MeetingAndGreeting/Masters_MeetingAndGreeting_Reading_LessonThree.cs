@@ -80,7 +80,7 @@ public class Masters_MeetingAndGreeting_Reading_LessonThree : Masters_Lesson {
             // Correct
             Masters_AudioManager.Instance.PlaySoundEffect(Masters_SFX.Correct);
 
-            progressCountTMP.text = $"{currentQuestionIndex}/4";
+            progressCountTMP.text = $"{currentQuestionIndex}/3";
 
             Image buttonImage = currentSelectedButton.GetComponent<Image>();
             buttonImage.color = correctColor;

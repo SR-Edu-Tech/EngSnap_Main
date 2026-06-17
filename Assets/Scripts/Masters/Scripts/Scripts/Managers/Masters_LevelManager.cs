@@ -20,7 +20,23 @@ public enum Masters_Unit {
     LetMeQuestion,
     SituationalDialogues,
     CorrectPronunciation,
-    JustAMinuteSession
+    JustAMinuteSession,
+    //Book two - 15 units
+    OfferingAHelpingHand,
+    LetsChoose,
+    StartingConversationWithAStranger,
+    JumbledWords,
+    AbbreviationsAndAcronyms,
+    TrickyThree,
+    ChangeVoiceAndSoundSmart,
+    ChattingBees,
+    SmartAlternatives,
+    WordSwitch,
+    IsThereADifference,
+    SequenceYourThoughts,
+    ConnectorsOfTimeAndPlace,
+    RealLifeInteractions,
+    PresentationPointers
 }
 
 public enum Masters_Topic {
@@ -69,8 +85,7 @@ public class Masters_LevelManager : Masters_Singleton<Masters_LevelManager> {
     private Masters_Unit currentlySelectedUnit;
     private Masters_Topic currentlySelectedTopic;
     private GameObject currentLessonGameObject;
-    private List<Dictionary<Masters_Unit, int>> topicCompletedPerUnitList = new List<Dictionary<Masters_Unit, int>>();
-    private Dictionary<Masters_Unit, int> topicCompletedPerUnitDictionary = new Dictionary<Masters_Unit, int>();
+    private Dictionary<Masters_Unit, HashSet<Masters_Topic>> completedTopicsPerUnit = new Dictionary<Masters_Unit, HashSet<Masters_Topic>>();
     private GameObject currentTopicGameObject;
     private List<Masters_TopicSelection> topicSelectionList = new List<Masters_TopicSelection>();
     private RectTransform topicSelectionScrollRectContentRectTransform;
@@ -89,20 +104,8 @@ public class Masters_LevelManager : Masters_Singleton<Masters_LevelManager> {
 
         Masters_TopicSelection currentTopicSelection;
 
-        bool found = false;
-        foreach (Dictionary<Masters_Unit, int> topicCompletedPerUnitDictionary in topicCompletedPerUnitList) {
-            if (topicCompletedPerUnitDictionary.ContainsKey(currentlySelectedUnit)) {
-                // Already has a dictionary for this unit
-                this.topicCompletedPerUnitDictionary = topicCompletedPerUnitDictionary;
-                found = true;
-            }
-        }
-        if (!found) {
-            // Not found a dictionary as selected is a new unit
-            Dictionary<Masters_Unit, int> newTopicCompletedPerUnitDictionary = new Dictionary<Masters_Unit, int>();
-            newTopicCompletedPerUnitDictionary[currentlySelectedUnit] = 0;
-            topicCompletedPerUnitList.Add(newTopicCompletedPerUnitDictionary);
-            topicCompletedPerUnitDictionary = newTopicCompletedPerUnitDictionary;
+        if (!completedTopicsPerUnit.ContainsKey(currentlySelectedUnit)) {
+            completedTopicsPerUnit[currentlySelectedUnit] = new HashSet<Masters_Topic>();
         }
 
         // CONDITION: If player goes back and clicks the same unit
@@ -130,68 +133,8 @@ public class Masters_LevelManager : Masters_Singleton<Masters_LevelManager> {
         }
 
         // CONDITION: If players clicks a unit for the very first time
-        switch (selectedUnit) {
-            case Masters_Unit.MeetingAndGreeting:
-                currentTopicGameObject = Instantiate(topicSelectionGameObject, topicCanvasGameObject.transform);
-                currentTopicGameObject.name = "MeetingAndGreeting_TopicSelection";
-                break;
-            case Masters_Unit.SelfIntroduction:
-                currentTopicGameObject = Instantiate(topicSelectionGameObject, topicCanvasGameObject.transform);
-                currentTopicGameObject.name = "SelfIntroduction_TopicSelection";
-                break;
-            case Masters_Unit.MyLearningHub:
-                currentTopicGameObject = Instantiate(topicSelectionGameObject, topicCanvasGameObject.transform);
-                currentTopicGameObject.name = "MyLearningHub_TopicSelection";
-                break;
-            case Masters_Unit.YouAreInvited:
-                currentTopicGameObject = Instantiate(topicSelectionGameObject, topicCanvasGameObject.transform);
-                currentTopicGameObject.name = "YouAreInvited_TopicSelection";
-                break;
-            case Masters_Unit.YeahAndNah:
-                currentTopicGameObject = Instantiate(topicSelectionGameObject, topicCanvasGameObject.transform);
-                currentTopicGameObject.name = "YeahAndNah_TopicSelection";
-                break;
-            case Masters_Unit.WowCompliments:
-                currentTopicGameObject = Instantiate(topicSelectionGameObject, topicCanvasGameObject.transform);
-                currentTopicGameObject.name = "WowCompliments_TopicSelection";
-                break;
-            case Masters_Unit.IDoAndIMake:
-                currentTopicGameObject = Instantiate(topicSelectionGameObject, topicCanvasGameObject.transform);
-                currentTopicGameObject.name = "IDoAndIMake_TopicSelection";
-                break;
-            case Masters_Unit.AnnounceAndRespondToUnfortunateNews:
-                currentTopicGameObject = Instantiate(topicSelectionGameObject, topicCanvasGameObject.transform);
-                currentTopicGameObject.name = "AnnounceAndRespondToUnfortunateNews_TopicSelection";
-                break;
-            case Masters_Unit.GoalsAndPlans:
-                currentTopicGameObject = Instantiate(topicSelectionGameObject, topicCanvasGameObject.transform);
-                currentTopicGameObject.name = "GoalsAndPlans_TopicSelection";
-                break;
-            case Masters_Unit.AreYouConfused:
-                currentTopicGameObject = Instantiate(topicSelectionGameObject, topicCanvasGameObject.transform);
-                currentTopicGameObject.name = "AreYouConfused_TopicSelection";
-                break;
-            case Masters_Unit.TongueTwisters:
-                currentTopicGameObject = Instantiate(topicSelectionGameObject, topicCanvasGameObject.transform);
-                currentTopicGameObject.name = "TongueTwisters_TopicSelection";
-                break;
-            case Masters_Unit.LetMeQuestion:
-                currentTopicGameObject = Instantiate(topicSelectionGameObject, topicCanvasGameObject.transform);
-                currentTopicGameObject.name = "LetMeQuestion_TopicSelection";
-                break;
-            case Masters_Unit.SituationalDialogues:
-                currentTopicGameObject = Instantiate(topicSelectionGameObject, topicCanvasGameObject.transform);
-                currentTopicGameObject.name = "SituationalDialogues_TopicSelection";
-                break;
-            case Masters_Unit.CorrectPronunciation:
-                currentTopicGameObject = Instantiate(topicSelectionGameObject, topicCanvasGameObject.transform);
-                currentTopicGameObject.name = "CorrectPronunciation_TopicSelection";
-                break;
-            case Masters_Unit.JustAMinuteSession:
-                currentTopicGameObject = Instantiate(topicSelectionGameObject, topicCanvasGameObject.transform);
-                currentTopicGameObject.name = "JustAMinuteSession_TopicSelection";
-                break;
-        }
+        currentTopicGameObject = Instantiate(topicSelectionGameObject, topicCanvasGameObject.transform);
+        currentTopicGameObject.name = $"{selectedUnit}_TopicSelection";
 
         currentTopicSelection = currentTopicGameObject.GetComponent<Masters_TopicSelection>();
         topicSelectionScrollRectContentRectTransform = currentTopicSelection.GetScrollRectContentRectTransform();
@@ -253,9 +196,9 @@ public class Masters_LevelManager : Masters_Singleton<Masters_LevelManager> {
     }
 
     public void OnLessonComplete(Masters_Topic topic) {
-        topicCompletedPerUnitDictionary[currentlySelectedUnit]++;
-        Debug.Log($"{currentlySelectedUnit}: {topicCompletedPerUnitDictionary[currentlySelectedUnit]}");
-        if(topicCompletedPerUnitDictionary[currentlySelectedUnit] == 8) {
+        completedTopicsPerUnit[currentlySelectedUnit].Add(topic);
+        Debug.Log($"{currentlySelectedUnit}: {completedTopicsPerUnit[currentlySelectedUnit].Count} unique topics completed");
+        if(completedTopicsPerUnit[currentlySelectedUnit].Count == 8) {
             // Rewards unlocked
             Destroy(currentLessonGameObject);
             OnTopicButtonClicked(Masters_Topic.Rewards);

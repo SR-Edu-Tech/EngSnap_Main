@@ -137,7 +137,7 @@ public class Screen2Controller : MonoBehaviour
 
         instructionText.text = "Teacher asks Bob how he is. What does Bob say?";
 
-        cardAText.text = "I am doing great, ma'am! Thank you.";
+        cardAText.text = "I am doing great, Thank you ma'am.How about you ma'am?";
         cardBText.text = "I am sleepy.";
         cardCText.text = "Goodbye, teacher.";
 

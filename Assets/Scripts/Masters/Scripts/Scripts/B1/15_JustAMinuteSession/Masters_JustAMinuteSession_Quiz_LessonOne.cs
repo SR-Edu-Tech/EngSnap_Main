@@ -82,7 +82,7 @@ public class Masters_JustAMinuteSession_Quiz_LessonOne : Masters_Lesson {
             // Correct
             Masters_AudioManager.Instance.PlaySoundEffect(Masters_SFX.Correct);
             currentlyPressedQuizButton.GetButtonImage().color = correctColor;
-            quizCountTMP.text = $"{++currentQuizIndex}/6";
+            quizCountTMP.text = $"{++currentQuizIndex}/4";
 
             canClickCheckButton = false;
             canClickOptionButton = false;

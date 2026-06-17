@@ -161,6 +161,7 @@ public class Masters_MyLearningHub_Writing_LessonOne : Masters_Lesson {
                 // Incorrect word
                 Masters_AudioManager.Instance.PlaySoundEffect(Masters_SFX.Incorrect);
                 currentSelectedBlank.SetWordAndColorToBlank(wordText, wrongColor);
+                button.interactable = true;
             }
         } else {
             Debug.Log($"{button} does not have FillInTheBlank_Word component!");

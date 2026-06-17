@@ -80,12 +80,12 @@ public class Masters_JustAMinuteSession_Game_LessonTwo : Masters_Lesson {
             sortPhraseCard.transform.SetParent(sortBin.GetPhraseTargetPointRectTransform(), true);
             sortPhraseCardRectTransform.DOAnchorPos(Vector2.zero, animationSpeed).SetEase(Ease.InOutSine);
             sortPhraseCardRectTransform.DOScale(Vector3.zero, animationSpeed).SetEase(Ease.InBack).OnComplete(() => {
-                //Invoke(SET_SORT_PUZZLE, timeBetweenSortPuzzle);
+                Invoke(SET_SORT_PUZZLE, timeBetweenSortPuzzle);
                 sortPhraseCard.gameObject.SetActive(false);
             });
 
             Masters_AudioManager.Instance.PlayVoiceOver(currentSortPuzzle.audioClip);
-            StartCoroutine(Masters_AudioManager.Instance.WaitForVoiceOverEnd(SetSortPuzzle));
+            //StartCoroutine(Masters_AudioManager.Instance.WaitForVoiceOverEnd(SetSortPuzzle));
         } else {
             // Wrong
             Masters_AudioManager.Instance.PlaySoundEffect(Masters_SFX.Incorrect);

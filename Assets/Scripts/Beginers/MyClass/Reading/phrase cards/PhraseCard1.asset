@@ -12,5 +12,5 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 8e8283a5813aeb64eb4f176759664879, type: 3}
   m_Name: PhraseCard1
   m_EditorClassIdentifier: 
-  phraseText: May I come in
+  phraseText: May I come in?
   phraseAudio: {fileID: 8300000, guid: 212874a01603b114b8431fc4012be1c8, type: 3}

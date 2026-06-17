@@ -16,7 +16,7 @@ public class Masters_JustAMinuteSession_Writing_LessonOne : Masters_Lesson {
     [SerializeField]
     private Color wrongColor;
     [SerializeField]
-    private int numberOfWordsPerSet;
+    private int[] numberOfWordsPerSetArray;
     [SerializeField]
     private float timeBetweenEachSet;
     [SerializeField]
@@ -82,7 +82,7 @@ public class Masters_JustAMinuteSession_Writing_LessonOne : Masters_Lesson {
     }
 
     private void LoadNextSetOfStatementsAndButtons() {
-        if (setIndex == 1) {
+        if (setIndex == 2) {
             nextButton.interactable = true;
             NextButtonAnimation();
             CompleteScreenAnimation();
@@ -159,13 +159,14 @@ public class Masters_JustAMinuteSession_Writing_LessonOne : Masters_Lesson {
                 // Incorrect word
                 Masters_AudioManager.Instance.PlaySoundEffect(Masters_SFX.Incorrect);
                 currentSelectedBlank.SetWordAndColorToBlank(wordText, wrongColor);
+                button.interactable = true;
             }
         } else {
             Debug.Log($"{button} does not have FillInTheBlank_Word component!");
         }
 
         numberOfWordsInteracted++;
-        if (numberOfWordsInteracted == numberOfWordsPerSet) {
+        if (numberOfWordsInteracted == numberOfWordsPerSetArray[setIndex - 1]) {
             // Completed a set
             numberOfWordsInteracted = 0;
             Invoke(LOAD_NEXT_SET_OF_STATEMENTS_AND_BUTTONS, timeBetweenEachSet);

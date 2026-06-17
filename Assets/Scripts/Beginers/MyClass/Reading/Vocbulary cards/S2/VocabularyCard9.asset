@@ -13,5 +13,5 @@ MonoBehaviour:
   m_Name: VocabularyCard9
   m_EditorClassIdentifier: 
   wordLabel: Ruler
-  illustration: {fileID: 21300000, guid: 0cd9fb9791632044aa1f05027646d664, type: 3}
+  illustration: {fileID: 21300000, guid: fb016db48f07fbc47aa745c76528e8fe, type: 3}
   wordAudio: {fileID: 8300000, guid: 946b1ed806eb04b4797a1c3ff8905903, type: 3}

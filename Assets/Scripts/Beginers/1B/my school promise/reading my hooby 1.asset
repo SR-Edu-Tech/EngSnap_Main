@@ -1,0 +1,17 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fc153ab9b77094c4da88a98f4388b36f, type: 3}
+  m_Name: reading my hooby 1
+  m_EditorClassIdentifier: 
+  wordLabel: Be quiet
+  illustration: {fileID: -1192883829, guid: 7ff8127f063ea4a41b3cb580fe15f5ea, type: 3}
+  wordAudio: {fileID: 8300000, guid: b2cd57a3177c7234891f47d3f304a584, type: 3}
