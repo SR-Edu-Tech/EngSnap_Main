@@ -167,38 +167,47 @@ public class DialogueListeningController_Listening_WOYP : MonoBehaviour, IUnitCo
     // ═════════════════════════════════════════════════════════════════════
     //  UNITY LIFECYCLE
     // ═════════════════════════════════════════════════════════════════════
-    void Awake()
+void Awake()
+{
+    // Cache card background images
+    _cardImages = new Image[lineCards.Length];
+    for (int i = 0; i < lineCards.Length; i++)
     {
-        // Capture original canvas positions FIRST — before anything moves them
-        _bobbyOriginalPos = bobbyRoot ? bobbyRoot.transform.localPosition : Vector3.zero;
-        _dannyOriginalPos = dannyRoot ? dannyRoot.transform.localPosition : Vector3.zero;
-
-        // Cache card background images
-        _cardImages = new Image[lineCards.Length];
-        for (int i = 0; i < lineCards.Length; i++)
-        {
-            if (lineCards[i] != null)
-                _cardImages[i] = lineCards[i].GetComponent<Image>();
-        }
-
-        // Wire up card tap callbacks — capture index for closure
-        for (int i = 0; i < lineCards.Length; i++)
-        {
-            int idx = i;
-            lineCards[i].onClick.AddListener(() => OnCardTapped(idx));
-        }
-
-        snailButton  .onClick.AddListener(OnSnail);
-        replayButton .onClick.AddListener(OnReplay);
-        nextButton   .onClick.AddListener(OnNext);
+        if (lineCards[i] != null)
+            _cardImages[i] = lineCards[i].GetComponent<Image>();
     }
 
-    void Start()
+    // Wire up card tap callbacks
+    for (int i = 0; i < lineCards.Length; i++)
     {
-        // If not launched via IUnitCompletable, auto-start in standalone testing
-        if (_panel == null) StartGame();
+        int idx = i;
+        lineCards[i].onClick.AddListener(() => OnCardTapped(idx));
     }
 
+    snailButton .onClick.AddListener(OnSnail);
+    replayButton.onClick.AddListener(OnReplay);
+    nextButton  .onClick.AddListener(OnNext);
+
+    // ── Do NOT read localPosition here — layout not settled yet ──
+}
+
+void Start()
+{
+    StartCoroutine(InitAfterLayout());
+}
+
+IEnumerator InitAfterLayout()
+{
+    // Wait one frame so Canvas layout has finalised all RectTransform positions
+    yield return null;
+
+    // NOW capture the correct resting positions
+    _bobbyOriginalPos = bobbyRoot ? bobbyRoot.transform.localPosition : Vector3.zero;
+    _dannyOriginalPos = dannyRoot ? dannyRoot.transform.localPosition : Vector3.zero;
+
+    // If not launched via IUnitCompletable, auto-start in standalone testing
+    if (_panel == null) StartGame();
+}
     // ═════════════════════════════════════════════════════════════════════
     //  START GAME
     // ═════════════════════════════════════════════════════════════════════
@@ -249,32 +258,40 @@ public class DialogueListeningController_Listening_WOYP : MonoBehaviour, IUnitCo
     // ═════════════════════════════════════════════════════════════════════
     //  CHARACTER SLIDE-IN INTRO
     // ═════════════════════════════════════════════════════════════════════
-    IEnumerator CharactersSlideIn()
+IEnumerator CharactersSlideIn()
+{
+    // ── Calculate hide offset from canvas size so it works on all ratios ──
+    Canvas canvas = GetComponentInParent<Canvas>();
+    float canvasHalfH = canvas != null
+        ? ((RectTransform)canvas.transform).rect.height * 0.5f
+        : 600f;   // fallback
+
+    // Push characters far enough below the canvas bottom to be fully hidden
+    float hideOffset = canvasHalfH + 400f;   // 400 = generous extra for tall characters
+
+    Vector3 bobbyShow = _bobbyOriginalPos;
+    Vector3 dannyShow = _dannyOriginalPos;
+    Vector3 bobbyHide = bobbyShow + Vector3.down * hideOffset;
+    Vector3 dannyHide = dannyShow + Vector3.down * hideOffset;
+
+    if (bobbyRoot) bobbyRoot.transform.localPosition = bobbyHide;
+    if (dannyRoot) dannyRoot.transform.localPosition = dannyHide;
+
+    float t = 0f, dur = 0.6f;
+    while (t < dur)
     {
-        // Slide both characters up from below — always target the original canvas position
-        Vector3 bobbyShow = _bobbyOriginalPos;
-        Vector3 dannyShow = _dannyOriginalPos;
-        Vector3 bobbyHide = bobbyShow + Vector3.down * 300f;
-        Vector3 dannyHide = dannyShow + Vector3.down * 300f;
-
-        if (bobbyRoot) bobbyRoot.transform.localPosition = bobbyHide;
-        if (dannyRoot) dannyRoot.transform.localPosition = dannyHide;
-
-        float t = 0f, dur = 0.6f;
-        while (t < dur)
-        {
-            float p = Mathf.SmoothStep(0f, 1f, t / dur);
-            if (bobbyRoot) bobbyRoot.transform.localPosition = Vector3.Lerp(bobbyHide, bobbyShow, p);
-            if (dannyRoot) dannyRoot.transform.localPosition = Vector3.Lerp(dannyHide, dannyShow, p);
-            t += Time.deltaTime;
-            yield return null;
-        }
-        if (bobbyRoot) bobbyRoot.transform.localPosition = bobbyShow;
-        if (dannyRoot) dannyRoot.transform.localPosition = dannyShow;
-
-        yield return new WaitForSeconds(0.3f);
-        StartCoroutine(PlayAllLines());
+        float p = Mathf.SmoothStep(0f, 1f, t / dur);
+        if (bobbyRoot) bobbyRoot.transform.localPosition = Vector3.Lerp(bobbyHide, bobbyShow, p);
+        if (dannyRoot) dannyRoot.transform.localPosition = Vector3.Lerp(dannyHide, dannyShow, p);
+        t += Time.deltaTime;
+        yield return null;
     }
+    if (bobbyRoot) bobbyRoot.transform.localPosition = bobbyShow;
+    if (dannyRoot) dannyRoot.transform.localPosition = dannyShow;
+
+    yield return new WaitForSeconds(0.3f);
+    StartCoroutine(PlayAllLines());
+}
 
     // ═════════════════════════════════════════════════════════════════════
     //  AUTO-PLAY ALL LINES SEQUENTIALLY

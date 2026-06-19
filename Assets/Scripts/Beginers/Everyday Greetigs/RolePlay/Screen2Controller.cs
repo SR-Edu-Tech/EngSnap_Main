@@ -212,7 +212,7 @@ public class Screen2Controller : MonoBehaviour
         {
             // Bob responds
             bobSpeechBubble.SetActive(true);
-            bobSpeechText.text = "I am doing great, ma'am! Thank you.";
+            bobSpeechText.text = "I am doing great, Thank you ma'am.How about you ma'am?";
             //SetTalking(bobAnimator, true);
             PlayClip(bobResponseClip);
             yield return new WaitForSeconds(GetClipLength(bobResponseClip, 2.5f));

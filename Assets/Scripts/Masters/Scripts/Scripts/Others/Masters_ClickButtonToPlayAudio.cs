@@ -21,7 +21,11 @@ public class Masters_ClickButtonToPlayAudio : MonoBehaviour {
     private void Awake() {
         button = GetComponent<Button>();
         rectTransform = GetComponent<RectTransform>();
-        button.onClick.AddListener(OnButtonClicked);
+        if (button != null) {
+            button.onClick.AddListener(OnButtonClicked);
+        } else {
+            Debug.LogWarning($"Button component missing on {gameObject.name}");
+        }
     }
 
     private void OnEnable() {
