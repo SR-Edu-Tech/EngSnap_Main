@@ -1,5 +1,6 @@
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.Text;
 using UnityEngine;
 using UnityEngine.Networking;
@@ -19,10 +20,19 @@ public class GameAuthManager : MonoBehaviour
 
     [Header("Class Selection")]
     public GameObject classSelectionPanel;
-    public GameObject beginnersLock;
-    public GameObject juniorsLock;
-    public GameObject seniorsLock;
-    public GameObject mastersLock;
+
+    [Tooltip("The Image component on each category's lock icon (same GameObject you " +
+             "were previously showing/hiding — now its sprite gets swapped instead).")]
+    public Image beginnersLock;
+    public Image juniorsLock;
+    public Image seniorsLock;
+    public Image mastersLock;
+
+    [Header("Lock Icon Sprites")]
+    [Tooltip("Sprite shown on a category's lock Image while it's locked.")]
+    public Sprite lockedSprite;
+    [Tooltip("Sprite shown on a category's lock Image once it's unlocked.")]
+    public Sprite unlockedSprite;
 
     [Header("Level Select Carousel")]
     public LevelSelectCarousel levelSelectCarousel;
@@ -32,11 +42,27 @@ public class GameAuthManager : MonoBehaviour
     public TextMeshProUGUI[] greetingTexts;
     public string greetingFormat = "Hi, {0}!";
 
-    // ── Course ID → carousel index ────────────────────────────────────────────
-    private const int COURSE_BEGINNERS = 12;
-    private const int COURSE_JUNIORS   = 14;
-    private const int COURSE_SENIORS   = 16;
-    private const int COURSE_MASTERS   = 19;
+    // ── Course ID → carousel category ─────────────────────────────────────────
+    // Each category can have multiple levels (Level 1, 2, 3, 4...), each with its
+    // own course id from the backend. List EVERY level id that belongs to a
+    // category here — the category unlocks if the student is assigned ANY one
+    // of them. Fill these in from your backend's actual course ids as new
+    // levels are added; the ones below are just the ids seen so far.
+    [Header("Course ID Mapping (all level ids per category)")]
+    [Tooltip("Every course id across all levels of Beginners (Level 1, 2, 3, 4...). " +
+             "Beginners unlocks if the student is assigned ANY of these. " +
+             "Only Level 1 & 2 ids confirmed so far — add 3/4 once known.")]
+    public int[] beginnersCourseIds = { 12, 13 };
+
+    [Tooltip("Every course id across all levels of Juniors. " +
+             "Only Level 1 & 2 ids confirmed so far — add 3/4 once known.")]
+    public int[] juniorsCourseIds = { 14, 15 };
+
+    [Tooltip("Every course id across all levels of Seniors.")]
+    public int[] seniorsCourseIds = { 16, 17, 18 };
+
+    [Tooltip("Every course id across all levels of Masters.")]
+    public int[] mastersCourseIds = { 19, 20, 21 };
 
     private string baseUrl = "https://gamedevpanel.com/api";
 
@@ -346,6 +372,18 @@ public class GameAuthManager : MonoBehaviour
         }
         else
         {
+            if (req.responseCode == 401)
+            {
+                // Token was rejected outright (expired/invalid) rather than a
+                // network hiccup — don't fall back to stale cached courses,
+                // since that leaves the user staring at a "locked" class
+                // selection screen with no obvious way back to login.
+                Debug.LogWarning("[GameAuthManager] Token rejected (401). Session expired — logging out.");
+                Logout();
+                statusText.text = "Session expired. Please log in again.";
+                yield break;
+            }
+
             Debug.LogWarning("[GameAuthManager] API call failed. Loading courses from cache...");
             if (LoadCachedCourses())
             {
@@ -374,7 +412,17 @@ public class GameAuthManager : MonoBehaviour
         ShowGreeting(null);
 
         if (HomeScreenManager.Instance != null)
+        {
             HomeScreenManager.Instance.SetCategoryLockStates(new bool[4]);
+            HomeScreenManager.Instance.SetUnlockedCourseIds(new HashSet<int>());
+        }
+
+        // Always land back on the login screen after logout — previously this
+        // only cleared data and reset locks but never touched panel visibility,
+        // so a logout could leave the (now stale/locked) class selection panel
+        // on screen with no way back to login.
+        if (classSelectionPanel != null) classSelectionPanel.SetActive(false);
+        if (loginPanel != null)          loginPanel.SetActive(true);
     }
 
     // ── Class selection ───────────────────────────────────────────────────────
@@ -384,29 +432,40 @@ public class GameAuthManager : MonoBehaviour
 
         bool[] unlocked = new bool[4];
 
-        SetLockOverlay(beginnersLock, true);
-        SetLockOverlay(juniorsLock,   true);
-        SetLockOverlay(seniorsLock,   true);
-        SetLockOverlay(mastersLock,   true);
+        // Every course id the student is assigned, at whatever level (Beginners
+        // Level 1 = 12, Level 2 = 13, etc.) — used to lock/unlock individual
+        // sub-buttons inside each category's sub-panel, not just the top-level
+        // category buttons.
+        var unlockedCourseIds = new HashSet<int>();
+
+        SetLockSprite(beginnersLock, true);
+        SetLockSprite(juniorsLock,   true);
+        SetLockSprite(seniorsLock,   true);
+        SetLockSprite(mastersLock,   true);
 
         foreach (AssignedCourse c in courses)
         {
             Debug.Log($"[GameAuthManager] Assigned: {c.name} (id={c.id})");
-            switch (c.id)
-            {
-                case COURSE_BEGINNERS: unlocked[0] = true; SetLockOverlay(beginnersLock, false); break;
-                case COURSE_JUNIORS:   unlocked[1] = true; SetLockOverlay(juniorsLock,   false); break;
-                case COURSE_SENIORS:   unlocked[2] = true; SetLockOverlay(seniorsLock,   false); break;
-                case COURSE_MASTERS:   unlocked[3] = true; SetLockOverlay(mastersLock,   false); break;
-            }
+
+            unlockedCourseIds.Add(c.id);
+
+            if (Contains(beginnersCourseIds, c.id)) { unlocked[0] = true; SetLockSprite(beginnersLock, false); }
+            if (Contains(juniorsCourseIds,   c.id)) { unlocked[1] = true; SetLockSprite(juniorsLock,   false); }
+            if (Contains(seniorsCourseIds,   c.id)) { unlocked[2] = true; SetLockSprite(seniorsLock,   false); }
+            if (Contains(mastersCourseIds,   c.id)) { unlocked[3] = true; SetLockSprite(mastersLock,   false); }
         }
 
-        // Apply to HomeScreenManager's category buttons
+        // Apply to HomeScreenManager's category buttons + per-level sub-buttons
         if (HomeScreenManager.Instance != null)
+        {
             HomeScreenManager.Instance.SetCategoryLockStates(unlocked);
+            HomeScreenManager.Instance.SetUnlockedCourseIds(unlockedCourseIds);
+        }
         else
+        {
             Debug.LogWarning("[GameAuthManager] HomeScreenManager.Instance is null — " +
                              "lock states not applied.");
+        }
 
         // Scroll carousel to first unlocked index
         int first = Array.FindIndex(unlocked, u => u);
@@ -420,10 +479,14 @@ public class GameAuthManager : MonoBehaviour
             Debug.LogWarning("[GameAuthManager] levelSelectCarousel not assigned.");
     }
 
-    private static void SetLockOverlay(GameObject go, bool show)
+    private void SetLockSprite(Image img, bool locked)
     {
-        if (go != null) go.SetActive(show);
+        if (img == null) return;
+        img.sprite = locked ? lockedSprite : unlockedSprite;
     }
+
+    private static bool Contains(int[] ids, int id) =>
+        ids != null && Array.IndexOf(ids, id) >= 0;
 }
 
 // ── Data models ───────────────────────────────────────────────────────────────

@@ -13,87 +13,255 @@ MonoBehaviour:
   m_Name: PanelConfig
   m_EditorClassIdentifier: 
   categories:
-  - buttonLabel: Beginners
-    panelHeading: Beginners
+  - buttonLabel: BEGINNERS
+    panelHeading: BEGINNERS
     subButtons:
-    - buttonLabel: Level 1A
+    - buttonLabel: 1A
       assetBundleUrl: https://drive.google.com/uc?export=download&id=1LO_BfC1-P8V7NZ1UYpgvb9UzYyHkxnZo
       sceneName: Beginer_1A
       homeScreenId: HomeScreen_Forest
       backgroundSprite: {fileID: 21300000, guid: c99d8cde92b9fec49a9fa7e99a565eca, type: 3}
       buttonSprite: {fileID: 21300000, guid: cf669e3328df407499845ad149f2271e, type: 3}
-    - buttonLabel: Level 1B
+      courseId: 12
+      manuallyLocked: 0
+    - buttonLabel: 1B
       assetBundleUrl: https://drive.google.com/uc?export=download&id=1LO_BfC1-P8V7NZ1UYpgvb9UzYyHkxnZo
       sceneName: Beginer_1B
       homeScreenId: HomeScreen_Forest
       backgroundSprite: {fileID: 21300000, guid: c99d8cde92b9fec49a9fa7e99a565eca, type: 3}
       buttonSprite: {fileID: 21300000, guid: cf669e3328df407499845ad149f2271e, type: 3}
-    - buttonLabel: Level 2A
+      courseId: 12
+      manuallyLocked: 0
+    - buttonLabel: PHONICS
       assetBundleUrl: https://drive.google.com/uc?export=download&id=1YFkrv0ZjvVIRcs4YcmKoUWxUda1Q3X17
       sceneName: Beginners_2A
       homeScreenId: HomeScreen_Forest
       backgroundSprite: {fileID: 21300000, guid: c99d8cde92b9fec49a9fa7e99a565eca, type: 3}
       buttonSprite: {fileID: 21300000, guid: cf669e3328df407499845ad149f2271e, type: 3}
-  - buttonLabel: Juniors
-    panelHeading: Juniors
+      courseId: 12
+      manuallyLocked: 1
+    - buttonLabel: 2A
+      assetBundleUrl: https://drive.google.com/uc?export=download&id=1YFkrv0ZjvVIRcs4YcmKoUWxUda1Q3X17
+      sceneName: Beginners_2A
+      homeScreenId: HomeScreen_Forest
+      backgroundSprite: {fileID: 21300000, guid: c99d8cde92b9fec49a9fa7e99a565eca, type: 3}
+      buttonSprite: {fileID: 21300000, guid: cf669e3328df407499845ad149f2271e, type: 3}
+      courseId: 13
+      manuallyLocked: 0
+    - buttonLabel: 2B
+      assetBundleUrl: https://drive.google.com/uc?export=download&id=1YFkrv0ZjvVIRcs4YcmKoUWxUda1Q3X17
+      sceneName: Beginners_2A
+      homeScreenId: HomeScreen_Forest
+      backgroundSprite: {fileID: 21300000, guid: c99d8cde92b9fec49a9fa7e99a565eca, type: 3}
+      buttonSprite: {fileID: 21300000, guid: cf669e3328df407499845ad149f2271e, type: 3}
+      courseId: 13
+      manuallyLocked: 1
+    - buttonLabel: PHONICS2
+      assetBundleUrl: https://drive.google.com/uc?export=download&id=1YFkrv0ZjvVIRcs4YcmKoUWxUda1Q3X17
+      sceneName: Beginners_2A
+      homeScreenId: HomeScreen_Forest
+      backgroundSprite: {fileID: 21300000, guid: c99d8cde92b9fec49a9fa7e99a565eca, type: 3}
+      buttonSprite: {fileID: 21300000, guid: cf669e3328df407499845ad149f2271e, type: 3}
+      courseId: 13
+      manuallyLocked: 1
+  - buttonLabel: JUNIORS
+    panelHeading: JUNIORS
     subButtons:
-    - buttonLabel: Level 1A
+    - buttonLabel: 1A
       assetBundleUrl: https://drive.google.com/uc?export=download&id=1zJV-D3XaKT3OoksjKUdd0f1ZssFZCYva
       sceneName: Junior_1A
       homeScreenId: HomeScreen_Water
       backgroundSprite: {fileID: 21300000, guid: cf09621552a475b4ba6f52268faffec6, type: 3}
       buttonSprite: {fileID: 21300000, guid: 1909b131275d209419bfea1a01ca5eee, type: 3}
-    - buttonLabel: Level 1B
+      courseId: 14
+      manuallyLocked: 0
+    - buttonLabel: 1B
       assetBundleUrl: https://drive.google.com/uc?export=download&id=1zJV-D3XaKT3OoksjKUdd0f1ZssFZCYva
       sceneName: Junior_1B
       homeScreenId: HomeScreen_Water
       backgroundSprite: {fileID: 21300000, guid: cf09621552a475b4ba6f52268faffec6, type: 3}
       buttonSprite: {fileID: 21300000, guid: 1909b131275d209419bfea1a01ca5eee, type: 3}
-    - buttonLabel: Level 2A
+      courseId: 14
+      manuallyLocked: 0
+    - buttonLabel: PHONICS
       assetBundleUrl: https://drive.google.com/uc?export=download&id=1TGaR9hUaIawaqY4W__Bdnjx9vVc232MJ
       sceneName: Junior_2A
       homeScreenId: HomeScreen_Water
       backgroundSprite: {fileID: 21300000, guid: cf09621552a475b4ba6f52268faffec6, type: 3}
       buttonSprite: {fileID: 21300000, guid: 1909b131275d209419bfea1a01ca5eee, type: 3}
-  - buttonLabel: Seniors
-    panelHeading: Seniors
+      courseId: 15
+      manuallyLocked: 1
+    - buttonLabel: 2A
+      assetBundleUrl: https://drive.google.com/uc?export=download&id=1TGaR9hUaIawaqY4W__Bdnjx9vVc232MJ
+      sceneName: Junior_2A
+      homeScreenId: HomeScreen_Water
+      backgroundSprite: {fileID: 21300000, guid: cf09621552a475b4ba6f52268faffec6, type: 3}
+      buttonSprite: {fileID: 21300000, guid: 1909b131275d209419bfea1a01ca5eee, type: 3}
+      courseId: 15
+      manuallyLocked: 0
+    - buttonLabel: 2B
+      assetBundleUrl: https://drive.google.com/uc?export=download&id=1TGaR9hUaIawaqY4W__Bdnjx9vVc232MJ
+      sceneName: Junior_2A
+      homeScreenId: HomeScreen_Water
+      backgroundSprite: {fileID: 21300000, guid: cf09621552a475b4ba6f52268faffec6, type: 3}
+      buttonSprite: {fileID: 21300000, guid: 1909b131275d209419bfea1a01ca5eee, type: 3}
+      courseId: 15
+      manuallyLocked: 1
+    - buttonLabel: WORKBOOK
+      assetBundleUrl: https://drive.google.com/uc?export=download&id=1TGaR9hUaIawaqY4W__Bdnjx9vVc232MJ
+      sceneName: Junior_2A
+      homeScreenId: HomeScreen_Water
+      backgroundSprite: {fileID: 21300000, guid: cf09621552a475b4ba6f52268faffec6, type: 3}
+      buttonSprite: {fileID: 21300000, guid: 1909b131275d209419bfea1a01ca5eee, type: 3}
+      courseId: 15
+      manuallyLocked: 1
+  - buttonLabel: SENIORS
+    panelHeading: SENIORS
     subButtons:
-    - buttonLabel: Level 1A
+    - buttonLabel: 1A
       assetBundleUrl: https://drive.google.com/uc?export=download&id=1b2TOHOb3Vlys7uevGRd5iwVQBuXKBUOX
       sceneName: SeniorLevel1A
       homeScreenId: HomeScreen_Desert
       backgroundSprite: {fileID: 21300000, guid: 819a2628e22a18c43ab19e97bada93fd, type: 3}
       buttonSprite: {fileID: 21300000, guid: bcd1fac159e014c4e9baecb27d97c266, type: 3}
-    - buttonLabel: Level 1B
+      courseId: 16
+      manuallyLocked: 0
+    - buttonLabel: 1B
       assetBundleUrl: https://drive.google.com/uc?export=download&id=1b2TOHOb3Vlys7uevGRd5iwVQBuXKBUOX
       sceneName: SeniorLevel1B
       homeScreenId: HomeScreen_Desert
       backgroundSprite: {fileID: 21300000, guid: 819a2628e22a18c43ab19e97bada93fd, type: 3}
       buttonSprite: {fileID: 21300000, guid: bcd1fac159e014c4e9baecb27d97c266, type: 3}
-    - buttonLabel: Level 2A
+      courseId: 16
+      manuallyLocked: 0
+    - buttonLabel: PHONICS
       assetBundleUrl: https://drive.google.com/uc?export=download&id=1Fg-rsXd-x74JPK_b2DdVuYlSLqD9GiBM
       sceneName: SeniorLevel2A
       homeScreenId: HomeScreen_Desert
       backgroundSprite: {fileID: 21300000, guid: 819a2628e22a18c43ab19e97bada93fd, type: 3}
       buttonSprite: {fileID: 21300000, guid: bcd1fac159e014c4e9baecb27d97c266, type: 3}
-  - buttonLabel: Masters
-    panelHeading: Masters
+      courseId: 17
+      manuallyLocked: 1
+    - buttonLabel: 2A
+      assetBundleUrl: https://drive.google.com/uc?export=download&id=1Fg-rsXd-x74JPK_b2DdVuYlSLqD9GiBM
+      sceneName: SeniorLevel2A
+      homeScreenId: HomeScreen_Desert
+      backgroundSprite: {fileID: 21300000, guid: 819a2628e22a18c43ab19e97bada93fd, type: 3}
+      buttonSprite: {fileID: 21300000, guid: bcd1fac159e014c4e9baecb27d97c266, type: 3}
+      courseId: 17
+      manuallyLocked: 0
+    - buttonLabel: 2B
+      assetBundleUrl: https://drive.google.com/uc?export=download&id=1Fg-rsXd-x74JPK_b2DdVuYlSLqD9GiBM
+      sceneName: SeniorLevel2A
+      homeScreenId: HomeScreen_Desert
+      backgroundSprite: {fileID: 21300000, guid: 819a2628e22a18c43ab19e97bada93fd, type: 3}
+      buttonSprite: {fileID: 21300000, guid: bcd1fac159e014c4e9baecb27d97c266, type: 3}
+      courseId: 17
+      manuallyLocked: 1
+    - buttonLabel: WORKBOOK
+      assetBundleUrl: https://drive.google.com/uc?export=download&id=1Fg-rsXd-x74JPK_b2DdVuYlSLqD9GiBM
+      sceneName: SeniorLevel2A
+      homeScreenId: HomeScreen_Desert
+      backgroundSprite: {fileID: 21300000, guid: 819a2628e22a18c43ab19e97bada93fd, type: 3}
+      buttonSprite: {fileID: 21300000, guid: bcd1fac159e014c4e9baecb27d97c266, type: 3}
+      courseId: 17
+      manuallyLocked: 1
+    - buttonLabel: 3A
+      assetBundleUrl: https://drive.google.com/uc?export=download&id=1Fg-rsXd-x74JPK_b2DdVuYlSLqD9GiBM
+      sceneName: SeniorLevel2A
+      homeScreenId: HomeScreen_Desert
+      backgroundSprite: {fileID: 21300000, guid: 819a2628e22a18c43ab19e97bada93fd, type: 3}
+      buttonSprite: {fileID: 21300000, guid: bcd1fac159e014c4e9baecb27d97c266, type: 3}
+      courseId: 17
+      manuallyLocked: 1
+    - buttonLabel: 3B
+      assetBundleUrl: https://drive.google.com/uc?export=download&id=1Fg-rsXd-x74JPK_b2DdVuYlSLqD9GiBM
+      sceneName: SeniorLevel2A
+      homeScreenId: HomeScreen_Desert
+      backgroundSprite: {fileID: 21300000, guid: 819a2628e22a18c43ab19e97bada93fd, type: 3}
+      buttonSprite: {fileID: 21300000, guid: bcd1fac159e014c4e9baecb27d97c266, type: 3}
+      courseId: 17
+      manuallyLocked: 1
+    - buttonLabel: ACTIVITYBOOK
+      assetBundleUrl: https://drive.google.com/uc?export=download&id=1Fg-rsXd-x74JPK_b2DdVuYlSLqD9GiBM
+      sceneName: SeniorLevel2A
+      homeScreenId: HomeScreen_Desert
+      backgroundSprite: {fileID: 21300000, guid: 819a2628e22a18c43ab19e97bada93fd, type: 3}
+      buttonSprite: {fileID: 21300000, guid: bcd1fac159e014c4e9baecb27d97c266, type: 3}
+      courseId: 17
+      manuallyLocked: 1
+  - buttonLabel: MASTERS
+    panelHeading: MASTERS
     subButtons:
-    - buttonLabel: Level 1A
+    - buttonLabel: 1A
       assetBundleUrl: https://drive.google.com/uc?export=download&id=1ld2FodYqdZxShpUEBa6h17ttbnjZlY7Q
       sceneName: Masters_B1
       homeScreenId: HomeScreen_City
       backgroundSprite: {fileID: 21300000, guid: 253965cd3ff8b6f4b8431b779a43e6eb, type: 3}
       buttonSprite: {fileID: 21300000, guid: fe62ee7e70b2a8e4b8addc11140a3792, type: 3}
-    - buttonLabel: Level 1B
+      courseId: 19
+      manuallyLocked: 0
+    - buttonLabel: 1B
       assetBundleUrl: https://drive.google.com/uc?export=download&id=1ld2FodYqdZxShpUEBa6h17ttbnjZlY7Q
       sceneName: Masters_B2
       homeScreenId: HomeScreen_City
       backgroundSprite: {fileID: 21300000, guid: 253965cd3ff8b6f4b8431b779a43e6eb, type: 3}
       buttonSprite: {fileID: 21300000, guid: fe62ee7e70b2a8e4b8addc11140a3792, type: 3}
-    - buttonLabel: Level 2A
+      courseId: 19
+      manuallyLocked: 0
+    - buttonLabel: PHONICS
       assetBundleUrl: https://drive.google.com/uc?export=download&id=1c4vvJIdVe3ZtZLWFt7se7XpllSgwU7yr
       sceneName: Masters_2A
       homeScreenId: HomeScreen_City
       backgroundSprite: {fileID: 21300000, guid: 253965cd3ff8b6f4b8431b779a43e6eb, type: 3}
       buttonSprite: {fileID: 21300000, guid: fe62ee7e70b2a8e4b8addc11140a3792, type: 3}
+      courseId: 20
+      manuallyLocked: 1
+    - buttonLabel: 2A
+      assetBundleUrl: https://drive.google.com/uc?export=download&id=1c4vvJIdVe3ZtZLWFt7se7XpllSgwU7yr
+      sceneName: Masters_2A
+      homeScreenId: HomeScreen_City
+      backgroundSprite: {fileID: 21300000, guid: 253965cd3ff8b6f4b8431b779a43e6eb, type: 3}
+      buttonSprite: {fileID: 21300000, guid: fe62ee7e70b2a8e4b8addc11140a3792, type: 3}
+      courseId: 20
+      manuallyLocked: 0
+    - buttonLabel: 2B
+      assetBundleUrl: https://drive.google.com/uc?export=download&id=1c4vvJIdVe3ZtZLWFt7se7XpllSgwU7yr
+      sceneName: Masters_2A
+      homeScreenId: HomeScreen_City
+      backgroundSprite: {fileID: 21300000, guid: 253965cd3ff8b6f4b8431b779a43e6eb, type: 3}
+      buttonSprite: {fileID: 21300000, guid: fe62ee7e70b2a8e4b8addc11140a3792, type: 3}
+      courseId: 20
+      manuallyLocked: 1
+    - buttonLabel: WORKBOOK
+      assetBundleUrl: https://drive.google.com/uc?export=download&id=1c4vvJIdVe3ZtZLWFt7se7XpllSgwU7yr
+      sceneName: Masters_2A
+      homeScreenId: HomeScreen_City
+      backgroundSprite: {fileID: 21300000, guid: 253965cd3ff8b6f4b8431b779a43e6eb, type: 3}
+      buttonSprite: {fileID: 21300000, guid: fe62ee7e70b2a8e4b8addc11140a3792, type: 3}
+      courseId: 20
+      manuallyLocked: 1
+    - buttonLabel: 3A
+      assetBundleUrl: https://drive.google.com/uc?export=download&id=1c4vvJIdVe3ZtZLWFt7se7XpllSgwU7yr
+      sceneName: Masters_2A
+      homeScreenId: HomeScreen_City
+      backgroundSprite: {fileID: 21300000, guid: 253965cd3ff8b6f4b8431b779a43e6eb, type: 3}
+      buttonSprite: {fileID: 21300000, guid: fe62ee7e70b2a8e4b8addc11140a3792, type: 3}
+      courseId: 20
+      manuallyLocked: 1
+    - buttonLabel: 3B
+      assetBundleUrl: https://drive.google.com/uc?export=download&id=1c4vvJIdVe3ZtZLWFt7se7XpllSgwU7yr
+      sceneName: Masters_2A
+      homeScreenId: HomeScreen_City
+      backgroundSprite: {fileID: 21300000, guid: 253965cd3ff8b6f4b8431b779a43e6eb, type: 3}
+      buttonSprite: {fileID: 21300000, guid: fe62ee7e70b2a8e4b8addc11140a3792, type: 3}
+      courseId: 20
+      manuallyLocked: 1
+    - buttonLabel: ACTIVITY
+      assetBundleUrl: https://drive.google.com/uc?export=download&id=1c4vvJIdVe3ZtZLWFt7se7XpllSgwU7yr
+      sceneName: Masters_2A
+      homeScreenId: HomeScreen_City
+      backgroundSprite: {fileID: 21300000, guid: 253965cd3ff8b6f4b8431b779a43e6eb, type: 3}
+      buttonSprite: {fileID: 21300000, guid: fe62ee7e70b2a8e4b8addc11140a3792, type: 3}
+      courseId: 20
+      manuallyLocked: 1

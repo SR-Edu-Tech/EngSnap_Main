@@ -89,6 +89,11 @@ public class HomeScreenManager : MonoBehaviour
     private Button                    _activeLearnButton = null;
     private static GameObject         _rememberedHomeScreen = null;
 
+    // Course IDs unlocked per the backend's assigned_courses (per-level, not just
+    // per-category). Null = not yet known (treated as "don't restrict" so sub-panels
+    // aren't accidentally locked before login data arrives).
+    private HashSet<int> _unlockedCourseIds = null;
+
     // ─────────────────────────────────────────────────────────────────────────
     private void Awake()
     {
@@ -208,6 +213,18 @@ public class HomeScreenManager : MonoBehaviour
             ApplyLockState(categoryButtons[i], unlockedIndices.Contains(i));
     }
 
+    /// <summary>
+    /// Sets the full set of unlocked course IDs (per level, e.g. "Beginners Level 1" = 12,
+    /// "Beginners Level 2" = 13), used to lock/unlock individual sub-buttons inside a
+    /// sub-panel. Call this from GameAuthManager right alongside SetCategoryLockStates.
+    /// Pass null to clear (e.g. on logout) — this makes BuildSubPanel treat everything
+    /// as unrestricted until fresh data arrives.
+    /// </summary>
+    public void SetUnlockedCourseIds(HashSet<int> unlockedCourseIds)
+    {
+        _unlockedCourseIds = unlockedCourseIds;
+    }
+
     private void ApplyLockState(Button btn, bool unlocked)
     {
         btn.interactable = unlocked;
@@ -224,6 +241,39 @@ public class HomeScreenManager : MonoBehaviour
         TextMeshProUGUI label = btn.GetComponentInChildren<TextMeshProUGUI>();
         if (label != null)
             label.alpha = unlocked ? 1f : 0.4f;
+    }
+
+    /// <summary>
+    /// Locks/unlocks a spawned sub-button based on:
+    ///   1. courseId == 0  → never API-locked (always unlocked, unless manuallyLocked)
+    ///   2. courseId != 0  → unlocked only if present in _unlockedCourseIds
+    ///   3. manuallyLocked → always wins, forces locked regardless of the above
+    /// _unlockedCourseIds == null means backend data hasn't arrived yet — in that
+    /// case courseId-based buttons are left unrestricted rather than locked, so a
+    /// slow API response can't accidentally block everything.
+    /// </summary>
+    private void ApplySubButtonLockState(Button btn, SubButtonData data)
+    {
+        bool unlocked = data.courseId == 0
+            || _unlockedCourseIds == null
+            || _unlockedCourseIds.Contains(data.courseId);
+
+        if (data.manuallyLocked)
+            unlocked = false;
+
+        btn.interactable = unlocked;
+
+        TextMeshProUGUI label = btn.GetComponentInChildren<TextMeshProUGUI>();
+        if (label != null)
+            label.alpha = unlocked ? 1f : 0.4f;
+
+        Image img = btn.GetComponent<Image>();
+        if (img != null)
+        {
+            Color c = img.color;
+            c.a = unlocked ? 1f : 0.5f;
+            img.color = c;
+        }
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -292,6 +342,8 @@ public class HomeScreenManager : MonoBehaviour
                 Image btnImage = btn.GetComponent<Image>();
                 if (btnImage != null) btnImage.sprite = subData.buttonSprite;
             }
+
+            ApplySubButtonLockState(btn, subData);
 
             SubButtonData captured = subData;
             btn.onClick.AddListener(() => OnSubButtonClicked(captured));

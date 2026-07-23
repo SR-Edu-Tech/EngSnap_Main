@@ -1,4 +1,3 @@
-
 using System;
 using System.Text;
 using TMPro;
@@ -47,7 +46,7 @@ namespace Junior2A
         [Header("Current Tracker State")]
         [SerializeField] int _selectedLessonIndex = -1;
         [SerializeField] Topics _selectedTopicType;
-        [SerializeField] int _currentSlideIndex;
+        [SerializeField] int _currentSlideIndex = -1;
         [SerializeField] bool _isLesssonOpen = true;
         [SerializeField] TopicData _currentTopicData;
         [SerializeField] GameObject _next, _topicParent, _lessonParent, _globalBackButton, _globalMainBackButton;
@@ -65,35 +64,43 @@ namespace Junior2A
             _isLesssonOpen = true;
             _selectedLessonIndex = _currentSlideIndex = -1;
             UnitAndTopicSelectionAudio(true);
-            _globalMainBackButton.SetActive(true);
-            _globalBackButton.SetActive(false);
+            if (_globalMainBackButton != null) _globalMainBackButton.SetActive(true);
+            if (_globalBackButton != null) _globalBackButton.SetActive(false);
         }
 
         public void SelectLesson(int lessonIndex)
         {
             _isLesssonOpen = false;
             _selectedLessonIndex = lessonIndex;
-            _topicParent.transform.GetChild(0).GetChild(0).GetComponent<RectTransform>().anchoredPosition = Vector3.zero;
+
+            if (_topicParent != null && _topicParent.transform.childCount > 0)
+            {
+                Transform container = _topicParent.transform.GetChild(0);
+                if (container.childCount > 0 && container.GetChild(0).TryGetComponent(out RectTransform rt))
+                {
+                    rt.anchoredPosition = Vector3.zero;
+                }
+            }
 
             if (_selectedLessonIndex >= 0 && _selectedLessonIndex < _lessons.Length)
             {
                 int _currentTopicIndex = 0;
                 foreach (TopicData topic in _lessons[_selectedLessonIndex].Topics)
                 {
-                    if (topic.IsCompleted)
+                    Transform topicGrid = _topicParent.transform.GetChild(0).GetChild(0);
+                    if (_currentTopicIndex < topicGrid.childCount)
                     {
-                        _topicParent.transform.GetChild(0).GetChild(0).GetChild(_currentTopicIndex).GetChild(1).GetComponent<Image>().enabled = true;
-                        Debug.Log($"Completed Topic: {topic.TopicType}");
-                    }
-                    else
-                    {
-                        _topicParent.transform.GetChild(0).GetChild(0).GetChild(_currentTopicIndex).GetChild(1).GetComponent<Image>().enabled = false;
+                        Transform item = topicGrid.GetChild(_currentTopicIndex);
+                        if (item.childCount > 1 && item.GetChild(1).TryGetComponent(out Image img))
+                        {
+                            img.enabled = topic.IsCompleted;
+                        }
                     }
                     _currentTopicIndex++;
                 }
             }
-            _globalBackButton.SetActive(true);
-            _globalMainBackButton.SetActive(false);
+            if (_globalBackButton != null) _globalBackButton.SetActive(true);
+            if (_globalMainBackButton != null) _globalMainBackButton.SetActive(false);
         }
 
         public void DebugMethod(string MSG) => Debug.Log(MSG);
@@ -102,29 +109,42 @@ namespace Junior2A
         {
             _selectedTopicType = (Topics)topicEnumIndex;
             _currentTopicData = GetTopicDataForCurrentLesson(_selectedTopicType);
-            if (_currentTopicData != null && _currentTopicData.Slides.Length > 0)
+
+            if (_currentTopicData != null && _currentTopicData.Slides != null && _currentTopicData.Slides.Length > 0)
             {
                 _currentSlideIndex = 0;
 
                 for (int i = 0; i < _currentTopicData.Slides.Length; i++)
                 {
-                    // Perfectly checks your global interface version
-                    Interfaces_Junior2A slideInterface = _currentTopicData.Slides[i].GetComponent<Interfaces_Junior2A>();
-                    if (slideInterface != null && slideInterface.IsViewed) _currentSlideIndex = i + 1;
+                    if (_currentTopicData.Slides[i] != null && _currentTopicData.Slides[i].TryGetComponent(out Interfaces_Junior2A slideInterface))
+                    {
+                        if (slideInterface.IsViewed) _currentSlideIndex = i + 1;
+                        else break;
+                    }
                     else break;
                 }
 
                 if (_currentSlideIndex >= _currentTopicData.Slides.Length) _currentSlideIndex = 0;
                 ShowCurrentSlideOnly();
             }
-            _globalBackButton.SetActive(true);
-            _globalMainBackButton.SetActive(false);
+
+            if (_globalBackButton != null) _globalBackButton.SetActive(true);
+            if (_globalMainBackButton != null) _globalMainBackButton.SetActive(false);
         }
 
         public void NextSlide()
         {
-            if (_currentSlideIndex > _currentTopicData.Slides.Length) return;
-            _currentTopicData.Slides[_currentSlideIndex].SetActive(false);
+            if (_currentTopicData == null || _currentTopicData.Slides == null) return;
+            if (_currentSlideIndex >= _currentTopicData.Slides.Length) return;
+
+            if (_currentSlideIndex >= 0 && _currentSlideIndex < _currentTopicData.Slides.Length)
+            {
+                if (_currentTopicData.Slides[_currentSlideIndex] != null)
+                {
+                    _currentTopicData.Slides[_currentSlideIndex].SetActive(false);
+                }
+            }
+
             _currentSlideIndex++;
             if (_currentSlideIndex >= _currentTopicData.Slides.Length) CompleteCurrentTopic();
             else ShowCurrentSlideOnly();
@@ -132,52 +152,105 @@ namespace Junior2A
 
         public void Back()
         {
-            if (_selectedLessonIndex >= 0 && _selectedLessonIndex < _lessons.Length && _lessons[_selectedLessonIndex].Reward != null && _lessons[_selectedLessonIndex].Reward.activeInHierarchy)
+            // 1. Hide Reward object if active
+            if (_selectedLessonIndex >= 0 && _selectedLessonIndex < _lessons.Length)
             {
-                _lessons[_selectedLessonIndex].Reward.SetActive(false);
-                _globalBackButton.SetActive(true);
+                if (_lessons[_selectedLessonIndex].Reward != null && _lessons[_selectedLessonIndex].Reward.activeInHierarchy)
+                {
+                    _lessons[_selectedLessonIndex].Reward.SetActive(false);
+                    if (_globalBackButton != null) _globalBackButton.SetActive(true);
+                }
             }
+
+            // 2. Already at Lesson/Topic selection menu level
             if (_currentSlideIndex < 0)
             {
-                _topicParent.SetActive(false);
+                if (_topicParent != null) _topicParent.SetActive(false);
                 UnitAndTopicSelectionAudio(true);
-                _lessonParent.GetComponent<RectTransform>().anchoredPosition = Vector3.zero;
-                for (int i = 0; i < 15; i++)
+
+                if (_lessonParent != null)
                 {
-                    // Perfectly checks your global pop effect component version
-                    var popEffect = _lessonParent.transform.GetChild(_lessonParent.transform.childCount - (1 + i)).GetComponent<PopEffect_Junior2A>();
-                    if (popEffect != null)
+                    if (_lessonParent.TryGetComponent(out RectTransform rt)) rt.anchoredPosition = Vector3.zero;
+
+                    int totalChildren = _lessonParent.transform.childCount;
+                    for (int i = 0; i < totalChildren; i++)
                     {
-                        popEffect.enabled = false;
-                        popEffect.enabled = true;
+                        Transform child = _lessonParent.transform.GetChild(i);
+                        if (child.TryGetComponent(out PopEffect_Junior2A popEffect))
+                        {
+                            popEffect.enabled = false;
+                            popEffect.enabled = true;
+                        }
                     }
                 }
+
                 _isLesssonOpen = true;
-                _globalMainBackButton.SetActive(true);
-                _globalBackButton.SetActive(false);
+                if (_globalMainBackButton != null) _globalMainBackButton.SetActive(true);
+                if (_globalBackButton != null) _globalBackButton.SetActive(false);
             }
+            // 3. Inside a topic's active slides
             else
             {
                 UnitAndTopicSelectionAudio(false);
-                _topicParent.transform.GetChild(0).GetChild(0).GetComponent<RectTransform>().anchoredPosition = Vector3.zero;
-                if (_currentTopicData.Slides.Length > 0) _currentTopicData.Slides[_currentSlideIndex].SetActive(false);
+
+                if (_topicParent != null && _topicParent.transform.childCount > 0)
+                {
+                    Transform container = _topicParent.transform.GetChild(0);
+                    if (container.childCount > 0 && container.GetChild(0).TryGetComponent(out RectTransform rt))
+                    {
+                        rt.anchoredPosition = Vector3.zero;
+                    }
+                }
+
+                // Turn off current slide safely if in range
+                if (_currentTopicData != null && _currentTopicData.Slides != null)
+                {
+                    if (_currentSlideIndex >= 0 && _currentSlideIndex < _currentTopicData.Slides.Length)
+                    {
+                        if (_currentTopicData.Slides[_currentSlideIndex] != null)
+                        {
+                            _currentTopicData.Slides[_currentSlideIndex].SetActive(false);
+                        }
+                    }
+                }
+
                 _currentSlideIndex--;
-                Next(false);
+
+                if (_currentSlideIndex >= 0)
+                {
+                    ShowCurrentSlideOnly();
+                }
+                else
+                {
+                    // Returned to topic menu from slide 0
+                    Next(false);
+                }
             }
         }
 
         public void Next(bool value)
         {
-            _next.SetActive(value);
-            var popEffect = _next.GetComponent<PopEffect_Junior2A>();
-            if (popEffect != null) popEffect.enabled = true;
+            if (_next != null)
+            {
+                _next.SetActive(value);
+                if (value && _next.TryGetComponent(out PopEffect_Junior2A popEffect))
+                {
+                    popEffect.enabled = false;
+                    popEffect.enabled = true;
+                }
+            }
         }
 
         void ShowCurrentSlideOnly()
         {
+            if (_currentTopicData == null || _currentTopicData.Slides == null) return;
+
             for (int i = 0; i < _currentTopicData.Slides.Length; i++)
             {
-                _currentTopicData.Slides[i].SetActive(i == _currentSlideIndex);
+                if (_currentTopicData.Slides[i] != null)
+                {
+                    _currentTopicData.Slides[i].SetActive(i == _currentSlideIndex);
+                }
             }
         }
 
@@ -190,6 +263,8 @@ namespace Junior2A
 
         TopicData GetTopicDataForCurrentLesson(Topics expectedTopic)
         {
+            if (_selectedLessonIndex < 0 || _selectedLessonIndex >= _lessons.Length) return null;
+
             foreach (TopicData topic in _lessons[_selectedLessonIndex].Topics)
             {
                 if (topic.TopicType == expectedTopic) return topic;
@@ -199,44 +274,70 @@ namespace Junior2A
 
         void CompleteCurrentTopic()
         {
-            _currentTopicData.IsCompleted = true;
+            if (_currentTopicData != null) _currentTopicData.IsCompleted = true;
+
             int _currentTopicIndex = 0;
             bool _allDone = true;
-            foreach (TopicData topic in _lessons[_selectedLessonIndex].Topics)
+
+            if (_selectedLessonIndex >= 0 && _selectedLessonIndex < _lessons.Length)
             {
-                if (topic.IsCompleted) _topicParent.transform.GetChild(0).GetChild(0).GetChild(_currentTopicIndex).GetChild(1).GetComponent<Image>().enabled = true;
-                else
+                foreach (TopicData topic in _lessons[_selectedLessonIndex].Topics)
                 {
-                    _topicParent.transform.GetChild(0).GetChild(0).GetChild(_currentTopicIndex).GetChild(1).GetComponent<Image>().enabled = false;
-                    _allDone = false;
+                    Transform topicGrid = _topicParent.transform.GetChild(0).GetChild(0);
+                    if (_currentTopicIndex < topicGrid.childCount)
+                    {
+                        Transform item = topicGrid.GetChild(_currentTopicIndex);
+                        if (item.childCount > 1 && item.GetChild(1).TryGetComponent(out Image img))
+                        {
+                            img.enabled = topic.IsCompleted;
+                        }
+                    }
+
+                    if (!topic.IsCompleted) _allDone = false;
+                    _currentTopicIndex++;
                 }
-                _currentTopicIndex++;
             }
+
             _currentSlideIndex = -1;
+
             if (_allDone)
             {
-                _lessons[_selectedLessonIndex].Reward.SetActive(true);
-                _globalBackButton.SetActive(false);
-                _globalMainBackButton.SetActive(true);
+                if (_selectedLessonIndex >= 0 && _selectedLessonIndex < _lessons.Length)
+                {
+                    if (_lessons[_selectedLessonIndex].Reward != null)
+                    {
+                        _lessons[_selectedLessonIndex].Reward.SetActive(true);
+                    }
+                }
+
+                if (_globalBackButton != null) _globalBackButton.SetActive(false);
+                if (_globalMainBackButton != null) _globalMainBackButton.SetActive(true);
             }
             else
             {
                 UnitAndTopicSelectionAudio(false);
-                _topicParent.transform.GetChild(0).GetChild(0).GetComponent<RectTransform>().anchoredPosition = Vector3.zero;
+                if (_topicParent != null && _topicParent.transform.childCount > 0)
+                {
+                    Transform container = _topicParent.transform.GetChild(0);
+                    if (container.childCount > 0 && container.GetChild(0).TryGetComponent(out RectTransform rt))
+                    {
+                        rt.anchoredPosition = Vector3.zero;
+                    }
+                }
             }
             Debug.Log($"Topic {_selectedTopicType} in Lesson {_selectedLessonIndex + 1} is completely viewed!");
         }
 
         public void Pop()
         {
-            if (_audioSource == null) return;
+            if (_audioSource == null || _popClip == null) return;
             _audioSource.clip = _popClip;
             _audioSource.Play();
         }
 
         public void Woosh()
         {
-            if (_audioSource == null) return;
+            if (_audioSource == null || _wooshClip == null) return;
             _audioSource.clip = _wooshClip;
             _audioSource.Play();
         }
@@ -266,4 +367,3 @@ namespace Junior2A
         }
     }
 }
-
