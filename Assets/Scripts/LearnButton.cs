@@ -19,8 +19,11 @@ public class LearnButton : MonoBehaviour
 
     private void Awake()
     {
+       Caching.ClearCache();
         _button = GetComponent<Button>();
         _button.onClick.AddListener(OnLearnClicked);
+
+        Debug.Log(Application.persistentDataPath);
     }
 
     private void Start()

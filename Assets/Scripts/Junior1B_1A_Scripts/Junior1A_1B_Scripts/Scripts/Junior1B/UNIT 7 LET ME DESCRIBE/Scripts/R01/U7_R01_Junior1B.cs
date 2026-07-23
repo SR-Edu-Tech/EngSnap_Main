@@ -1,0 +1,338 @@
+using System.Collections;
+using System.Collections.Generic;
+using TMPro;
+using UnityEngine;
+using UnityEngine.UI;
+
+public class U7_R01_Junior1B : MonoBehaviour, Interfaces_Junior1B
+{
+    [Header("Audio Engine Setup")]
+    [SerializeField] private AudioSource _audioSource;
+    [SerializeField] private AudioClip _introClip;
+    [Tooltip("Intro clips for each individual button parent theme respectively.")]
+    [SerializeField] private AudioClip[] _groupIntroClips;
+    [SerializeField] private AudioClip[] _clips;
+
+    [Header("Layout Target References")]
+    [Tooltip("Assign your 4 distinct button theme groups here in sequential layout order.")]
+    [SerializeField] private Transform[] _cardParents; 
+
+    [Header("Color Visual States")]
+    [SerializeField] private Color _playingColor = Color.yellow;
+    [SerializeField] private Color _doneColor = Color.green;
+
+    [Header("Runtime State Matrices")]
+    [SerializeField] private int _activeGroupIndex = 0;
+    [SerializeField] private int _currentAudioIndex = 0;
+    [SerializeField] private bool _isViewed = false;
+    [SerializeField] private bool _isSlowed = false;
+
+    private Coroutine _coroutine;
+    private Coroutine _repeatCoroutine;
+    
+    // Tracks globally played audio clip indices to determine completion
+    private HashSet<int> _completedGlobalIndices = new HashSet<int>();
+    private bool _isSequenceRunning = false;
+
+    public bool IsViewed => _isViewed;
+
+    private void OnEnable() => StartCoroutine(Starter());
+
+    private IEnumerator Starter()
+    {
+        if (_cardParents == null || _cardParents.Length == 0)
+        {
+            Debug.LogError("❌ Card Parents array reference is completely missing or empty!");
+            yield break;
+        }
+
+        // Hide the footer next button layer tracking setups on startup
+        if (transform.childCount > 0)
+        {
+            Transform footer = transform.GetChild(transform.childCount - 1);
+            if (footer.childCount > 1) footer.GetChild(1).gameObject.SetActive(false);
+        }
+
+        _completedGlobalIndices.Clear();
+        DeactivateAllParents();
+        ResetAllCardVisualColors();
+        
+        _activeGroupIndex = 0;
+        _currentAudioIndex = 0;
+
+        // 1. Master Intro plays over a clean initial screen state
+        if (_audioSource != null && _introClip != null)
+        {
+            _audioSource.clip = _introClip;
+            _audioSource.Play();
+            yield return new WaitForSeconds(_introClip.length);
+        }
+
+        // 2. Start the group flow sequence manually
+        yield return StartCoroutine(SetupActiveGroup(_activeGroupIndex));
+    }
+
+    private IEnumerator SetupActiveGroup(int groupIndex)
+    {
+        if (groupIndex >= _cardParents.Length)
+        {
+            // All groups complete! Reveal navigation targets
+            if (transform.childCount > 0)
+            {
+                Transform footer = transform.GetChild(transform.childCount - 1);
+                if (footer.childCount > 1) footer.GetChild(1).gameObject.SetActive(true);
+            }
+
+            if (GameManager_Junior1B.Instance != null) GameManager_Junior1B.Instance.Next(true);
+            _isViewed = true;
+            yield break;
+        }
+
+        _isSequenceRunning = true;
+        _activeGroupIndex = groupIndex;
+        Transform activeParent = _cardParents[_activeGroupIndex];
+        if (activeParent == null) yield break;
+
+        // Activate parent container frame
+        activeParent.gameObject.SetActive(true);
+
+        // Play Group Intro if available
+        if (_groupIntroClips != null && _activeGroupIndex < _groupIntroClips.Length && _groupIntroClips[_activeGroupIndex] != null)
+        {
+            _audioSource.clip = _groupIntroClips[_activeGroupIndex];
+            _audioSource.Play();
+            yield return new WaitForSeconds(_audioSource.clip.length);
+        }
+        else
+        {
+            yield return new WaitForSeconds(0.3f);
+        }
+
+        // Sequentially spawn and pop all card layout items in the active parent group
+        foreach (Transform button in activeParent)
+        {
+            button.gameObject.SetActive(true);
+            if (button.TryGetComponent(out Button btn)) btn.interactable = false;
+
+            if (button.TryGetComponent(out Popeffect_Junior1B pop)) 
+            {
+                pop.enabled = false; 
+                pop.enabled = true;
+                yield return new WaitForSeconds(pop.PopDuration + 0.15f);
+            }
+            else
+            {
+                yield return new WaitForSeconds(0.5f);
+            }
+        }
+
+        // Re-enable interaction settings so the user can click them manually
+        foreach (Transform button in activeParent)
+        {
+            if (button.TryGetComponent(out Button btn)) btn.interactable = true;
+        }
+
+        _isSequenceRunning = false;
+    }
+
+    public void PlayAudio(int index)
+    {
+        if (_isSequenceRunning || _cardParents == null || _activeGroupIndex >= _cardParents.Length) return;
+
+        if (_repeatCoroutine != null) StopCoroutine(_repeatCoroutine);
+        
+        // Reset previously playing target visual frames if clicking rapidly
+        ResetCardVisualState(_currentAudioIndex);
+        UpdateCardColor(_currentAudioIndex, _completedGlobalIndices.Contains(_currentAudioIndex) ? _doneColor : Color.white);
+
+        _currentAudioIndex = index;
+        
+        if (_coroutine != null) StopCoroutine(_coroutine);
+        _coroutine = StartCoroutine(StartButtonAudio());
+    }
+
+    private IEnumerator StartButtonAudio()
+    {
+        SetCardActiveVisualState(_currentAudioIndex);
+        UpdateCardColor(_currentAudioIndex, _playingColor); // Set to playing state (Yellow)
+
+        if (_clips != null && _currentAudioIndex < _clips.Length && _clips[_currentAudioIndex] != null && _audioSource != null)
+        {
+            _audioSource.clip = _clips[_currentAudioIndex];
+            _audioSource.Play();
+
+            float pV1 = Mathf.Abs(_audioSource.pitch) > 0 ? Mathf.Abs(_audioSource.pitch) : 1f;
+            float aL1 = _clips[_currentAudioIndex].length / pV1;
+            yield return new WaitForSeconds(aL1);
+        }
+
+        ResetCardVisualState(_currentAudioIndex);
+        _completedGlobalIndices.Add(_currentAudioIndex);
+        UpdateCardColor(_currentAudioIndex, _doneColor); // Finished playing state (Green)
+
+        // Check if all buttons inside the CURRENT active parent are fully listened to
+        CheckCurrentGroupCompletion();
+    }
+
+    private void CheckCurrentGroupCompletion()
+    {
+        Transform activeParent = _cardParents[_activeGroupIndex];
+        if (activeParent == null) return;
+
+        int startingClipOffsetIndex = GetGroupGlobalOffsetIndex(_activeGroupIndex);
+        int totalChildrenInGroup = activeParent.childCount;
+
+        bool groupComplete = true;
+        for (int i = 0; i < totalChildrenInGroup; i++)
+        {
+            int globalCheckIndex = startingClipOffsetIndex + i;
+            if (!_completedGlobalIndices.Contains(globalCheckIndex))
+            {
+                groupComplete = false;
+                break;
+            }
+        }
+
+        // If all matching row profiles have finished listening, shift focus onwards automatically
+        if (groupComplete)
+        {
+            StartCoroutine(TransitionToNextGroup());
+        }
+    }
+
+    private IEnumerator TransitionToNextGroup()
+    {
+        _isSequenceRunning = true;
+        yield return new WaitForSeconds(0.5f);
+
+        // Hide current finished pack if there is a next one to load
+        if (_activeGroupIndex < _cardParents.Length - 1)
+        {
+            if (_cardParents[_activeGroupIndex] != null)
+                _cardParents[_activeGroupIndex].gameObject.SetActive(false);
+        }
+
+        _activeGroupIndex++;
+        yield return StartCoroutine(SetupActiveGroup(_activeGroupIndex));
+    }
+
+    public void Repeat()
+    {
+        if (_cardParents == null || _cardParents.Length == 0) return;
+
+        ResetCardVisualState(_currentAudioIndex);
+        if (_coroutine != null) StopCoroutine(_coroutine);
+        if (_repeatCoroutine != null) StopCoroutine(_repeatCoroutine);
+
+        _repeatCoroutine = StartCoroutine(RepeatFromBeginningFlow());
+    }
+
+    private IEnumerator RepeatFromBeginningFlow()
+    {
+        _completedGlobalIndices.Clear();
+        DeactivateAllParents();
+        ResetAllCardVisualColors();
+        
+        _activeGroupIndex = 0;
+        _currentAudioIndex = 0;
+
+        yield return StartCoroutine(SetupActiveGroup(_activeGroupIndex));
+    }
+
+    public void Slow(TextMeshProUGUI text)
+    {
+        if (text != null) text.text = _isSlowed ? "    SLOW" : "    FAST";
+        if (_audioSource != null) _audioSource.pitch = _isSlowed ? 1f : 0.75f;
+        _isSlowed = !_isSlowed;
+    }
+
+    private void DeactivateAllParents()
+    {
+        foreach (Transform parent in _cardParents)
+        {
+            if (parent != null)
+            {
+                foreach (Transform button in parent) button.gameObject.SetActive(false);
+                parent.gameObject.SetActive(false);
+            }
+        }
+    }
+
+    private void ResetAllCardVisualColors()
+    {
+        for (int i = 0; i < _clips.Length; i++)
+        {
+            UpdateCardColor(i, Color.white);
+            ResetCardVisualState(i);
+        }
+    }
+
+    private void UpdateCardColor(int globalIndex, Color targetColor)
+    {
+        Transform targetCard = GetCardTransformFromIndex(globalIndex);
+        if (targetCard != null && targetCard.TryGetComponent(out Image cardImage))
+        {
+            cardImage.color = targetColor;
+        }
+    }
+
+    private int GetGroupGlobalOffsetIndex(int groupIndex)
+    {
+        int accumulatedCount = 0;
+        for (int i = 0; i < groupIndex; i++)
+        {
+            if (_cardParents[i] != null) accumulatedCount += _cardParents[i].childCount;
+        }
+        return accumulatedCount;
+    }
+
+    private void SetCardActiveVisualState(int index)
+    {
+        Transform targetCard = GetCardTransformFromIndex(index);
+        if (targetCard == null) return;
+
+        if (targetCard.childCount > 0)
+        {
+            Transform innerContainer = targetCard.GetChild(0);
+            if (innerContainer.childCount > 0)
+            {
+                Transform highlightObj = innerContainer.GetChild(0);
+                if (highlightObj.TryGetComponent(out Image highlightImg)) highlightImg.enabled = true;
+            }
+        }
+    }
+
+    private void ResetCardVisualState(int index)
+    {
+        Transform targetCard = GetCardTransformFromIndex(index);
+        if (targetCard == null) return;
+
+        if (targetCard.childCount > 0)
+        {
+            Transform innerContainer = targetCard.GetChild(0);
+            if (innerContainer.childCount > 0)
+            {
+                Transform highlightObj = innerContainer.GetChild(0);
+                if (highlightObj.TryGetComponent(out Image highlightImg)) highlightImg.enabled = false;
+            }
+        }
+    }
+
+    private Transform GetCardTransformFromIndex(int globalIndex)
+    {
+        int accumulatedCount = 0;
+        for (int i = 0; i < _cardParents.Length; i++)
+        {
+            if (_cardParents[i] == null) continue;
+            int countInThisParent = _cardParents[i].childCount;
+
+            if (globalIndex >= accumulatedCount && globalIndex < accumulatedCount + countInThisParent)
+            {
+                int localIndex = globalIndex - accumulatedCount;
+                return _cardParents[i].GetChild(localIndex);
+            }
+            accumulatedCount += countInThisParent;
+        }
+        return null;
+    }
+}

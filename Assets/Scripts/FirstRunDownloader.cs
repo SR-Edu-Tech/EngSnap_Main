@@ -65,6 +65,34 @@ public class FirstRunDownloader : MonoBehaviour
     public GameObject classSelectionPanel;
     public GameObject loginPanel;
 
+    [Header("No Internet Popup")]
+    [Tooltip("Popup panel shown when trying to download without internet.")]
+    public GameObject noInternetPopup;
+    [Tooltip("Retry button inside the no internet popup.")]
+    public Button noInternetRetryButton;
+    [Tooltip("Home button inside the no internet popup.")]
+    public Button noInternetHomeButton;
+    [Tooltip("Text component inside the no internet popup to display status message.")]
+    public TextMeshProUGUI noInternetText;
+
+    private enum UserChoice
+    {
+        Pending,
+        Retry,
+        GoToHomeScreen
+    }
+    private UserChoice _userChoice = UserChoice.Pending;
+
+    private Coroutine _animationRoutine;
+    private int _noInternetTextIndex = 0;
+    private readonly string[] _noInternetSentences = new string[]
+    {
+        "Internet connection lost.",
+        "Connect to an active internet connection and try again.",
+        "Please check your Wi-Fi or mobile data network settings.",
+        "Ensure your device is online before retrying."
+    };
+
     [Header("Settings")]
     public int maxRetries = 3;
     public float completionDelay = 0.2f;
@@ -81,6 +109,141 @@ public class FirstRunDownloader : MonoBehaviour
         }
 
         Instance = this;
+    }
+
+    private void Start()
+    {
+        if (noInternetRetryButton != null)
+            noInternetRetryButton.onClick.AddListener(OnRetryButtonClicked);
+        if (noInternetHomeButton != null)
+            noInternetHomeButton.onClick.AddListener(OnNoInternetHomeClicked);
+
+        if (noInternetPopup != null)
+        {
+            noInternetPopup.SetActive(false);
+
+            if (noInternetText == null)
+            {
+                var texts = noInternetPopup.GetComponentsInChildren<TextMeshProUGUI>(true);
+                foreach (var t in texts)
+                {
+                    if (noInternetRetryButton != null && t.transform.IsChildOf(noInternetRetryButton.transform))
+                        continue;
+                    if (noInternetHomeButton != null && t.transform.IsChildOf(noInternetHomeButton.transform))
+                        continue;
+                    if (t.GetComponentInParent<Button>() != null)
+                        continue;
+
+                    noInternetText = t;
+                    break;
+                }
+            }
+        }
+    }
+
+    private void StartAnimation(IEnumerator routine)
+    {
+        if (_animationRoutine != null)
+        {
+            StopCoroutine(_animationRoutine);
+        }
+        _animationRoutine = StartCoroutine(routine);
+    }
+
+    private IEnumerator PopInRoutine(Transform target)
+    {
+        target.localScale = Vector3.zero;
+        float duration = 0.4f;
+        float elapsed = 0f;
+        while (elapsed < duration)
+        {
+            elapsed += Time.unscaledDeltaTime;
+            float t = elapsed / duration;
+            float scaleValue;
+            if (t < 0.7f)
+            {
+                scaleValue = Mathf.Lerp(0f, 1.15f, t / 0.7f);
+            }
+            else
+            {
+                scaleValue = Mathf.Lerp(1.15f, 1.0f, (t - 0.7f) / 0.3f);
+            }
+            target.localScale = new Vector3(scaleValue, scaleValue, scaleValue);
+            yield return null;
+        }
+        target.localScale = Vector3.one;
+    }
+
+    private IEnumerator BounceRoutine(Transform target, Action onComplete = null)
+    {
+        float duration = 0.3f;
+        float elapsed = 0f;
+        while (elapsed < duration)
+        {
+            elapsed += Time.unscaledDeltaTime;
+            float t = elapsed / duration;
+            float scaleValue;
+            if (t < 0.3f)
+            {
+                scaleValue = Mathf.Lerp(1f, 0.85f, t / 0.3f);
+            }
+            else if (t < 0.7f)
+            {
+                scaleValue = Mathf.Lerp(0.85f, 1.15f, (t - 0.3f) / 0.4f);
+            }
+            else
+            {
+                scaleValue = Mathf.Lerp(1.15f, 1.0f, (t - 0.7f) / 0.3f);
+            }
+            target.localScale = new Vector3(scaleValue, scaleValue, scaleValue);
+            yield return null;
+        }
+        target.localScale = Vector3.one;
+        onComplete?.Invoke();
+    }
+
+    private void OnRetryButtonClicked()
+    {
+        if (Application.internetReachability != NetworkReachability.NotReachable)
+        {
+            Debug.Log("[FirstRunDownloader] Internet connection restored. Retrying download...");
+            StartAnimation(BounceRoutine(noInternetPopup.transform, () =>
+            {
+                if (noInternetPopup != null)
+                    noInternetPopup.SetActive(false);
+                _userChoice = UserChoice.Retry;
+            }));
+        }
+        else
+        {
+            Debug.LogWarning("[FirstRunDownloader] Retry clicked, but still no internet.");
+            _noInternetTextIndex = (_noInternetTextIndex + 1) % _noInternetSentences.Length;
+            if (noInternetText != null)
+            {
+                noInternetText.text = _noInternetSentences[_noInternetTextIndex];
+            }
+            StartAnimation(BounceRoutine(noInternetPopup.transform));
+        }
+    }
+
+    private void OnNoInternetHomeClicked()
+    {
+        Debug.Log("[FirstRunDownloader] Home clicked on No Internet popup.");
+        
+        StartAnimation(BounceRoutine(noInternetPopup.transform, () =>
+        {
+            _userChoice = UserChoice.GoToHomeScreen;
+
+            if (noInternetPopup != null)
+                noInternetPopup.SetActive(false);
+
+            HideDownloadPanel();
+
+            if (HomeScreenManager.Instance != null)
+            {
+                HomeScreenManager.Instance.RestoreAfterBundle();
+            }
+        }));
     }
 
     public void StartFlow()
@@ -147,8 +310,36 @@ public class FirstRunDownloader : MonoBehaviour
             {
                 if (Application.internetReachability == NetworkReachability.NotReachable)
                 {
-                    NotifyLearnLoadError("No internet connection. Please connect and try again.");
-                    yield break;
+                    // Show "No Internet" popup
+                    if (noInternetPopup != null)
+                    {
+                        if (noInternetText != null)
+                        {
+                            noInternetText.text = "Internet connection lost.";
+                        }
+                        noInternetPopup.SetActive(true);
+                        StartAnimation(PopInRoutine(noInternetPopup.transform));
+                    }
+                    else
+                    {
+                        Debug.LogError("[FirstRunDownloader] noInternetPopup is not assigned!");
+                    }
+
+                    // Hide normal download/loading panel so only the popup shows
+                    HideDownloadPanel();
+
+                    _userChoice = UserChoice.Pending;
+
+                    // Wait until user makes a choice (Retry or Home Screen)
+                    while (_userChoice == UserChoice.Pending)
+                    {
+                        yield return null;
+                    }
+
+                    if (_userChoice == UserChoice.GoToHomeScreen)
+                    {
+                        yield break;
+                    }
                 }
 
                 ShowDownloadPanel("Downloading lesson...", 0f);
@@ -343,6 +534,7 @@ public class FirstRunDownloader : MonoBehaviour
 
         PlayerPrefs.DeleteKey(PREF_BUNDLE_VERSION);
         PlayerPrefs.DeleteKey(PREF_LEGACY_DOWNLOADED);
+        PlayerPrefs.DeleteKey("CACHED_COURSES");
         PlayerPrefs.Save();
 
         string dir = Path.Combine(Application.persistentDataPath, "bundles");

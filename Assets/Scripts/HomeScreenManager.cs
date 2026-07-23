@@ -391,6 +391,24 @@ public class HomeScreenManager : MonoBehaviour
     }
 
     // ─────────────────────────────────────────────────────────────────────────
+    //  Restore directly to the main home screen (clearing active/remembered screens)
+    // ─────────────────────────────────────────────────────────────────────────
+    public void RestoreToHomeScreen()
+    {
+        Debug.Log("[HomeScreenManager] RestoreToHomeScreen called.");
+
+        if (mainCamera != null) mainCamera.gameObject.SetActive(true);
+
+        HideActiveHomeScreen();
+        _rememberedHomeScreen = null;
+
+        ShowLoadingOverlay(false);
+        ReEnableLearnButton();
+
+        ShowScreen(homeScreen);
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
     //  Progress / error handlers
     // ─────────────────────────────────────────────────────────────────────────
     private void HandleProgress(float t)

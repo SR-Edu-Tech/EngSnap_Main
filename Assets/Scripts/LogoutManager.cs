@@ -11,6 +11,7 @@ public class LogoutManager : MonoBehaviour
     {
         // REMOVE LOGIN TOKEN
         PlayerPrefs.DeleteKey("ACCESS_TOKEN");
+        PlayerPrefs.DeleteKey("CACHED_COURSES");
 
         // OPTIONAL
         PlayerPrefs.Save();

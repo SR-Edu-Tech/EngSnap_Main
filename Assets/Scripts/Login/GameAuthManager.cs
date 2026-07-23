@@ -97,13 +97,24 @@ public class GameAuthManager : MonoBehaviour
     // ─────────────────────────────────────────────────────────────────────────
     public void ApplySessionState()
     {
+        ShowGreeting(AppSession.UserName);
+
+        // Offline mode check first
+        if (Application.internetReachability == NetworkReachability.NotReachable)
+        {
+            if (LoadCachedCourses())
+            {
+                return;
+            }
+        }
+
         if (string.IsNullOrEmpty(AppSession.StudentId))
         {
-            Debug.LogWarning("[GameAuthManager] ApplySessionState: no student ID.");
+            Debug.LogWarning("[GameAuthManager] ApplySessionState: no student ID. Checking for cache...");
+            LoadCachedCourses();
             return;
         }
 
-        ShowGreeting(AppSession.UserName);
         StartCoroutine(GetStudentCourses(AppSession.StudentId));
     }
 
@@ -116,6 +127,22 @@ public class GameAuthManager : MonoBehaviour
         {
             Debug.Log("Already Logged In");
             ShowGreeting(AppSession.UserName);
+
+            if (Application.internetReachability == NetworkReachability.NotReachable)
+            {
+                if (LoadCachedCourses())
+                {
+                    return;
+                }
+            }
+
+            if (string.IsNullOrEmpty(AppSession.StudentId))
+            {
+                Debug.LogWarning("[GameAuthManager] OnPlayButton: no student ID. Checking for cache...");
+                LoadCachedCourses();
+                return;
+            }
+
             StartCoroutine(GetStudentCourses(AppSession.StudentId));
         }
         else
@@ -234,9 +261,46 @@ public class GameAuthManager : MonoBehaviour
             HomeScreenManager.Instance.RefreshGreeting();
     }
 
+    private bool LoadCachedCourses()
+    {
+        if (PlayerPrefs.HasKey("CACHED_COURSES"))
+        {
+            try
+            {
+                string cachedJson = PlayerPrefs.GetString("CACHED_COURSES");
+                if (!string.IsNullOrEmpty(cachedJson))
+                {
+                    CoursesResponse response = JsonUtility.FromJson<CoursesResponse>(cachedJson);
+                    if (response?.data?.assigned_courses != null && response.data.assigned_courses.Length > 0)
+                    {
+                        if (statusText != null) statusText.text = "";
+                        OpenClassSelection(response.data.assigned_courses);
+                        return true;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.LogError($"[GameAuthManager] Error loading cached courses: {ex.Message}");
+            }
+        }
+        return false;
+    }
+
     // ── Courses API ───────────────────────────────────────────────────────────
     IEnumerator GetStudentCourses(string studentId)
     {
+        if (Application.internetReachability == NetworkReachability.NotReachable)
+        {
+            Debug.Log("[GameAuthManager] Offline mode detected. Checking for cached courses...");
+            if (LoadCachedCourses())
+            {
+                yield break;
+            }
+            statusText.text = "No Internet Connection";
+            yield break;
+        }
+
         statusText.text = "Getting Courses...";
 
         string token = PlayerPrefs.GetString("ACCESS_TOKEN");
@@ -247,18 +311,28 @@ public class GameAuthManager : MonoBehaviour
 
         yield return req.SendWebRequest();
 
-        Debug.Log("Courses Response: " + req.downloadHandler.text);
+        Debug.Log("Courses Response: " + req.downloadHandler?.text);
 
         if (req.result == UnityWebRequest.Result.Success)
         {
             statusText.text = "Courses Loaded";
 
-            CoursesResponse response =
-                JsonUtility.FromJson<CoursesResponse>(req.downloadHandler.text);
+            CoursesResponse response = null;
+            try
+            {
+                response = JsonUtility.FromJson<CoursesResponse>(req.downloadHandler.text);
+            }
+            catch (Exception ex)
+            {
+                Debug.LogError($"[GameAuthManager] Json parsing failed: {ex.Message}");
+            }
 
             if (response?.data?.assigned_courses != null &&
                 response.data.assigned_courses.Length > 0)
             {
+                PlayerPrefs.SetString("CACHED_COURSES", req.downloadHandler.text);
+                PlayerPrefs.Save();
+
                 OpenClassSelection(response.data.assigned_courses);
                 LoginInput.text    = "";
                 passwordInput.text = "";
@@ -272,8 +346,21 @@ public class GameAuthManager : MonoBehaviour
         }
         else
         {
+            Debug.LogWarning("[GameAuthManager] API call failed. Loading courses from cache...");
+            if (LoadCachedCourses())
+            {
+                yield break;
+            }
+
             statusText.text = "Failed To Load Courses";
-            Debug.LogError(req.error + "\n" + req.downloadHandler.text);
+            if (req.downloadHandler != null)
+            {
+                Debug.LogError(req.error + "\n" + req.downloadHandler.text);
+            }
+            else
+            {
+                Debug.LogError(req.error);
+            }
         }
     }
 
@@ -281,6 +368,8 @@ public class GameAuthManager : MonoBehaviour
     public void Logout()
     {
         PlayerPrefs.DeleteKey("ACCESS_TOKEN");
+        PlayerPrefs.DeleteKey("CACHED_COURSES");
+        PlayerPrefs.Save();
         AppSession.ClearAll();
         ShowGreeting(null);
 

@@ -41,7 +41,6 @@ public class AudioManager : MonoBehaviour
     {
         if (Instance != null && Instance != this) { Destroy(gameObject); return; }
         Instance = this;
-        DontDestroyOnLoad(gameObject);
 
         // Auto-create sources if not assigned
         if (musicSource == null) musicSource = CreateSource("MusicSource", true, 0.45f);
@@ -49,11 +48,33 @@ public class AudioManager : MonoBehaviour
         if (voSource    == null) voSource     = CreateSource("VOSource",    false, 1f);
     }
 
+    void OnEnable()
+    {
+        // Re-register when this game object is activated — handles the case where
+        // Instance was cleared (or pointed to an inactive GO) while this GO was off.
+        if (Instance == null || !Instance.gameObject.activeInHierarchy)
+            Instance = this;
+    }
+
+    void OnDisable()
+    {
+        // Clear the singleton reference so callers using ?. get null (no-op)
+        // instead of an inactive GO that would crash StartCoroutine.
+        if (Instance == this)
+            Instance = null;
+    }
+
     // ── Public API ──────────────────────────────────────────────────────────
 
     public void PlayMusic(AudioClip clip, float fadeTime = 0.5f)
     {
+        if (clip == null) return;
         if (musicSource.clip == clip && musicSource.isPlaying) return;
+
+        // If the AudioManager's GO is currently inactive a coroutine cannot start.
+        // Guard here so callers never get a crash regardless of activation order.
+        if (!gameObject.activeInHierarchy) return;
+
         StartCoroutine(CrossfadeMusic(clip, fadeTime));
     }
 
