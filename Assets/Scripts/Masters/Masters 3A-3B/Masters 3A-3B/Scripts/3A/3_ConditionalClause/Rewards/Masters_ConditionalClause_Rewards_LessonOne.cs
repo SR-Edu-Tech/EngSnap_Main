@@ -1,0 +1,2 @@
+public class Masters_ConditionalClause_Rewards_LessonOne : Masters_BoostSomeoneUp_Rewards_LessonOne {
+}

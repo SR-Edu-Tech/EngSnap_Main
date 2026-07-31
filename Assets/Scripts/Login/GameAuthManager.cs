@@ -196,6 +196,7 @@ public class GameAuthManager : MonoBehaviour
 
         UnityWebRequest req = UnityWebRequest.Post(baseUrl + "/auth/login", form);
         req.SetRequestHeader("Accept", "application/json");
+        req.timeout=30;
         yield return req.SendWebRequest();
 
         Debug.Log("Login Response: " + req.downloadHandler.text);
@@ -230,8 +231,25 @@ public class GameAuthManager : MonoBehaviour
         }
         else
         {
-            Debug.LogError(req.error);
-            statusText.text = "Email or password is incorrect";
+            string body = req.downloadHandler != null ? req.downloadHandler.text : string.Empty;
+            Debug.LogError($"Login failed. result={req.result} code={req.responseCode} error={req.error}\n{body}");
+
+            if (req.responseCode == 405)
+            {
+                statusText.text = "Server error: Method Not Allowed (check endpoint/method).";
+            }
+            else if (req.responseCode == 0)
+            {
+                statusText.text = "Network error. Check connection, proxy, or TLS.";
+            }
+            else if (req.responseCode >= 400 && req.responseCode < 500)
+            {
+                statusText.text = "Invalid credentials or bad request. See console.";
+            }
+            else
+            {
+                statusText.text = "Login failed. See console for details.";
+            }
         }
     }
 

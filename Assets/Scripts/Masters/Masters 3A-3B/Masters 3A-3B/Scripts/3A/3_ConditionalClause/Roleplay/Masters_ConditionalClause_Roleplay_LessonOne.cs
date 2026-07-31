@@ -1,0 +1,2 @@
+public class Masters_ConditionalClause_Roleplay_LessonOne : Masters_BoostSomeoneUp_Roleplay_LessonOne {
+}
