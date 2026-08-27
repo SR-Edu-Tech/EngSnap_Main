@@ -26,39 +26,39 @@ public class Masters_PolishedCommunication_Speaking_LessonOne : Masters_Lesson {
     [SerializeField]
     protected SpeechToText[] speechToTextArray;
     [SerializeField]
-    private GameObject phraseCardReferenceGameObject;
+    public GameObject phraseCardReferenceGameObject;
     [SerializeField]
-    private RectTransform phraseCardSpawnPointRectTransform;
+    public RectTransform phraseCardSpawnPointRectTransform;
     [SerializeField]
-    private float timeToLoadNextSpeechToText = 2f;
+    public float timeToLoadNextSpeechToText = 2f;
 
     [Header("UI References")]
     [SerializeField]
-    private TextMeshProUGUI debugTMP;
+    public TextMeshProUGUI debugTMP;
     [SerializeField]
-    private TextMeshProUGUI progressCountTMP;
+    public TextMeshProUGUI progressCountTMP;
     [SerializeField]
-    private Slider progressBar;
+    public Slider progressBar;
     [SerializeField]
-    private Color correctColor = Color.green, wrongColor = Color.red, defaultColor = Color.white;
+    public Color correctColor = Color.green, wrongColor = Color.red, defaultColor = Color.white;
     [SerializeField]
-    private Image sliderImage;
+    public Image sliderImage;
     [SerializeField]
-    private RectTransform sliderRectTransform, micRectTransform, fillRectTransform, borderRectTransform, debugRectTransform;
+    public RectTransform sliderRectTransform, micRectTransform, fillRectTransform, borderRectTransform, debugRectTransform;
     [SerializeField]
-    private float animationSpeed = 0.5f, timeBetweenEachAnimation = 0.2f;
+    public float animationSpeed = 0.5f, timeBetweenEachAnimation = 0.2f;
     [SerializeField]
-    private Button skipButton;
+    public Button skipButton;
     [SerializeField]
-    private Button continueButton;
+    public Button continueButton;
 
     [Header("Polished Communication Routing")]
     [SerializeField]
-    private Masters_LessonSO nextLessonSO;
+    public Masters_LessonSO nextLessonSO;
 
-    private SpeechToText currentSpeechToText;
-    private int currentSpeechToTextIndex;
-    private GameObject currentPhraseCardGameObject;
+    public SpeechToText currentSpeechToText;
+    public int currentSpeechToTextIndex;
+    public GameObject currentPhraseCardGameObject;
 
     protected virtual void OnEnable() {
         CrossPlatformSpeechManager.OnResultStatic += OnSpeechResult;

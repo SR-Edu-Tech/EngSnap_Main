@@ -360,10 +360,13 @@ public class HomeScreenManager : MonoBehaviour
     {
         SetSubPanelBackground(data.backgroundSprite);
 
-        AppSession.PendingBundleUrl = data.assetBundleUrl;
+        string resolvedUrl = data.GetAssetBundleUrl();
+
+        AppSession.PendingBundleUrl = resolvedUrl;
         AppSession.PendingSceneName = data.sceneName;
 
-        Debug.Log($"[HomeScreen] Selected → URL: {data.assetBundleUrl} | Scene: {data.sceneName}");
+        Debug.Log($"[HomeScreen] Selected → Platform: {Application.platform} | " +
+                  $"URL: {resolvedUrl} | Scene: {data.sceneName}");
 
         HideActiveHomeScreen();
         homeScreen.SetActive(false);

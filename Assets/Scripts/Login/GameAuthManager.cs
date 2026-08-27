@@ -18,6 +18,10 @@ public class GameAuthManager : MonoBehaviour
     public TMP_InputField passwordInput;
     public TMP_Text       statusText;
 
+    [Header("No course assigned UI")]
+    public GameObject noCourseAssignedPanel;
+    public TMP_Text noCourseAssignedText;
+
     [Header("Class Selection")]
     public GameObject classSelectionPanel;
 
@@ -43,11 +47,6 @@ public class GameAuthManager : MonoBehaviour
     public string greetingFormat = "Hi, {0}!";
 
     // ── Course ID → carousel category ─────────────────────────────────────────
-    // Each category can have multiple levels (Level 1, 2, 3, 4...), each with its
-    // own course id from the backend. List EVERY level id that belongs to a
-    // category here — the category unlocks if the student is assigned ANY one
-    // of them. Fill these in from your backend's actual course ids as new
-    // levels are added; the ones below are just the ids seen so far.
     [Header("Course ID Mapping (all level ids per category)")]
     [Tooltip("Every course id across all levels of Beginners (Level 1, 2, 3, 4...). " +
              "Beginners unlocks if the student is assigned ANY of these. " +
@@ -71,67 +70,75 @@ public class GameAuthManager : MonoBehaviour
     {
         if (Instance != null && Instance != this) { Destroy(gameObject); return; }
         Instance = this;
+
+        // ── Windows 7 TLS Fix ────────────────────────────────────────────────
+        try
+        {
+            System.Net.ServicePointManager.SecurityProtocol =
+                System.Net.SecurityProtocolType.Tls12 |
+                System.Net.SecurityProtocolType.Tls11 |
+                System.Net.SecurityProtocolType.Tls;
+
+            System.Net.ServicePointManager.ServerCertificateValidationCallback =
+                delegate { return true; };
+
+            Debug.Log("[TLS] Security protocol set: TLS 1.0, 1.1, 1.2 enabled.");
+            Debug.Log("[TLS] Current protocol: " + System.Net.ServicePointManager.SecurityProtocol);
+        }
+        catch (Exception ex)
+        {
+            Debug.LogError("[TLS] Failed to set security protocol: " + ex.Message);
+        }
+        // ── End Windows 7 TLS Fix ────────────────────────────────────────────
     }
 
     void Start()
     {
         loginPanel.SetActive(false);
         classSelectionPanel.SetActive(false);
+        noCourseAssignedPanel.SetActive(false);
 
-        // Restore session from saved token. AppSession is static and resets
-        // on every Play-mode start, but PlayerPrefs persist.
+        Debug.Log("[GameAuthManager] Start() called.");
+        Debug.Log("[GameAuthManager] Platform: " + Application.platform);
+        Debug.Log("[GameAuthManager] Internet reachability: " + Application.internetReachability);
+
         if (PlayerPrefs.HasKey("ACCESS_TOKEN") &&
             string.IsNullOrEmpty(AppSession.UserName))
         {
             string saved = PlayerPrefs.GetString("ACCESS_TOKEN");
+            Debug.Log("[GameAuthManager] Found saved ACCESS_TOKEN. Restoring session...");
             AppSession.UserName  = DecodeUserNameFromJwt(saved);
             AppSession.StudentId = DecodeStudentIdFromJwt(saved);
             Debug.Log("RESTORED STUDENT ID = " + AppSession.StudentId);
+            Debug.Log("RESTORED USER NAME = " + AppSession.UserName);
+        }
+        else
+        {
+            Debug.Log("[GameAuthManager] No saved session found. User needs to login.");
         }
 
-        // FIX: Push the greeting into HomeScreenManager as soon as we have the
-        // name. HomeScreenManager.Start() also calls RefreshGreeting(), but if
-        // GameAuthManager.Start() runs AFTER it the name would be missed.
-        // Calling it here guarantees it runs whenever the name is available.
-        // We also wait one frame so all MonoBehaviours have finished their own
-        // Start() before we touch HomeScreenManager.
         StartCoroutine(RefreshUINextFrame());
     }
 
-    // Wait one frame so HomeScreenManager.Awake/Start has definitely run,
-    // then push the restored name into its greeting label.
     private IEnumerator RefreshUINextFrame()
     {
-        yield return null; // one frame
+        yield return null;
 
         if (!string.IsNullOrEmpty(AppSession.UserName))
         {
             ShowGreeting(AppSession.UserName);
-            Debug.Log("[GameAuthManager] Greeting refreshed on startup: " +
-                      AppSession.UserName);
+            Debug.Log("[GameAuthManager] Greeting refreshed on startup: " + AppSession.UserName);
         }
     }
 
-    // ─────────────────────────────────────────────────────────────────────────
-    //  Called by HomeScreenManager via FirstRunDownloader AFTER the selection
-    //  panel is visible.  This is the correct time to apply lock states.
-    //
-    //  HOW TO WIRE:
-    //  In FirstRunDownloader.OpenNextPanel(), after ShowSelectionPanel(),
-    //  call GameAuthManager.Instance.ApplySessionState().
-    //  (See FirstRunDownloader.cs — the call is already added there.)
-    // ─────────────────────────────────────────────────────────────────────────
     public void ApplySessionState()
     {
         ShowGreeting(AppSession.UserName);
 
-        // Offline mode check first
         if (Application.internetReachability == NetworkReachability.NotReachable)
         {
-            if (LoadCachedCourses())
-            {
-                return;
-            }
+            Debug.Log("[GameAuthManager] ApplySessionState: No internet. Loading cache...");
+            if (LoadCachedCourses()) return;
         }
 
         if (string.IsNullOrEmpty(AppSession.StudentId))
@@ -144,22 +151,21 @@ public class GameAuthManager : MonoBehaviour
         StartCoroutine(GetStudentCourses(AppSession.StudentId));
     }
 
-    // ── Play button (kept for scenes that wire it directly) ───────────────────
+    // ── Play button ───────────────────────────────────────────────────────────
     public void OnPlayButton()
     {
         classSelectionPanel.SetActive(false);
+        Debug.Log("[GameAuthManager] OnPlayButton() called.");
 
         if (PlayerPrefs.HasKey("ACCESS_TOKEN"))
         {
-            Debug.Log("Already Logged In");
+            Debug.Log("[GameAuthManager] Already Logged In. Token found.");
             ShowGreeting(AppSession.UserName);
 
             if (Application.internetReachability == NetworkReachability.NotReachable)
             {
-                if (LoadCachedCourses())
-                {
-                    return;
-                }
+                Debug.Log("[GameAuthManager] No internet on play button. Loading cache...");
+                if (LoadCachedCourses()) return;
             }
 
             if (string.IsNullOrEmpty(AppSession.StudentId))
@@ -173,6 +179,7 @@ public class GameAuthManager : MonoBehaviour
         }
         else
         {
+            Debug.Log("[GameAuthManager] No token found. Showing login panel.");
             loginPanel.SetActive(true);
         }
     }
@@ -182,11 +189,35 @@ public class GameAuthManager : MonoBehaviour
 
     IEnumerator LoginCoroutine()
     {
+        Debug.Log("[LOGIN] ========== LOGIN ATTEMPT STARTED ==========");
+        Debug.Log("[LOGIN] Platform: " + Application.platform);
+        Debug.Log("[LOGIN] Internet Reachability: " + Application.internetReachability);
+        Debug.Log("[LOGIN] Base URL: " + baseUrl);
+        Debug.Log("[LOGIN] TLS Protocol: " + System.Net.ServicePointManager.SecurityProtocol);
+
         if (Application.internetReachability == NetworkReachability.NotReachable)
         {
+            Debug.LogWarning("[LOGIN] No internet connection detected.");
             statusText.text = "No Internet Connection";
             yield break;
         }
+
+        if (string.IsNullOrEmpty(LoginInput.text.Trim()))
+        {
+            Debug.LogWarning("[LOGIN] Email field is empty!");
+            statusText.text = "Please enter your email.";
+            yield break;
+        }
+
+        if (string.IsNullOrEmpty(passwordInput.text.Trim()))
+        {
+            Debug.LogWarning("[LOGIN] Password field is empty!");
+            statusText.text = "Please enter your password.";
+            yield break;
+        }
+
+        Debug.Log("[LOGIN] Email entered: " + LoginInput.text.Trim());
+        Debug.Log("[LOGIN] Password length: " + passwordInput.text.Trim().Length);
 
         statusText.text = "Logging in...";
 
@@ -194,63 +225,134 @@ public class GameAuthManager : MonoBehaviour
         form.AddField("login",    LoginInput.text.Trim());
         form.AddField("password", passwordInput.text.Trim());
 
-        UnityWebRequest req = UnityWebRequest.Post(baseUrl + "/auth/login", form);
-        req.SetRequestHeader("Accept", "application/json");
-        req.timeout=30;
-        yield return req.SendWebRequest();
+        string loginUrl = baseUrl + "/auth/login";
+        Debug.Log("[LOGIN] Sending POST request to: " + loginUrl);
 
-        Debug.Log("Login Response: " + req.downloadHandler.text);
+        UnityWebRequest req = UnityWebRequest.Post(loginUrl, form);
+        req.SetRequestHeader("Accept", "application/json");
+        req.timeout = 30;
+        req.certificateHandler = new BypassCertificate();
+
+        Debug.Log("[LOGIN] Certificate handler: BypassCertificate set.");
+        Debug.Log("[LOGIN] Timeout: 30 seconds");
+        Debug.Log("[LOGIN] Sending request...");
+
+        float startTime = Time.time;
+        yield return req.SendWebRequest();
+        float elapsed = Time.time - startTime;
+
+        Debug.Log("[LOGIN] ========== LOGIN RESPONSE ==========");
+        Debug.Log("[LOGIN] Time taken: " + elapsed.ToString("F2") + " seconds");
+        Debug.Log("[LOGIN] Result: " + req.result);
+        Debug.Log("[LOGIN] Response Code: " + req.responseCode);
+        Debug.Log("[LOGIN] Error: " + (string.IsNullOrEmpty(req.error) ? "None" : req.error));
+        Debug.Log("[LOGIN] Response Body: " + (req.downloadHandler != null ? req.downloadHandler.text : "NULL"));
 
         if (req.result == UnityWebRequest.Result.Success)
         {
-            LoginResponse response =
-                JsonUtility.FromJson<LoginResponse>(req.downloadHandler.text);
+            Debug.Log("[LOGIN] Request succeeded. Parsing response...");
+
+            LoginResponse response = null;
+            try
+            {
+                response = JsonUtility.FromJson<LoginResponse>(req.downloadHandler.text);
+                Debug.Log("[LOGIN] JSON parsed successfully.");
+                Debug.Log("[LOGIN] access_token empty: " + string.IsNullOrEmpty(response.access_token));
+                Debug.Log("[LOGIN] status: " + response.status);
+                Debug.Log("[LOGIN] message: " + response.message);
+            }
+            catch (Exception ex)
+            {
+                Debug.LogError("[LOGIN] JSON parsing failed: " + ex.Message);
+                statusText.text = "Login failed. Invalid server response.";
+                yield break;
+            }
 
             if (!string.IsNullOrEmpty(response.access_token))
             {
+                Debug.Log("[LOGIN] Access token received! Saving session...");
                 PlayerPrefs.SetString("ACCESS_TOKEN", response.access_token);
                 PlayerPrefs.Save();
 
                 AppSession.UserName  = DecodeUserNameFromJwt(response.access_token);
                 AppSession.StudentId = DecodeStudentIdFromJwt(response.access_token);
 
+                Debug.Log("[LOGIN] User Name: " + AppSession.UserName);
+                Debug.Log("[LOGIN] Student ID: " + AppSession.StudentId);
+
                 ShowGreeting(AppSession.UserName);
-
-                Debug.Log($"Token Saved | User: {AppSession.UserName} | " +
-                          $"Student: {AppSession.StudentId}");
-
                 statusText.text = "Login Successful";
                 loginPanel.SetActive(false);
 
+                Debug.Log("[LOGIN] Login successful! Loading courses...");
                 StartCoroutine(GetStudentCourses(AppSession.StudentId));
             }
             else
             {
+                Debug.LogWarning("[LOGIN] Access token is EMPTY in response!");
+                Debug.LogWarning("[LOGIN] Full response: " + req.downloadHandler.text);
                 statusText.text = "Email or password is incorrect";
             }
         }
         else
         {
-            string body = req.downloadHandler != null ? req.downloadHandler.text : string.Empty;
-            Debug.LogError($"Login failed. result={req.result} code={req.responseCode} error={req.error}\n{body}");
+            Debug.LogError("[LOGIN] ========== LOGIN FAILED ==========");
+            Debug.LogError("[LOGIN] Result: " + req.result);
+            Debug.LogError("[LOGIN] Response Code: " + req.responseCode);
+            Debug.LogError("[LOGIN] Error Message: " + req.error);
+            Debug.LogError("[LOGIN] Response Body: " + (req.downloadHandler != null ? req.downloadHandler.text : "NULL"));
+            Debug.LogError("[LOGIN] Time taken: " + elapsed.ToString("F2") + " seconds");
+            Debug.LogError("[LOGIN] TLS Protocol at failure: " + System.Net.ServicePointManager.SecurityProtocol);
 
-            if (req.responseCode == 405)
+            if (req.responseCode == 0)
             {
-                statusText.text = "Server error: Method Not Allowed (check endpoint/method).";
-            }
-            else if (req.responseCode == 0)
-            {
+                Debug.LogError("[LOGIN] Code 0 = Connection completely failed!");
+                Debug.LogError("[LOGIN] Causes: TLS mismatch, firewall, proxy, no internet");
                 statusText.text = "Network error. Check connection, proxy, or TLS.";
             }
-            else if (req.responseCode >= 400 && req.responseCode < 500)
+            else if (req.responseCode == 401)
             {
-                statusText.text = "Invalid credentials or bad request. See console.";
+                Debug.LogError("[LOGIN] 401 = Wrong credentials or expired token");
+                statusText.text = "Email or password is incorrect.";
+            }
+            else if (req.responseCode == 403)
+            {
+                Debug.LogError("[LOGIN] 403 = Account disabled or blocked");
+                statusText.text = "Access denied. Contact administrator.";
+            }
+            else if (req.responseCode == 404)
+            {
+                Debug.LogError("[LOGIN] 404 = Wrong API URL: " + loginUrl);
+                statusText.text = "Server error. Please contact support.";
+            }
+            else if (req.responseCode == 405)
+            {
+                Debug.LogError("[LOGIN] 405 = Wrong HTTP method used");
+                statusText.text = "Server error: Method Not Allowed.";
+            }
+            else if (req.responseCode >= 500)
+            {
+                Debug.LogError("[LOGIN] 500+ = Backend server error");
+                statusText.text = "Server error. Please try again later.";
+            }
+            else if (req.result == UnityWebRequest.Result.ConnectionError)
+            {
+                Debug.LogError("[LOGIN] ConnectionError = Network/TLS/Proxy issue");
+                statusText.text = "Connection failed. Check your network.";
+            }
+            else if (req.result == UnityWebRequest.Result.ProtocolError)
+            {
+                Debug.LogError("[LOGIN] ProtocolError = Server returned error response");
+                statusText.text = "Login failed. Code: " + req.responseCode;
             }
             else
             {
+                Debug.LogError("[LOGIN] Unknown error");
                 statusText.text = "Login failed. See console for details.";
             }
         }
+
+        Debug.Log("[LOGIN] ========== LOGIN ATTEMPT ENDED ==========");
     }
 
     // ── JWT decoders ──────────────────────────────────────────────────────────
@@ -267,7 +369,7 @@ public class GameAuthManager : MonoBehaviour
             string[] parts = jwt.Split('.');
             if (parts.Length != 3)
             {
-                Debug.LogError("[JWT] Invalid token format.");
+                Debug.LogError("[JWT] Invalid token format. Parts: " + parts.Length);
                 return null;
             }
 
@@ -279,7 +381,7 @@ public class GameAuthManager : MonoBehaviour
             }
 
             string json = Encoding.UTF8.GetString(Convert.FromBase64String(payload));
-            Debug.Log($"[JWT] Payload: {json}");
+            Debug.Log($"[JWT] Payload decoded: {json}");
             return JsonUtility.FromJson<JwtPayload>(json);
         }
         catch (Exception ex)
@@ -300,13 +402,13 @@ public class GameAuthManager : MonoBehaviour
             foreach (var tmp in greetingTexts)
                 if (tmp != null) tmp.text = text;
 
-        // Keep HomeScreenManager's own label in sync too
         if (HomeScreenManager.Instance != null)
             HomeScreenManager.Instance.RefreshGreeting();
     }
 
     private bool LoadCachedCourses()
     {
+        Debug.Log("[CACHE] Attempting to load cached courses...");
         if (PlayerPrefs.HasKey("CACHED_COURSES"))
         {
             try
@@ -317,6 +419,7 @@ public class GameAuthManager : MonoBehaviour
                     CoursesResponse response = JsonUtility.FromJson<CoursesResponse>(cachedJson);
                     if (response?.data?.assigned_courses != null && response.data.assigned_courses.Length > 0)
                     {
+                        Debug.Log("[CACHE] Loaded successfully. Count: " + response.data.assigned_courses.Length);
                         if (statusText != null) statusText.text = "";
                         OpenClassSelection(response.data.assigned_courses);
                         return true;
@@ -325,22 +428,24 @@ public class GameAuthManager : MonoBehaviour
             }
             catch (Exception ex)
             {
-                Debug.LogError($"[GameAuthManager] Error loading cached courses: {ex.Message}");
+                Debug.LogError($"[CACHE] Error loading: {ex.Message}");
             }
         }
+        Debug.LogWarning("[CACHE] No cached courses found.");
         return false;
     }
 
     // ── Courses API ───────────────────────────────────────────────────────────
     IEnumerator GetStudentCourses(string studentId)
     {
+        Debug.Log("[COURSES] ========== FETCHING COURSES ==========");
+        Debug.Log("[COURSES] Student ID: " + studentId);
+        Debug.Log("[COURSES] Internet: " + Application.internetReachability);
+
         if (Application.internetReachability == NetworkReachability.NotReachable)
         {
-            Debug.Log("[GameAuthManager] Offline mode detected. Checking for cached courses...");
-            if (LoadCachedCourses())
-            {
-                yield break;
-            }
+            Debug.Log("[COURSES] No internet. Loading cached courses...");
+            if (LoadCachedCourses()) yield break;
             statusText.text = "No Internet Connection";
             yield break;
         }
@@ -348,14 +453,26 @@ public class GameAuthManager : MonoBehaviour
         statusText.text = "Getting Courses...";
 
         string token = PlayerPrefs.GetString("ACCESS_TOKEN");
-        UnityWebRequest req = UnityWebRequest.Get(
-            baseUrl + "/student-courses-with-lock/" + studentId);
+        string coursesUrl = baseUrl + "/student-courses-with-lock/" + studentId;
+
+        Debug.Log("[COURSES] URL: " + coursesUrl);
+        Debug.Log("[COURSES] Token length: " + token.Length);
+
+        UnityWebRequest req = UnityWebRequest.Get(coursesUrl);
         req.SetRequestHeader("Authorization", "Bearer " + token);
         req.SetRequestHeader("Accept", "application/json");
+        req.certificateHandler = new BypassCertificate();
 
+        float startTime = Time.time;
         yield return req.SendWebRequest();
+        float elapsed = Time.time - startTime;
 
-        Debug.Log("Courses Response: " + req.downloadHandler?.text);
+        Debug.Log("[COURSES] ========== COURSES RESPONSE ==========");
+        Debug.Log("[COURSES] Time: " + elapsed.ToString("F2") + "s");
+        Debug.Log("[COURSES] Result: " + req.result);
+        Debug.Log("[COURSES] Code: " + req.responseCode);
+        Debug.Log("[COURSES] Error: " + (string.IsNullOrEmpty(req.error) ? "None" : req.error));
+        Debug.Log("[COURSES] Response: " + req.downloadHandler?.text);
 
         if (req.result == UnityWebRequest.Result.Success)
         {
@@ -365,15 +482,17 @@ public class GameAuthManager : MonoBehaviour
             try
             {
                 response = JsonUtility.FromJson<CoursesResponse>(req.downloadHandler.text);
+                Debug.Log("[COURSES] JSON parsed successfully.");
             }
             catch (Exception ex)
             {
-                Debug.LogError($"[GameAuthManager] Json parsing failed: {ex.Message}");
+                Debug.LogError($"[COURSES] Json parsing failed: {ex.Message}");
             }
 
             if (response?.data?.assigned_courses != null &&
                 response.data.assigned_courses.Length > 0)
             {
+                Debug.Log("[COURSES] Courses found: " + response.data.assigned_courses.Length);
                 PlayerPrefs.SetString("CACHED_COURSES", req.downloadHandler.text);
                 PlayerPrefs.Save();
 
@@ -384,45 +503,56 @@ public class GameAuthManager : MonoBehaviour
             }
             else
             {
+                Debug.LogWarning("[COURSES] No courses assigned to student.");
                 statusText.text = "No courses assigned.";
-                Debug.LogWarning("[GameAuthManager] assigned_courses is empty or null.");
+
+                noCourseAssignedPanel.SetActive(true);
+                noCourseAssignedText.text = "No Courses Assigned to this user. Please contact your administrator.";
+                
             }
         }
         else
         {
+            Debug.LogError("[COURSES] ========== COURSES FAILED ==========");
+            Debug.LogError("[COURSES] Result: " + req.result);
+            Debug.LogError("[COURSES] Code: " + req.responseCode);
+            Debug.LogError("[COURSES] Error: " + req.error);
+
             if (req.responseCode == 401)
             {
-                // Token was rejected outright (expired/invalid) rather than a
-                // network hiccup — don't fall back to stale cached courses,
-                // since that leaves the user staring at a "locked" class
-                // selection screen with no obvious way back to login.
-                Debug.LogWarning("[GameAuthManager] Token rejected (401). Session expired — logging out.");
+                Debug.LogWarning("[COURSES] 401 = Token expired. Logging out...");
                 Logout();
                 statusText.text = "Session expired. Please log in again.";
                 yield break;
             }
 
-            Debug.LogWarning("[GameAuthManager] API call failed. Loading courses from cache...");
-            if (LoadCachedCourses())
-            {
-                yield break;
-            }
+            Debug.LogWarning("[COURSES] API failed. Loading cached courses...");
+            if (LoadCachedCourses()) yield break;
 
             statusText.text = "Failed To Load Courses";
             if (req.downloadHandler != null)
-            {
                 Debug.LogError(req.error + "\n" + req.downloadHandler.text);
-            }
             else
-            {
                 Debug.LogError(req.error);
-            }
         }
-    }
 
+        Debug.Log("[COURSES] ========== COURSES FETCH ENDED ==========");
+    }
+    
+    public void OnNoCoursesOkButton()
+    {
+        noCourseAssignedPanel.SetActive(false);
+        loginPanel.SetActive(true);
+        statusText.text = "";
+        LoginInput.text = "";
+        passwordInput.text = "";
+
+        Logout();
+    }
     // ── Logout ────────────────────────────────────────────────────────────────
     public void Logout()
     {
+        Debug.Log("[GameAuthManager] Logout() called. Clearing session...");
         PlayerPrefs.DeleteKey("ACCESS_TOKEN");
         PlayerPrefs.DeleteKey("CACHED_COURSES");
         PlayerPrefs.Save();
@@ -435,25 +565,18 @@ public class GameAuthManager : MonoBehaviour
             HomeScreenManager.Instance.SetUnlockedCourseIds(new HashSet<int>());
         }
 
-        // Always land back on the login screen after logout — previously this
-        // only cleared data and reset locks but never touched panel visibility,
-        // so a logout could leave the (now stale/locked) class selection panel
-        // on screen with no way back to login.
         if (classSelectionPanel != null) classSelectionPanel.SetActive(false);
         if (loginPanel != null)          loginPanel.SetActive(true);
+        Debug.Log("[GameAuthManager] Logout complete.");
     }
 
     // ── Class selection ───────────────────────────────────────────────────────
     private void OpenClassSelection(AssignedCourse[] courses)
     {
+        Debug.Log("[CLASS] Opening class selection. Total courses: " + courses.Length);
         classSelectionPanel.SetActive(true);
 
         bool[] unlocked = new bool[4];
-
-        // Every course id the student is assigned, at whatever level (Beginners
-        // Level 1 = 12, Level 2 = 13, etc.) — used to lock/unlock individual
-        // sub-buttons inside each category's sub-panel, not just the top-level
-        // category buttons.
         var unlockedCourseIds = new HashSet<int>();
 
         SetLockSprite(beginnersLock, true);
@@ -463,17 +586,15 @@ public class GameAuthManager : MonoBehaviour
 
         foreach (AssignedCourse c in courses)
         {
-            Debug.Log($"[GameAuthManager] Assigned: {c.name} (id={c.id})");
-
+            Debug.Log($"[CLASS] Course: {c.name} (id={c.id})");
             unlockedCourseIds.Add(c.id);
 
-            if (Contains(beginnersCourseIds, c.id)) { unlocked[0] = true; SetLockSprite(beginnersLock, false); }
-            if (Contains(juniorsCourseIds,   c.id)) { unlocked[1] = true; SetLockSprite(juniorsLock,   false); }
-            if (Contains(seniorsCourseIds,   c.id)) { unlocked[2] = true; SetLockSprite(seniorsLock,   false); }
-            if (Contains(mastersCourseIds,   c.id)) { unlocked[3] = true; SetLockSprite(mastersLock,   false); }
+            if (Contains(beginnersCourseIds, c.id)) { unlocked[0] = true; SetLockSprite(beginnersLock, false); Debug.Log("[CLASS] Beginners UNLOCKED"); }
+            if (Contains(juniorsCourseIds,   c.id)) { unlocked[1] = true; SetLockSprite(juniorsLock,   false); Debug.Log("[CLASS] Juniors UNLOCKED"); }
+            if (Contains(seniorsCourseIds,   c.id)) { unlocked[2] = true; SetLockSprite(seniorsLock,   false); Debug.Log("[CLASS] Seniors UNLOCKED"); }
+            if (Contains(mastersCourseIds,   c.id)) { unlocked[3] = true; SetLockSprite(mastersLock,   false); Debug.Log("[CLASS] Masters UNLOCKED"); }
         }
 
-        // Apply to HomeScreenManager's category buttons + per-level sub-buttons
         if (HomeScreenManager.Instance != null)
         {
             HomeScreenManager.Instance.SetCategoryLockStates(unlocked);
@@ -481,20 +602,18 @@ public class GameAuthManager : MonoBehaviour
         }
         else
         {
-            Debug.LogWarning("[GameAuthManager] HomeScreenManager.Instance is null — " +
-                             "lock states not applied.");
+            Debug.LogWarning("[CLASS] HomeScreenManager.Instance is null.");
         }
 
-        // Scroll carousel to first unlocked index
         int first = Array.FindIndex(unlocked, u => u);
         if (first < 0) first = 0;
 
-        Debug.Log($"[GameAuthManager] First unlocked index: {first}");
+        Debug.Log($"[CLASS] First unlocked index: {first}");
 
         if (levelSelectCarousel != null)
             levelSelectCarousel.ScrollToIndex(first);
         else
-            Debug.LogWarning("[GameAuthManager] levelSelectCarousel not assigned.");
+            Debug.LogWarning("[CLASS] levelSelectCarousel not assigned.");
     }
 
     private void SetLockSprite(Image img, bool locked)
@@ -505,6 +624,16 @@ public class GameAuthManager : MonoBehaviour
 
     private static bool Contains(int[] ids, int id) =>
         ids != null && Array.IndexOf(ids, id) >= 0;
+}
+
+// ── Certificate bypass for Windows 7 SSL ─────────────────────────────────────
+public class BypassCertificate : CertificateHandler
+{
+    protected override bool ValidateCertificate(byte[] certificateData)
+    {
+        Debug.Log("[CERT] Certificate validation bypassed for Windows 7 compatibility.");
+        return true;
+    }
 }
 
 // ── Data models ───────────────────────────────────────────────────────────────

@@ -25,36 +25,36 @@ public class Masters_PolishedCommunication_Writing_LessonOne : Masters_Lesson {
 
     [Header("UI Components")]
     [SerializeField]
-    private TextMeshProUGUI promptTMP;
+    public TextMeshProUGUI promptTMP;
     [SerializeField]
-    private TMP_InputField inputField;
+    public TMP_InputField inputField;
     [SerializeField]
-    private Button checkButton;
+    public Button checkButton;
     [SerializeField]
-    private TextMeshProUGUI progressCountTMP;
+    public TextMeshProUGUI progressCountTMP;
     [SerializeField]
-    private Masters_LessonSO nextLessonSO;
+    public Masters_LessonSO nextLessonSO;
 
     [Header("Hint UI Components")]
     [SerializeField]
-    private GameObject hintPanel;
+    public GameObject hintPanel;
     [SerializeField]
-    private TextMeshProUGUI hintTMP;
+    public TextMeshProUGUI hintTMP;
 
     [Header("Settings & Visual Feedback")]
     [SerializeField]
-    private float timeBetweenQuestions = 1.5f;
+    public float timeBetweenQuestions = 1.5f;
     [SerializeField]
-    private Color correctColor = Color.green;
+    public Color correctColor = Color.green;
     [SerializeField]
-    private Color incorrectColor = Color.red;
+    public Color incorrectColor = Color.red;
     [SerializeField]
-    private Color defaultInputFieldColor = Color.white;
+    public Color defaultInputFieldColor = Color.white;
     [SerializeField]
-    private Image inputFieldBackground;
+    public Image inputFieldBackground;
 
-    private int currentQuestionIndex;
-    private WritingQuestion currentQuestion;
+    public int currentQuestionIndex;
+    public WritingQuestion currentQuestion;
 
     protected override void Awake() {
         base.Awake();

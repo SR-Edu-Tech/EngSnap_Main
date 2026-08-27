@@ -21,25 +21,25 @@ public class Masters_PolishedCommunication_Listening_LessonOne : Masters_Lesson 
     }
 
     [Header("Listening L1 Data")]
-    [SerializeField] private RegisterQuestionData[] questions;
-    [SerializeField] private Button[] optionButtons; // Index 0: FORMAL, Index 1: INFORMAL
-    [SerializeField] private TextMeshProUGUI progressTMP;
-    [SerializeField] private float animationSpeed = 0.4f;
-    [SerializeField] private int passThreshold = 8;
+    [SerializeField] public RegisterQuestionData[] questions;
+    [SerializeField] public Button[] optionButtons; // Index 0: FORMAL, Index 1: INFORMAL
+    [SerializeField] public TextMeshProUGUI progressTMP;
+    [SerializeField] public float animationSpeed = 0.4f;
+    [SerializeField] public int passThreshold = 8;
 
     [Header("Audio Toggles")]
-    [SerializeField] private Toggle slowToggle;
-    [SerializeField] private Toggle repeatToggle;
+    [SerializeField] public Toggle slowToggle;
+    [SerializeField] public Toggle repeatToggle;
 
     [Header("Navigation")]
-    [SerializeField] private Masters_LessonSO nextLessonSO;
+    [SerializeField] public Masters_LessonSO nextLessonSO;
 
-    private int currentQuestionIndex = 0;
-    private int correctScore = 0;
-    private bool isAnswering = false;
-    private bool isSlowed = false;
-    private bool isRepeatOn = false;
-    private Coroutine audioCoroutine;
+    public int currentQuestionIndex = 0;
+    public int correctScore = 0;
+    public bool isAnswering = false;
+    public bool isSlowed = false;
+    public bool isRepeatOn = false;
+    public Coroutine audioCoroutine;
 
     protected override void Awake() {
         base.Awake();
@@ -153,7 +153,7 @@ public class Masters_PolishedCommunication_Listening_LessonOne : Masters_Lesson 
     }
 #endif
 
-    private void ConfigureOptionButtons() {
+    public void ConfigureOptionButtons() {
         if (optionButtons != null && optionButtons.Length > 0 && optionButtons[0] != null) {
             Transform buttonParent = optionButtons[0].transform.parent;
             if (buttonParent != null) {

@@ -1,0 +1,343 @@
+using Junior2A;
+﻿using Junior2A;
+using System;
+using System.Collections;
+using TMPro;
+using UnityEngine;
+using UnityEngine.UI;
+
+public class U5_SP01_Junior2A : MonoBehaviour, Interfaces_Junior2A
+{
+    [Header("Audio Configurations")]
+    [SerializeField] private AudioSource _audioSource;
+    [SerializeField] private AudioClip _introClip, _correctClip, _wrongClip;
+    [SerializeField] private AudioClip[] _questionClips;
+
+    [Header("Q&A Data Arrays")]
+    [SerializeField] private string[] _questionText;
+    [SerializeField] private string[] _answerText;
+    [SerializeField] private int _currentAudioIndex = 0;
+
+    [Header("Animation Configurations")]
+    [SerializeField] private GameObject _characterAnimationObj; // Drag 'Speech' GameObject here
+    [SerializeField] private Animator _characterAnimator;
+    [SerializeField] private string _talkingBoolName = "isTalking";
+
+    [Header("UI Component Panels (Titles)")]
+    [SerializeField] private GameObject _titleMasterParent;     // Drag 'Title' GameObject here
+
+    [Header("Audio Speaker Button UI")]
+    [SerializeField] private GameObject _speakerButtonObj;     // Drag 'Button' here
+    [SerializeField] private TextMeshProUGUI _questionTextUI;  // Drag 'Text' (inside Button) here
+    [SerializeField] private Image _speakerWaveIcon;           // Drag 'Speaker' image here
+
+    [Header("UI Component Panels (Accuracy Setup)")]
+    [SerializeField] private GameObject _accuracyPanelMaster; // Drag 'Accuracy Panel' master parent here
+    [SerializeField] private Slider _progressBar;              // Drag 'Accuracy' slider here
+    [SerializeField] private TextMeshProUGUI _feedbackText;    // Drag 'Feedback' text here
+    [SerializeField] private TextMeshProUGUI _percentageText;  // Drag '%' text here
+
+    [Header("UI Component Panels (Mic)")]
+    [SerializeField] private GameObject _micObj;              // Drag 'Mix' button here
+    [SerializeField] private Image _micIconImage;             // Drag 'mic icon' image here
+    [SerializeField] private Sprite _micSprite;
+    [SerializeField] private Sprite _speakerSprite;
+
+    [Header("Speaking Slide Buttons")]
+    [SerializeField] private GameObject _localNextButton;     // Drag 'Next Button' here
+    [SerializeField] private GameObject _skipButtonObj; // Drag SkipButton here
+
+    [Header("Engine Mechanics")]
+    [SerializeField, Range(0f, 1f)] private float passThreshold = 0.75f;
+    [SerializeField] private bool _isProcessingResult = false;
+    [SerializeField] private bool _isViewed = false;
+    [SerializeField] private bool _isMicOn = false;
+
+    private Coroutine _coroutine;
+
+    public bool IsViewed => _isViewed;
+
+    void OnEnable()
+    {
+        if (_speakerWaveIcon != null)
+            _speakerWaveIcon.enabled = false;
+
+        if (_micObj != null)
+            _micObj.GetComponent<Button>().interactable = true;
+
+        CrossPlatformSpeechManager.OnResultStatic += OnSpeechResult;
+        StartCoroutine(Starter());
+    }
+
+    void OnDisable()
+    {
+        CrossPlatformSpeechManager.OnResultStatic -= OnSpeechResult;
+    }
+
+    public void MicToogle()
+    {
+        _isMicOn = !_isMicOn;
+
+        if (_isMicOn)
+        {
+            if (_micIconImage != null && _speakerSprite != null)
+                _micIconImage.sprite = _speakerSprite;
+
+            if (_micObj != null && _micObj.transform.childCount > 0)
+                _micObj.transform.GetChild(0).GetComponent<Image>().color = Color.red;
+
+            SetAnimationState(true);
+            CrossPlatformSpeechManager.Instance?.StartListening();
+
+            if (_feedbackText != null) _feedbackText.text = "Listening...";
+            if (_percentageText != null) _percentageText.text = "";
+        }
+        else
+        {
+            RevertMicIconToDefault();
+            CrossPlatformSpeechManager.Instance?.StopListening();
+        }
+    }
+
+    private void RevertMicIconToDefault()
+    {
+        if (_micIconImage != null && _micSprite != null)
+            _micIconImage.sprite = _micSprite;
+
+        if (_micObj != null && _micObj.transform.childCount > 0)
+            _micObj.transform.GetChild(0).GetComponent<Image>().color = Color.black;
+
+        SetAnimationState(false);
+    }
+
+    private void SetAnimationState(bool isTalking)
+    {
+        if (_characterAnimator != null && !string.IsNullOrEmpty(_talkingBoolName))
+        {
+            foreach (AnimatorControllerParameter param in _characterAnimator.parameters)
+            {
+                if (param.name == _talkingBoolName)
+                {
+                    _characterAnimator.SetBool(_talkingBoolName, isTalking);
+                    return;
+                }
+            }
+        }
+    }
+
+    IEnumerator Starter()
+    {
+        _currentAudioIndex = 0;
+
+        // ðŸ›‘ PHASE 1: Turn on Titles only. Explicitly lock down the gameplay elements.
+        if (_titleMasterParent != null) _titleMasterParent.SetActive(true);
+
+        if (_characterAnimationObj != null) _characterAnimationObj.SetActive(false);
+        if (_speakerButtonObj != null) _speakerButtonObj.SetActive(false);
+        if (_accuracyPanelMaster != null) _accuracyPanelMaster.SetActive(false);
+        if (_micObj != null) _micObj.SetActive(false);
+        if (_localNextButton != null) _localNextButton.SetActive(false);
+        if (_skipButtonObj != null) { _skipButtonObj.SetActive(false); }
+
+        if (_feedbackText != null) _feedbackText.text = "";
+        if (_percentageText != null) _percentageText.text = "";
+        SetAnimationState(false);
+
+        // Populate the inner button question text proactively before it is unhidden
+        if (_questionTextUI != null && _questionText != null && _questionText.Length > _currentAudioIndex)
+        {
+            _questionTextUI.text = _questionText[_currentAudioIndex];
+        }
+
+        // Play the complete rules audio track
+        if (_audioSource != null && _introClip != null)
+        {
+            _audioSource.clip = _introClip;
+            _audioSource.Play();
+            yield return new WaitForSeconds(_audioSource.clip.length);
+        }
+
+        // ðŸš€ PHASE 2: Intro audio complete! Unveil everything together perfectly.
+        ShowTargetWord();
+    }
+
+    public void PlayAudioClip()
+    {
+        if (_coroutine != null) StopCoroutine(_coroutine);
+        _coroutine = StartCoroutine(PlayClip());
+    }
+
+    IEnumerator PlayClip()
+    {
+        if (_speakerWaveIcon != null)
+            _speakerWaveIcon.enabled = true;
+
+        if (_audioSource != null && _questionClips != null && _questionClips.Length > _currentAudioIndex)
+        {
+            _audioSource.clip = _questionClips[_currentAudioIndex];
+            _audioSource.Play();
+            yield return new WaitForSeconds(_audioSource.clip.length);
+        }
+
+        if (_speakerWaveIcon != null)
+            _speakerWaveIcon.enabled = false;
+    }
+
+    void ShowTargetWord()
+    {
+        if (_feedbackText != null) _feedbackText.text = "Tap To Speak";
+        if (_percentageText != null) _percentageText.text = "";
+        if (_localNextButton != null) _localNextButton.SetActive(false);
+        if (_skipButtonObj != null) { _skipButtonObj.SetActive(false); }
+
+        if (_questionTextUI != null && _questionText != null && _questionText.Length > _currentAudioIndex)
+        {
+            _questionTextUI.text = _questionText[_currentAudioIndex];
+        }
+
+        // Everything drops in all at once here smoothly
+        if (_characterAnimationObj != null) _characterAnimationObj.SetActive(true);
+        if (_speakerButtonObj != null) _speakerButtonObj.SetActive(true);
+        if (_micObj != null) _micObj.SetActive(true);
+        if (_accuracyPanelMaster != null) _accuracyPanelMaster.SetActive(true);
+
+        if (_progressBar != null) _progressBar.value = 0f;
+
+        _isProcessingResult = false;
+    }
+
+
+    void OnSpeechResult(string spokenText)
+    {
+        if (_isProcessingResult) return;
+        if (_isMicOn) MicToogle();
+        EvaluateSpeech(spokenText, true);
+    }
+
+    void EvaluateSpeech(string text, bool final)
+    {
+        if (_answerText == null || _answerText.Length <= _currentAudioIndex) return;
+
+        float score = SimilarityPercent(_answerText[_currentAudioIndex], text);
+        if (_feedbackText != null) _feedbackText.text = text;
+        if (_percentageText != null) _percentageText.text = Mathf.RoundToInt(score * 100) + "%";
+
+        if (_progressBar != null)
+        {
+            _progressBar.value = score;
+            _progressBar.fillRect.GetComponent<Image>().color = Color.HSVToRGB(Mathf.Lerp(0f, 0.33f, score), 0.9f, 0.6f);
+        }
+
+        if (score >= passThreshold)
+        {
+            _isProcessingResult = true;
+            CrossPlatformSpeechManager.Instance?.StopListening();
+            StartCoroutine(AudioChecker(true));
+        }
+        else if (final)
+        {
+            _isProcessingResult = true;
+            StartCoroutine(AudioChecker(false));
+        }
+    }
+
+    public void OnLocalNextButtonPressed()
+    {
+        // 1. Reset the accuracy slider visual state
+        if (_progressBar != null)
+        {
+            _progressBar.value = 0f;
+        }
+
+        // 2. Clear out the previous audio feedback string layers
+        if (_feedbackText != null) _feedbackText.text = "";
+        if (_percentageText != null) _percentageText.text = "";
+
+        // 3. Advance to the next question index (this button only handles moving forward)
+        if (_currentAudioIndex < _questionClips.Length - 1)
+        {
+            _currentAudioIndex++;
+            ShowTargetWord();
+        }
+    }
+
+    IEnumerator AudioChecker(bool isMatch)
+    {
+        if (isMatch)
+        {
+            if (_audioSource != null && _correctClip != null)
+                _audioSource.PlayOneShot(_correctClip);
+
+            yield return new WaitForSeconds(1.2f);
+
+            // ðŸ’¡ CHECK IF IT'S THE LAST CLIP
+            if (_currentAudioIndex < _questionClips.Length - 1)
+            {
+                // Not the last clip yet -> Show the LOCAL next button to move to the next question
+                if (_localNextButton != null) _localNextButton.SetActive(true);
+            }
+            else
+            {
+                // IT IS THE LAST CLIP -> Turn on the GLOBAL next button instead!
+                if (_micObj != null) _micObj.GetComponent<Button>().interactable = false;
+                if (_skipButtonObj != null) { _skipButtonObj.SetActive(false); }
+                _isViewed = true;
+
+                if (GameManager_Junior2A.Instance != null)
+                {
+                    GameManager_Junior2A.Instance.Next(true); // Fired up the global next button!
+                }
+            }
+        }
+        else
+        {
+            if (_audioSource != null && _wrongClip != null)
+                _audioSource.PlayOneShot(_wrongClip);
+
+            yield return new WaitForSeconds(1.2f);
+            _isProcessingResult = false;
+            if (_feedbackText != null) _feedbackText.text = "Tap To Speak";
+        }
+    }
+
+    float SimilarityPercent(string reference, string hypothesis)
+    {
+        string a = Normalize(reference);
+        string b = Normalize(hypothesis);
+        if (string.IsNullOrEmpty(a) || string.IsNullOrEmpty(b)) return 0f;
+        int dist = Levenshtein(a, b);
+        return 1f - (float)dist / Mathf.Max(a.Length, b.Length);
+    }
+
+    string Normalize(string s)
+    {
+        return System.Text.RegularExpressions.Regex.Replace(s.Trim().ToLowerInvariant(), @"[^a-z0-9\s]", "");
+    }
+
+    int Levenshtein(string s, string t)
+    {
+        int n = s.Length, m = t.Length;
+        int[,] d = new int[n + 1, m + 1];
+        for (int i = 0; i <= n; i++) d[i, 0] = i;
+        for (int j = 0; j <= m; j++) d[0, j] = j;
+        for (int i = 1; i <= n; i++)
+        {
+            for (int j = 1; j <= m; j++)
+            {
+                int cost = (s[i - 1] == t[j - 1]) ? 0 : 1;
+                d[i, j] = Math.Min(Math.Min(d[i - 1, j] + 1, d[i, j - 1] + 1), d[i - 1, j - 1] + cost);
+            }
+        }
+        return d[n, m];
+    }
+    // Called by the Skip UI button after a failed attempt
+    public void OnSkipButtonPressed()
+    {
+        if (_currentAudioIndex < _questionClips.Length - 1)
+        {
+            _currentAudioIndex++;
+            ShowTargetWord();
+        }
+        if (_skipButtonObj != null) { _skipButtonObj.SetActive(false); }
+    }
+}

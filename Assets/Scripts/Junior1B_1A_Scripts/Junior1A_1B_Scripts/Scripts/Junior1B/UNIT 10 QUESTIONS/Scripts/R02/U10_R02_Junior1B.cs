@@ -167,7 +167,6 @@ public class U10_R02_Junior1B : MonoBehaviour, Interfaces_Junior1B
 
         if (currentTabP.childCount > 0)
         {
-            // Cascade elements smoothly into view, making them interactive for your click
             foreach (Transform child in currentTabP.GetChild(0))
             {
                 child.gameObject.SetActive(true);
@@ -176,7 +175,6 @@ public class U10_R02_Junior1B : MonoBehaviour, Interfaces_Junior1B
             }
         }
 
-        // Mark tab completion flags explicitly right after entry display completes
         if (_currentTabIndex == 0) _tab1Opened = true;
         else _tab2Opened = true;
 
@@ -204,47 +202,50 @@ public class U10_R02_Junior1B : MonoBehaviour, Interfaces_Junior1B
         if (currentTabP.childCount == 0) return;
 
         Transform contentParent = currentTabP.GetChild(0);
-        if (index >= contentParent.childCount) return;
 
-        Transform targetButton = contentParent.GetChild(index);
-        Sprite btnSprite = null;
+        AudioClip[] currentClips = _currentTabIndex == 0 ? _tab1AudioClips : _tab2AudioClips;
+        if (currentClips == null || index >= currentClips.Length || index < 0) return;
 
-        if (targetButton.childCount > 0 && targetButton.GetChild(0).childCount > 0 && targetButton.GetChild(0).GetChild(0).childCount > 0)
+        if (index < contentParent.childCount)
         {
-            var imgComp = targetButton.GetChild(0).GetChild(0).GetComponent<Image>();
-            if (imgComp != null) btnSprite = imgComp.sprite;
-        }
+            Transform targetButton = contentParent.GetChild(index);
 
-        if (index % 2 == 0)
-        {
-            if (currentTabP.childCount > 1)
+            if (targetButton.TryGetComponent(out Image clickImg)) OnSpeaker(clickImg);
+            else if (targetButton.childCount > 0 && targetButton.GetChild(0).TryGetComponent(out Image childImg)) OnSpeaker(childImg);
+
+            // Even-indexed clicks bounce the Left Character panel
+            if (index % 2 == 0)
             {
-                Transform displayLeft = currentTabP.GetChild(1);
-                if (displayLeft != null)
+                if (currentTabP.childCount > 1)
                 {
-                    displayLeft.localScale = Vector3.one;
-                    if (btnSprite != null && displayLeft.TryGetComponent(out Image img)) img.sprite = btnSprite;
-                    if (displayLeft.TryGetComponent(out Popeffect_Junior1B popLeft))
+                    Transform displayLeft = currentTabP.GetChild(1);
+                    if (displayLeft != null)
                     {
-                        popLeft.enabled = false;
-                        popLeft.enabled = true;
+                        displayLeft.localScale = Vector3.one;
+                        // FIX: Removed the line that forces button sprites onto your acting character image
+                        if (displayLeft.TryGetComponent(out Popeffect_Junior1B popLeft))
+                        {
+                            popLeft.enabled = false;
+                            popLeft.enabled = true;
+                        }
                     }
                 }
             }
-        }
-        else
-        {
-            if (currentTabP.childCount > 2)
+            // Odd-indexed clicks bounce the Right Character panel
+            else
             {
-                Transform displayRight = currentTabP.GetChild(2);
-                if (displayRight != null)
+                if (currentTabP.childCount > 2)
                 {
-                    displayRight.localScale = Vector3.one;
-                    if (btnSprite != null && displayRight.TryGetComponent(out Image img)) img.sprite = btnSprite;
-                    if (displayRight.TryGetComponent(out Popeffect_Junior1B popRight))
+                    Transform displayRight = currentTabP.GetChild(2);
+                    if (displayRight != null)
                     {
-                        popRight.enabled = false;
-                        popRight.enabled = true;
+                        displayRight.localScale = Vector3.one;
+                        // FIX: Removed the line that forces button sprites onto your acting character image
+                        if (displayRight.TryGetComponent(out Popeffect_Junior1B popRight))
+                        {
+                            popRight.enabled = false;
+                            popRight.enabled = true;
+                        }
                     }
                 }
             }

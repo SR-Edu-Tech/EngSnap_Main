@@ -20,31 +20,31 @@ public class Masters_PolishedCommunication_Reading_LessonTwo : Masters_Lesson, I
     }
 
     [Header("Match Setup")]
-    [SerializeField] private MatchPuzzle[] puzzles;
-    [SerializeField] private Masters_UniversalLineDragMatch leftMatchNodePrefab;
-    [SerializeField] private Masters_UniversalLineDragMatch rightMatchNodePrefab;
-    [SerializeField] private Transform leftContainer;
-    [SerializeField] private Transform rightContainer;
-    [SerializeField] private bool useUniqueRightCards = true; // True = 2 cards on right (FORMAL & INFORMAL)
-    [SerializeField] private int pairsPerSet = 4; // Splits 8 puzzles into 2 pages of 4 items each
+    [SerializeField] public MatchPuzzle[] puzzles;
+    [SerializeField] public Masters_UniversalLineDragMatch leftMatchNodePrefab;
+    [SerializeField] public Masters_UniversalLineDragMatch rightMatchNodePrefab;
+    [SerializeField] public Transform leftContainer;
+    [SerializeField] public Transform rightContainer;
+    [SerializeField] public bool useUniqueRightCards = true; // True = 2 cards on right (FORMAL & INFORMAL)
+    [SerializeField] public int pairsPerSet = 4; // Splits 8 puzzles into 2 pages of 4 items each
 
-    [SerializeField] private RectTransform puzzleContainerRectTransform;
-    [SerializeField] private float animationSpeed = 0.5f;
-    [SerializeField] private TextMeshProUGUI progressCountTMP;
+    [SerializeField] public RectTransform puzzleContainerRectTransform;
+    [SerializeField] public float animationSpeed = 0.5f;
+    [SerializeField] public TextMeshProUGUI progressCountTMP;
 
     [Header("Navigation")]
-    [SerializeField] private Masters_LessonSO nextLessonSO;
+    [SerializeField] public Masters_LessonSO nextLessonSO;
 
-    private int totalPairs;
-    private int currentSetIndex = 0;
-    private int correctCountInCurrentSet = 0;
-    private int currentSetExpectedPairs = 0;
-    private int correctCount = 0;
+    public int totalPairs;
+    public int currentSetIndex = 0;
+    public int correctCountInCurrentSet = 0;
+    public int currentSetExpectedPairs = 0;
+    public int correctCount = 0;
 
-    private string currentCorrectMatch;
-    private LineRenderer currentLineRenderer;
-    private bool canDrawLine;
-    private Masters_UniversalLineDragMatch startLineDragToExpressionMatch;
+    public string currentCorrectMatch;
+    public LineRenderer currentLineRenderer;
+    public bool canDrawLine;
+    public Masters_UniversalLineDragMatch startLineDragToExpressionMatch;
 
 #if UNITY_EDITOR
     private void Reset() {
@@ -109,12 +109,12 @@ public class Masters_PolishedCommunication_Reading_LessonTwo : Masters_Lesson, I
         };
     }
 
-    private IEnumerator InitializeLessonRoutine() {
+    public IEnumerator InitializeLessonRoutine() {
         yield return new WaitForSeconds(1.0f);
         LoadNextSet();
     }
 
-    private void LoadNextSet() {
+    public void LoadNextSet() {
         if (puzzles == null || leftMatchNodePrefab == null || rightMatchNodePrefab == null) return;
 
         int startIndex = currentSetIndex * pairsPerSet;
@@ -291,7 +291,7 @@ public class Masters_PolishedCommunication_Reading_LessonTwo : Masters_Lesson, I
         }
     }
 
-    private void ResetLine() {
+    public void ResetLine() {
         if (currentLineRenderer != null) {
             currentLineRenderer.positionCount = 2;
             currentLineRenderer.SetPosition(0, Vector3.zero);
@@ -301,7 +301,7 @@ public class Masters_PolishedCommunication_Reading_LessonTwo : Masters_Lesson, I
         canDrawLine = false;
     }
 
-    private void OnLessonSuccess() {
+    public void OnLessonSuccess() {
         if (nextButton != null) {
             nextButton.gameObject.SetActive(true);
             nextButton.interactable = true;

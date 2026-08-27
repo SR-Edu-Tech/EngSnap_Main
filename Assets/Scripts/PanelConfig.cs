@@ -19,7 +19,21 @@ public class CategoryData
 public class SubButtonData
 {
     public string buttonLabel;
+
+    [Header("AssetBundle URL (per platform)")]
+    [Tooltip("Used when building/running on Android. Falls back to Legacy URL below if left empty.")]
+    public string assetBundleUrlAndroid;
+
+    [Tooltip("Used when building/running on iOS. Falls back to Legacy URL below if left empty.")]
+    public string assetBundleUrlIOS;
+
+    [Tooltip("Used when building/running on Windows (Standalone). Falls back to Legacy URL below if left empty.")]
+    public string assetBundleUrlWindows;
+
+    [Tooltip("Old single-field URL. Kept for backward compatibility with existing configs, and " +
+             "used as a fallback for any platform whose field above is left empty.")]
     public string assetBundleUrl;
+
     public string sceneName;
     public string homeScreenId;
 
@@ -38,4 +52,41 @@ public class SubButtonData
     [Tooltip("Force this button locked regardless of what the API says. " +
              "Lets you manually disable a level without touching the backend.")]
     public bool manuallyLocked;
+
+    /// <summary>
+    /// Returns the AssetBundle URL for whatever platform this build is currently running on.
+    /// Falls back to the legacy single "assetBundleUrl" field if the platform-specific
+    /// field is empty, so older configs keep working without edits.
+    /// </summary>
+    public string GetAssetBundleUrl()
+    {
+        string platformUrl;
+
+        switch (Application.platform)
+        {
+            case RuntimePlatform.Android:
+                platformUrl = assetBundleUrlAndroid;
+                break;
+
+            case RuntimePlatform.IPhonePlayer:
+                platformUrl = assetBundleUrlIOS;
+                break;
+
+            case RuntimePlatform.WindowsPlayer:
+            case RuntimePlatform.WindowsEditor:
+                platformUrl = assetBundleUrlWindows;
+                break;
+
+            default:
+                platformUrl = null;
+                break;
+        }
+
+        if (!string.IsNullOrEmpty(platformUrl))
+            return platformUrl;
+
+        // Fallback for platforms without a dedicated field (e.g. macOS/Linux editor),
+        // or if the platform-specific field was left blank.
+        return assetBundleUrl;
+    }
 }

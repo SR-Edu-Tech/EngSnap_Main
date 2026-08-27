@@ -21,44 +21,44 @@ public class Masters_PolishedCommunication_Writing_LessonTwo : Masters_Lesson {
 
     [Header("Writing Prompts")]
     [SerializeField]
-    protected WritingPrompt[] writingPromptArray;
+    public WritingPrompt[] writingPromptArray;
 
     [Header("Time Delay")]
     [SerializeField]
-    private float timeBeforeFirstPrompt = 1f;
+    public float timeBeforeFirstPrompt = 1f;
     [SerializeField]
-    private float timeBetweenPrompts = 2f;
+    public float timeBetweenPrompts = 2f;
 
     [Header("Game UI Reference")]
     [SerializeField]
-    private TextMeshProUGUI npcSpeechBubbleTMP;
+    public TextMeshProUGUI npcSpeechBubbleTMP;
     [SerializeField]
-    private Masters_TextTypeWriter npcSpeechTypeWriter;
+    public Masters_TextTypeWriter npcSpeechTypeWriter;
     [SerializeField]
-    private TMP_InputField studentInputField;
+    public TMP_InputField studentInputField;
     [SerializeField]
-    private Image studentInputFieldBackgroundImage;
+    public Image studentInputFieldBackgroundImage;
     [SerializeField]
-    private Button[] starterChipButtons;
+    public Button[] starterChipButtons;
     [SerializeField]
-    private TextMeshProUGUI[] starterChipTMPs;
+    public TextMeshProUGUI[] starterChipTMPs;
     [SerializeField]
-    private Button submitButton;
+    public Button submitButton;
 
     [Header("Color")]
     [SerializeField]
-    private Color defaultInputColor = Color.white;
+    public Color defaultInputColor = Color.white;
     [SerializeField]
-    private Color correctInputColor = Color.green;
+    public Color correctInputColor = Color.green;
     [SerializeField]
-    private Color incorrectInputColor = Color.red;
+    public Color incorrectInputColor = Color.red;
 
     [Header("Polished Communication Routing")]
     [SerializeField]
-    private Masters_LessonSO nextLessonSO;
+    public Masters_LessonSO nextLessonSO;
 
-    private int promptIndex = 0;
-    private WritingPrompt currentPrompt;
+    public int promptIndex = 0;
+    public WritingPrompt currentPrompt;
 
     protected override void Awake() {
         base.Awake();

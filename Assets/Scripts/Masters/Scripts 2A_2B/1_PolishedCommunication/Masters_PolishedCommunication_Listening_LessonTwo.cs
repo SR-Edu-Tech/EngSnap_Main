@@ -20,17 +20,17 @@ public class Masters_PolishedCommunication_Listening_LessonTwo : Masters_Lesson 
     }
 
     [Header("Listening L2 Data")]
-    [SerializeField] private SortTileData[] sortTiles;
-    [SerializeField] private Masters_UniversalSortBin[] sortBinArray;
-    [SerializeField] private Masters_UniversalSortPhraseCard sortPhraseCard;
-    [SerializeField] private RectTransform sortPhraseRestPointRectTransform;
-    [SerializeField] private TextMeshProUGUI progressTMP;
-    [SerializeField] private float animationSpeed = 0.4f;
-    [SerializeField] private int passThreshold = 6;
+    [SerializeField] public SortTileData[] sortTiles;
+    [SerializeField] public Masters_UniversalSortBin[] sortBinArray;
+    [SerializeField] public Masters_UniversalSortPhraseCard sortPhraseCard;
+    [SerializeField] public RectTransform sortPhraseRestPointRectTransform;
+    [SerializeField] public TextMeshProUGUI progressTMP;
+    [SerializeField] public float animationSpeed = 0.4f;
+    [SerializeField] public int passThreshold = 6;
 
-    private int currentTileIndex = 0;
-    private int correctSorts = 0;
-    private bool canClick = false;
+    public int currentTileIndex = 0;
+    public int correctSorts = 0;
+    public bool canClick = false;
 
     protected override void Awake() {
         base.Awake();
