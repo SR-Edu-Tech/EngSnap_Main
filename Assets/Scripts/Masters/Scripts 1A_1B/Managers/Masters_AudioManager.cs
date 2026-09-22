@@ -23,6 +23,8 @@ public class Masters_AudioManager : Masters_Singleton<Masters_AudioManager> {
     [SerializeField]
     private AudioSource sfxAudioSource;
     [SerializeField]
+    private AudioSource musicAudioSource;
+    [SerializeField]
     private AudioClip correctAudioClip, incorrectAudioClip, popAudioClip, selectPositiveAudioClip, 
         selectNegativeAudioClip;
     [SerializeField]
@@ -78,6 +80,29 @@ public class Masters_AudioManager : Masters_Singleton<Masters_AudioManager> {
                 sfxAudioSource.PlayOneShot(selectPositiveAudioClip);
                 break;
         }
+    }
+
+    public void PlaySoundEffect(AudioClip audioClip) {
+        if (audioClip == null || sfxAudioSource == null) return;
+
+        sfxAudioSource.pitch = Random.Range(minimumPitch, maximumPitch);
+        sfxAudioSource.PlayOneShot(audioClip);
+    }
+
+    public void PlayMusic(AudioClip audioClip) {
+        if (audioClip == null) return;
+
+        if (musicAudioSource == null) {
+            musicAudioSource = gameObject.AddComponent<AudioSource>();
+            musicAudioSource.loop = true;
+            musicAudioSource.playOnAwake = false;
+        }
+
+        if (musicAudioSource.clip == audioClip && musicAudioSource.isPlaying) return;
+
+        musicAudioSource.clip = audioClip;
+        musicAudioSource.loop = true;
+        musicAudioSource.Play();
     }
 
     public void PlayAudioClipsArray(AudioClip[] audioClipArray, float timeBetweenAudioClips) {

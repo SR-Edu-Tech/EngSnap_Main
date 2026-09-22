@@ -15,6 +15,19 @@ public abstract class Masters_Lesson : MonoBehaviour {
     protected AudioClip narratorSpeech;
 
 
+    protected Transform FindChildRecursive(Transform parent, string targetName) {
+        if (parent == null) return null;
+        if (parent.name == targetName) return parent;
+
+        foreach (Transform child in parent) {
+            Transform result = FindChildRecursive(child, targetName);
+            if (result != null) return result;
+        }
+
+        return null;
+    }
+
+
     protected virtual void Awake() {
         nextButton.onClick.AddListener(OnNextButtonClicked);
     }
@@ -30,7 +43,12 @@ public abstract class Masters_Lesson : MonoBehaviour {
         }
     }
 
-    protected abstract void OnNextButtonClicked();
+    protected virtual void OnNextButtonClicked() { }
 
+    public virtual void EnsureAspectRatiosAndAnchorsPreserved() {
+    }
+
+    public virtual void EnsureNextAndBackButtonWired() {
+    }
 
 }

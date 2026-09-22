@@ -1,0 +1,112 @@
+using DG.Tweening;
+using System.Collections.Generic;
+using TMPro;
+using UnityEngine;
+
+/// <summary>
+/// Unit 2: Clear Confusion - Game Lesson One (G01: Doubt Dash — Sort Questions Fast).
+/// Subclasses Unit 1's falling sort controller and overrides ConfigureBins() to enable all 5 bins
+/// for the 5 doubt-clearing job chips: ASK TO REPEAT, EXPLAIN AGAIN, REASON + ASK, ASK PERMISSION, SIGNAL POLITELY.
+/// Uses the inherited sortPuzzleArray directly with unit2SortType.
+/// </summary>
+public class Masters_ClearConfusion_Game_LessonOne : Masters_PolishedCommunication_Game_LessonOne {
+
+    /// <summary>
+    /// Override ConfigureBins to activate all 5 bins and assign Unit 2 categories.
+    /// </summary>
+    protected override void ConfigureBins() {
+        Masters_FallingSortBin[] allBins = GetComponentsInChildren<Masters_FallingSortBin>(true);
+        if (allBins == null || allBins.Length == 0) return;
+
+        Masters_Unit2_FallingSortCategory[] categories = new Masters_Unit2_FallingSortCategory[] {
+            Masters_Unit2_FallingSortCategory.AskToRepeat,
+            Masters_Unit2_FallingSortCategory.ExplainAgain,
+            Masters_Unit2_FallingSortCategory.ReasonAndAsk,
+            Masters_Unit2_FallingSortCategory.AskPermission,
+            Masters_Unit2_FallingSortCategory.SignalPolitely
+        };
+
+        List<Masters_FallingSortBin> activeBins = new List<Masters_FallingSortBin>();
+        for (int i = 0; i < allBins.Length && i < categories.Length; i++) {
+            if (allBins[i] != null) {
+                allBins[i].gameObject.SetActive(true);
+                allBins[i].SetUnit2Category(categories[i]);
+                activeBins.Add(allBins[i]);
+            }
+        }
+
+        // Deactivate any extra bins beyond what we need
+        for (int i = categories.Length; i < allBins.Length; i++) {
+            if (allBins[i] != null) allBins[i].gameObject.SetActive(false);
+        }
+
+        sortBinArray = activeBins.ToArray();
+    }
+
+    /// <summary>
+    /// Override SpawnRandomCard to use inherited sortPuzzleArray data.
+    /// </summary>
+    protected override void SpawnRandomCard() {
+        if (sortPuzzleArray == null || sortPuzzleArray.Length == 0) return;
+
+        SortPuzzle selectedPuzzle = sortPuzzleArray[Random.Range(0, sortPuzzleArray.Length)];
+        if (selectedPuzzle == null) return;
+
+        if (phraseCardPrefab != null && topSpawnPoint != null) {
+            Masters_FallingSortPhraseCard newCard = Instantiate(phraseCardPrefab, topSpawnPoint.parent);
+            newCard.SetExpression(selectedPuzzle.expression);
+
+            RectTransform cardRect = newCard.GetComponent<RectTransform>();
+            if (cardRect != null) {
+                cardRect.position = topSpawnPoint.position;
+                cardRect.localScale = Vector3.one;
+            }
+            newCard.gameObject.SetActive(true);
+
+            newCard.OnDragEnded += HandleCardDragEnded;
+            activeCards.Add(newCard);
+        }
+    }
+
+    /// <summary>
+    /// Override EvaluateDrop to match against Unit 2 categories (MatchesUnit2) using unit2SortType.
+    /// </summary>
+    protected override void EvaluateDrop(Masters_FallingSortPhraseCard card, Masters_FallingSortBin bin) {
+        TextMeshProUGUI tmp = card.GetComponentInChildren<TextMeshProUGUI>();
+        string cardText = (tmp != null) ? tmp.text : "";
+
+        SortPuzzle matchedPuzzle = null;
+        if (sortPuzzleArray != null) {
+            foreach (var puzzle in sortPuzzleArray) {
+                if (puzzle != null && puzzle.expression == cardText) {
+                    matchedPuzzle = puzzle;
+                    break;
+                }
+            }
+        }
+
+        if (matchedPuzzle != null && bin.MatchesUnit2(matchedPuzzle.unit2SortType)) {
+            if (Masters_AudioManager.Instance != null) {
+                Masters_AudioManager.Instance.PlaySoundEffect(Masters_SFX.Correct);
+            }
+            score++;
+            UpdateUI();
+        } else {
+            if (Masters_AudioManager.Instance != null) {
+                Masters_AudioManager.Instance.PlaySoundEffect(Masters_SFX.Incorrect);
+            }
+        }
+
+        activeCards.Remove(card);
+        if (cardTargetBins.ContainsKey(card)) cardTargetBins.Remove(card);
+
+        RectTransform cardRect = card.GetComponent<RectTransform>();
+        if (cardRect != null) {
+            cardRect.DOScale(Vector3.zero, 0.3f).SetEase(DG.Tweening.Ease.InBack).OnComplete(() => {
+                if (card != null && card.gameObject != null) Destroy(card.gameObject);
+            });
+        } else if (card != null && card.gameObject != null) {
+            Destroy(card.gameObject);
+        }
+    }
+}

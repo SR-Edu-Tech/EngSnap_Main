@@ -22,6 +22,11 @@ public class FrameAnswerSystem_S2A : MonoBehaviour
         [Header("CORRECT ANSWERS")]
         public string[] correctAnswers;
 
+        [Header("ORDERED ANSWERS")]
+public bool useOrderedAnswers;
+
+public string[] orderedAnswers;
+
         [Header("CONFIRM")]
         public Button confirmButton;
     }
@@ -263,14 +268,29 @@ selectedSlot = -1;
     {
         bool isCorrect = false;
 
-        // Check if current answer exists anywhere
-        // in the assigned Correct Answers list
-        foreach (string correct in frame.correctAnswers)
+        if (frame.useOrderedAnswers)
         {
-            if (currentAnswers[i] == correct)
+            // ORDERED MODE
+            // Each blank must match its corresponding
+            // answer in orderedAnswers.
+            if (i < frame.orderedAnswers.Length &&
+                currentAnswers[i] == frame.orderedAnswers[i])
             {
                 isCorrect = true;
-                break;
+            }
+        }
+        else
+        {
+            // OLD MODE
+            // Any answer in correctAnswers is accepted
+            // for any blank.
+            foreach (string correct in frame.correctAnswers)
+            {
+                if (currentAnswers[i] == correct)
+                {
+                    isCorrect = true;
+                    break;
+                }
             }
         }
 
